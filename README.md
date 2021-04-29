@@ -1,7 +1,9 @@
 # Weave
 
 Hey there, Welcome to Weave. :wave:
-Weave is Frabrics resource for all blockchain related objects and entities, more to come as we develop.
+
+Weave is Frabrics resource for all blockchain related objects and entities, which means it encompasses almost our entire business and infrastructure. 
+Expect entity specific guides as we develop.
 
 ## prerequisites
 You are going to need to install [npm](https://www.npmjs.com/) and [truffle](https://www.trufflesuite.com/truffle).
