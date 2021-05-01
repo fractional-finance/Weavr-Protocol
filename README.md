@@ -2,13 +2,14 @@
 
 Hey there, Welcome to Weave. :wave:
 
-Weave is Frabrics resource for all blockchain related objects and entities, which means it encompasses almost our entire business and infrastructure. 
+Weave is Frabric's resource for all blockchain related objects and entities, which means it encompasses almost our entire business infrastructure.
+
 Expect entity specific guides as we develop.
 
-## prerequisites
-You are going to need to install [npm](https://www.npmjs.com/) and [truffle](https://www.trufflesuite.com/truffle).
-Once you have both installed, you will then need to run `npm install @openzeppelin/contracts` in this directory, to ensure that you have access to open zepplin templates.
+## Prerequisites
 
-## How to test
-With that, you should be able to run `truffle test`
+NodeJS, NPM, and Truffle are requirements. Once you have NodeJS and NPM installed, run `npm i -g -s truffle`. Then, run `npm i` from within this project to install its dependencies.
 
+## Testing
+
+`truffle test`
