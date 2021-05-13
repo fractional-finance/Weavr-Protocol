@@ -77,11 +77,19 @@ abstract contract IntegratedLimitOrderDex {
         // Do a O(1) deletion from the holders array for each filled order
         // A shift would be very expensive and the 18 decimal accuracy of Ethereum means preserving the order of orders wouldn't be helpful
         // 1 wei is microscopic, so placing a 1 wei different order...
-        if (h != order.holders.length) {
-          for (uint256 i = 0; i < h - 1; i++) {
+
+        // h will always be after the last edited order
+        h--;
+        // This order may have been partially filled or fully filled
+        // If it's partial, don't replace it
+        if (order.holders[h].amount != 0) {
+          h--;
+        }
+        for (uint256 i = 0; i < h; i++) {
+          if ((h + i) < order.holders.length) {
             order.holders[i] = order.holders[order.holders.length - 1];
-            order.holders.pop();
           }
+          order.holders.pop();
         }
       }
     }
