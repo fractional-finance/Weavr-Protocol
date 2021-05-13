@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "../interfaces/lists/IAssetWhitelist.sol";
-import "./GlobalWhitelist.sol";
+import "../lists/GlobalWhitelist.sol";
 
 contract AssetWhitelist is IAssetWhitelist, GlobalWhitelist, Pausable {
   // Whitelist used for the entire Frabric platform
