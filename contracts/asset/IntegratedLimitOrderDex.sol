@@ -19,6 +19,11 @@ abstract contract IntegratedLimitOrderDex {
     Suborder[] holders;
   }
 
+  event Filled(address indexed sender, address indexed recipient, uint256 indexed price, uint256 amount);
+  event NewBuyOrder(uint256 indexed price);
+  event NewSellOrder(uint256 indexed price);
+  event OrderIncrease(address indexed sender, uint256 indexed price, uint256 amount);
+
   // Indexed by price
   mapping (uint256 => Order) private _orders;
 
@@ -39,6 +44,7 @@ abstract contract IntegratedLimitOrderDex {
       }
       order.holders[h].amount -= thisAmount;
       filled += thisAmount;
+      emit Filled(msg.sender, order.holders[h].holder, price, amount);
 
       if (buying) {
         // Internally transfer ETH
@@ -72,8 +78,8 @@ abstract contract IntegratedLimitOrderDex {
         // A shift would be very expensive and the 18 decimal accuracy of Ethereum means preserving the order of orders wouldn't be helpful
         // 1 wei is microscopic, so placing a 1 wei different order...
         if (h != order.holders.length) {
-          while (order.holders[0].amount == 0) {
-            order.holders[0] = order.holders[order.holders.length - 1];
+          for (uint256 i = 0; i < h - 1; i++) {
+            order.holders[i] = order.holders[order.holders.length - 1];
             order.holders.pop();
           }
         }
@@ -92,16 +98,21 @@ abstract contract IntegratedLimitOrderDex {
     Order storage order = _orders[price];
     if (order.orderType == OrderType.Null) {
       order.orderType = OrderType.Buy;
-      order.holders = [Suborder(msg.sender, amount)];
+      order.holders.push(Suborder(msg.sender, amount));
+      emit NewBuyOrder(price);
+      emit OrderIncrease(msg.sender, price, amount);
     } else if (order.orderType == OrderType.Buy) {
       order.holders.push(Suborder(msg.sender, amount));
+      emit OrderIncrease(msg.sender, price, amount);
     } else if (order.orderType == OrderType.Sell) {
       uint256 filled = fill(true, amount, price, order);
 
       // Create a buy order for any outstanding amount
       if (filled < amount) {
         order.orderType = OrderType.Buy;
-        order.holders = [Suborder(msg.sender, amount - filled)];
+        order.holders.push(Suborder(msg.sender, amount - filled));
+        emit NewBuyOrder(price);
+        emit OrderIncrease(msg.sender, price, amount);
       }
     } else {
       require(false, "IntegratedLimitOrderDex: OrderType enum expanded yet not case handler");
@@ -116,12 +127,16 @@ abstract contract IntegratedLimitOrderDex {
     Order storage order = _orders[price];
     if (order.orderType == OrderType.Null) {
       order.orderType = OrderType.Sell;
-      order.holders = [Suborder(msg.sender, amount)];
+      order.holders.push(Suborder(msg.sender, amount));
+      emit NewSellOrder(price);
+      emit OrderIncrease(msg.sender, price, amount);
     } else if (order.orderType == OrderType.Buy) {
       uint256 filled = fill(false, amount, price, order);
       if (filled < amount) {
         order.orderType = OrderType.Sell;
-        order.holders = [Suborder(msg.sender, amount - filled)];
+        order.holders.push(Suborder(msg.sender, amount - filled));
+        emit NewSellOrder(price);
+        emit OrderIncrease(msg.sender, price, amount - filled);
       }
     } else if (order.orderType == OrderType.Sell) {
       order.holders.push(Suborder(msg.sender, amount));
