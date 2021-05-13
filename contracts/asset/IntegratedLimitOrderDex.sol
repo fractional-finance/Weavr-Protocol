@@ -64,33 +64,37 @@ abstract contract IntegratedLimitOrderDex {
       _eth[msg.sender] += filled * price;
     }
 
-    if (filled == amount) {
-      // If we filled every order, set the order type to null
-      if (h == order.holders.length) {
-        order.orderType = OrderType.Null;
-        // Also clear the holders array for a gas refund
-        // Future EIPs will make this irrelevant, yet it also helps tidy up the internal state (notably with cancelOrder)
-        while (order.holders.length != 0) {
-          order.holders.pop();
-        }
-      } else {
-        // Do a O(1) deletion from the holders array for each filled order
-        // A shift would be very expensive and the 18 decimal accuracy of Ethereum means preserving the order of orders wouldn't be helpful
-        // 1 wei is microscopic, so placing a 1 wei different order...
+    // h will always be after the last edited order
+    h--;
 
-        // h will always be after the last edited order
-        h--;
-        // This order may have been partially filled or fully filled
-        // If it's partial, don't replace it
-        if (order.holders[h].amount != 0) {
-          h--;
+    // This crux order may have been partially filled or fully filled
+    // If it's partially filled, decrement again
+    if (order.holders[h].amount != 0) {
+      // Prevents reversion by underflow
+      // If we didn't fill any orders, there's nothing left to do
+      if (h == 0) {
+        return filled;
+      }
+      h--;
+    }
+
+    // If we filled every order, set the order type to null
+    if (h == (order.holders.length - 1)) {
+      order.orderType = OrderType.Null;
+      // Clear the holders array
+      // For now, this also offers a gas refund, yet future EIPs will remove this
+      while (order.holders.length != 0) {
+        order.holders.pop();
+      }
+    } else {
+      // Do a O(1) deletion from the holders array for each filled order
+      // A shift would be very expensive and the 18 decimal accuracy of Ethereum means preserving the order of orders wouldn't be helpful
+      // 1 wei is microscopic, so placing a 1 wei different order...
+      for (uint256 i = 0; i < h; i++) {
+        if ((h + i) < order.holders.length) {
+          order.holders[i] = order.holders[order.holders.length - 1];
         }
-        for (uint256 i = 0; i < h; i++) {
-          if ((h + i) < order.holders.length) {
-            order.holders[i] = order.holders[order.holders.length - 1];
-          }
-          order.holders.pop();
-        }
+        order.holders.pop();
       }
     }
 
