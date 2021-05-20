@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.4;
 
-interface IDAO {
+interface IDao {
   struct ProposalMetaData {
     address creator;
     string info;

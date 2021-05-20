@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.4;
 
-import "../interfaces/DAO/IDAO.sol";
+import "../interfaces/dao/IDao.sol";
 
 // Provides functions to be used internally to track proposals and votes
 abstract contract DAO is IDAO {

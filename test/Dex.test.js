@@ -3,12 +3,12 @@ require("chai")
   .use(require("chai-as-promised"))
   .should();
 
-let IloDexERC20 = artifacts.require("IloDexERC20");
+let StubbedDex = artifacts.require("StubbedDex");
 
 contract("IntegratedLimitOrderDex", (accounts) => {
   let dex;
   it("should mint tokens to test with", async () => {
-    dex = await IloDexERC20.new();
+    dex = await StubbedDex.new();
     (await dex.totalSupply.call()).should.be.eq.BN(await dex.balanceOf.call(accounts[0]));
     (await dex.totalSupply.call()).toString().should.be.equal("1000000000000000000");
     await dex.approve(dex.address, await dex.totalSupply.call());
