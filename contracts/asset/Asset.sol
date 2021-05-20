@@ -2,9 +2,10 @@
 pragma solidity ^0.8.4;
 
 import "../lists/ScoreList.sol";
+import "../DAO/DAO.sol";
 import "./AssetERC20.sol";
 
-contract Asset is AssetERC20, ScoreList {
+contract Asset is AssetERC20, ScoreList, DAO {
   constructor(
     address fractionalNFT,
     uint256 nftID,
