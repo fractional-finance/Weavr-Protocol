@@ -2,16 +2,6 @@
 pragma solidity ^0.8.4;
 
 interface IDao {
-  struct ProposalMetaData {
-    address creator;
-    string info;
-    mapping(address => bool) voters;
-    mapping(address => bool) used;
-    uint256 submitted;
-    uint256 expires;
-    bool completed;
-  }
-
   event NewProposal(uint256 indexed id, address indexed creator, string info);
   event VoteAdded(uint256 indexed id, address indexed voter);
   event VoteRemoved(uint256 indexed id, address indexed voter);

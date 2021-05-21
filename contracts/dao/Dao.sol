@@ -4,7 +4,16 @@ pragma solidity ^0.8.4;
 import "../interfaces/dao/IDao.sol";
 
 // Provides functions to be used internally to track proposals and votes
-abstract contract DAO is IDAO {
+abstract contract Dao is IDao {
+  struct ProposalMetaData {
+    address creator;
+    string info;
+    mapping(address => bool) voters;
+    mapping(address => bool) used;
+    uint256 submitted;
+    uint256 expires;
+    bool completed;
+  }
   mapping(uint256 => ProposalMetaData) private _proposals;
   uint256 private _nextProposalId;
 
