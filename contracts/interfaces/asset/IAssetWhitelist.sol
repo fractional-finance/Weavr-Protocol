@@ -5,7 +5,6 @@ import "../modifiers/IPausable.sol";
 import "../lists/IGlobalWhitelist.sol";
 
 interface IAssetWhitelist is IGlobalWhitelist, IPausable {
-  function setParentWhitelist(address parentWhitelistAddress) external;
   function parentWhitelist() external view returns (address);
 
   event ParentWhitelistChanged(address oldParent, address newParent);
