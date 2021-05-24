@@ -5,7 +5,9 @@ import "../lists/ScoreList.sol";
 import "../dao/Dao.sol";
 import "./AssetERC20.sol";
 
-contract Asset is AssetERC20, ScoreList, Dao {
+import "../interfaces/asset/IAsset.sol";
+
+contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
   constructor(
     address fractionalNFT,
     uint256 nftID,

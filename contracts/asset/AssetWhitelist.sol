@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/security/Pausable.sol";
-
-import "../interfaces/lists/IAssetWhitelist.sol";
+import "../interfaces/asset/IAssetWhitelist.sol";
 import "../lists/GlobalWhitelist.sol";
+import "../modifiers/Pausable.sol";
 
 contract AssetWhitelist is IAssetWhitelist, GlobalWhitelist, Pausable {
   // Whitelist used for the entire Frabric platform
@@ -19,24 +18,8 @@ contract AssetWhitelist is IAssetWhitelist, GlobalWhitelist, Pausable {
     _setParentWhitelist(parentWhitelistAddress);
   }
 
-  function setParentWhitelist(address parentWhitelistAddress) external override onlyOwner {
-    _setParentWhitelist(parentWhitelistAddress);
-  }
-
   function parentWhitelist() external view override returns (address) {
     return address(_parentWhitelist);
-  }
-
-  function paused() public view override(IPausable, Pausable) returns (bool) {
-    return Pausable.paused();
-  }
-
-  function pause() external override onlyOwner {
-    _pause();
-  }
-
-  function unpause() external override onlyOwner {
-    _unpause();
   }
 
   function whitelisted(address person) public view override(IWhitelist, GlobalWhitelist) returns (bool) {

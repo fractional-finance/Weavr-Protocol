@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.4;
+pragma solidity >=0.8.4;
 
 interface IDao {
   event NewProposal(uint256 indexed id, address indexed creator, string info);
