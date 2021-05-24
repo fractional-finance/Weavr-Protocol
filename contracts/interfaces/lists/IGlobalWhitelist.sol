@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.4;
+pragma solidity >=0.8.4;
 
-import "./IWhitelist.sol";
+import "./IInfoWhitelist.sol";
 
-interface IGlobalWhitelist is IWhitelist {
+interface IGlobalWhitelist is IInfoWhitelist {
   function explicitlyWhitelisted(address person) external view returns (bool);
 }

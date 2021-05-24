@@ -2,9 +2,6 @@
   "name": "weave",
   "version": "0.0.1",
   "description": "Blockchain components of the Frabric platform.",
-  "directories": {
-    "test": "test"
-  },
   "dependencies": {
     "@openzeppelin/contracts": "^4.1.0",
     "@superfluid-finance/ethereum-contracts": "^1.0.0-rc.3",

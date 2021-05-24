@@ -4,8 +4,10 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "../interfaces/asset/IIntegratedLimitOrderDex.sol";
+
 // In order to be integrated into an ERC20, the ERC20 must allow itself to transfer from any holder
-abstract contract IntegratedLimitOrderDex {
+abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
   using SafeERC20 for IERC20;
 
   enum OrderType { Null, Buy, Sell }
@@ -18,11 +20,6 @@ abstract contract IntegratedLimitOrderDex {
     OrderType orderType;
     Suborder[] holders;
   }
-
-  event Filled(address indexed sender, address indexed recipient, uint256 indexed price, uint256 amount);
-  event NewBuyOrder(uint256 indexed price);
-  event NewSellOrder(uint256 indexed price);
-  event OrderIncrease(address indexed sender, uint256 indexed price, uint256 amount);
 
   // Indexed by price
   mapping (uint256 => Order) private _orders;
@@ -102,7 +99,7 @@ abstract contract IntegratedLimitOrderDex {
   }
 
   // Price is always denoted in ETH
-  function buy(uint256 amount, uint256 price) public payable {
+  function buy(uint256 amount, uint256 price) public override payable {
     require(amount != 0, "IntegratedLimitOrderDex: Amount is 0");
     require(price != 0, "IntegratedLimitOrderDex: Price is 0");
     require(msg.value == amount * price, "IntegratedLimitOrderDex: Invalid message value");
@@ -131,7 +128,7 @@ abstract contract IntegratedLimitOrderDex {
     }
   }
 
-  function sell(uint256 amount, uint256 price) public {
+  function sell(uint256 amount, uint256 price) public override {
     require(amount != 0, "IntegratedLimitOrderDex: Amount is 0");
     require(price != 0, "IntegratedLimitOrderDex: Price is 0");
     IERC20(address(this)).safeTransferFrom(msg.sender, address(this), amount);
@@ -157,7 +154,7 @@ abstract contract IntegratedLimitOrderDex {
     }
   }
 
-  function cancelOrder(uint256 price, uint256 i) public {
+  function cancelOrder(uint256 price, uint256 i) external override {
     require(_orders[price].orderType != OrderType.Null, "IntegratedLimitOrderDex: Trying to cancel a Null order.");
     require(_orders[price].holders[i].holder == msg.sender);
 
@@ -177,30 +174,30 @@ abstract contract IntegratedLimitOrderDex {
     _orders[price].holders.pop();
   }
 
-  function withdraw() public {
+  function withdraw() public override {
     uint256 balance = _eth[msg.sender];
     _eth[msg.sender] = 0;
     (bool success, ) = msg.sender.call{value: balance}("");
     require(success);
   }
 
-  function getOrderType(uint256 price) public view returns (uint256) {
+  function getOrderType(uint256 price) public view override returns (uint256) {
     return uint256(_orders[price].orderType);
   }
 
-  function getOrderQuantity(uint256 price) public view returns (uint256) {
+  function getOrderQuantity(uint256 price) public view override returns (uint256) {
     return _orders[price].holders.length;
   }
 
-  function getOrderHolder(uint256 price, uint256 i) public view returns (address) {
+  function getOrderHolder(uint256 price, uint256 i) public view override returns (address) {
     return _orders[price].holders[i].holder;
   }
 
-  function getOrderAmount(uint256 price, uint256 i) public view returns (uint256) {
+  function getOrderAmount(uint256 price, uint256 i) public view override returns (uint256) {
     return _orders[price].holders[i].amount;
   }
 
-  function getEthBalance(address holder) public view returns (uint256) {
+  function getEthBalance(address holder) public view override returns (uint256) {
     return _eth[holder];
   }
 }
