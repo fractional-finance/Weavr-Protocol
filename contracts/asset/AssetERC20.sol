@@ -14,37 +14,40 @@ import "./AssetWhitelist.sol";
 import "./IntegratedLimitOrderDex.sol";
 import "../interfaces/asset/IAssetERC20.sol";
 
+import "../interfaces/platform/IPlatform.sol";
+
 contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLimitOrderDex {
-  address private _fractionalNFT;
-  uint256 private _nftID;
+  address public override platform;
+  uint256 public override nft;
   uint256 private _shares;
 
-  ISuperToken private _dividendToken;
+  bool public override dissolved;
+
+  address public override dividendToken;
   ISuperfluid private _superfluid;
   IInstantDistributionAgreementV1 private _ida;
 
   constructor(
-    address fractionalNFT,
-    uint256 nftID,
+    address _platform,
+    uint256 _nft,
     uint256 shares,
-    address fractionalWhitelist,
-    address dividendToken,
     address superfluid,
-    address ida
-  ) ERC20("Fabric Asset", "FBRC-A") AssetWhitelist(fractionalWhitelist) {
+    address ida,
+    address _dividendToken
+  ) ERC20("Fabric Asset", "FBRC-A") AssetWhitelist(IPlatform(platform).whitelist()) {
     require(shares <= ~uint128(0), "Asset: Too many shares");
 
-    _fractionalNFT = fractionalNFT;
-    _nftID = nftID;
+    platform = _platform;
+    nft = _nft;
     _shares = shares;
 
-    _dividendToken = ISuperToken(dividendToken);
+    dividendToken = _dividendToken;
     _superfluid = ISuperfluid(superfluid);
     _ida = IInstantDistributionAgreementV1(ida);
 
     _superfluid.callAgreement(
       _ida,
-      abi.encodeWithSelector(_ida.createIndex.selector, _dividendToken, 0, ""),
+      abi.encodeWithSelector(_ida.createIndex.selector, ISuperToken(dividendToken), 0, ""),
       ""
     );
   }
@@ -55,17 +58,20 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
 
   function onERC721Received(address operator, address, uint256 tokenID, bytes calldata) external override returns (bytes4) {
     // Confirm the correct NFT is being locked in
-    require(msg.sender == _fractionalNFT);
-    require(tokenID == _nftID);
+    require(msg.sender == platform);
+    require(tokenID == nft);
 
-    // Mint the shares
-    ERC20._mint(operator, _shares);
+    // Only run if this the original NFT; not a re-issue from a platform change
+    if (totalSupply() == 0) {
+      // Mint the shares
+      ERC20._mint(operator, _shares);
+    }
 
     _superfluid.callAgreement(
       _ida,
       abi.encodeWithSelector(
         _ida.updateSubscription.selector,
-        _dividendToken,
+        ISuperToken(dividendToken),
         0,
         operator,
         uint128(_shares),
@@ -90,10 +96,15 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   }
 
   function unpause() external override onlyOwner {
+    require(!dissolved);
     _unpause();
   }
 
-  function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
+  function _dissolved() internal {
+    dissolved = true;
+  }
+
+  function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     uint256 fromBalance = balanceOf(from);
     uint256 toBalance = balanceOf(to);
 
@@ -101,7 +112,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
       _ida,
       abi.encodeWithSelector(
         _ida.updateSubscription.selector,
-        _dividendToken,
+        ISuperToken(dividendToken),
         0,
         from,
         uint128(fromBalance - amount),
@@ -114,7 +125,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
       _ida,
       abi.encodeWithSelector(
         _ida.updateSubscription.selector,
-        _dividendToken,
+        ISuperToken(dividendToken),
         0,
         to,
         uint128(toBalance + amount),
@@ -124,21 +135,25 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     );
   }
 
-  function distribute(uint256 amount) external override {
-    (uint256 actual, ) = _ida.calculateDistribution(_dividendToken, address(this), 0, amount);
-    _dividendToken.transferFrom(msg.sender, address(this), actual);
+  function _distribute(address from, uint256 amount) internal {
+    (uint256 actual, ) = _ida.calculateDistribution(ISuperToken(dividendToken), address(this), 0, amount);
+    ISuperToken(dividendToken).transferFrom(from, address(this), actual);
 
     _superfluid.callAgreement(
       _ida,
       abi.encodeWithSelector(
         _ida.distribute.selector,
-        _dividendToken,
+        ISuperToken(dividendToken),
         0,
         actual,
         ""
       ),
       ""
     );
-    emit Distributed(msg.sender, amount);
+    emit Distributed(from, amount);
+  }
+
+  function distribute(uint256 amount) external override {
+    _distribute(msg.sender, amount);
   }
 }
