@@ -21,8 +21,6 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
     Suborder[] holders;
   }
 
-  event Logger(uint256 filledAmout);
-
   // Indexed by price
   mapping (uint256 => Order) private _orders;
 
@@ -60,7 +58,6 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
     if (buying) {
       IERC20(address(this)).safeTransfer(msg.sender, filled);
     } else {
-      emit Logger(filled*price);
       _eth[msg.sender] += filled * price;
     }
 
