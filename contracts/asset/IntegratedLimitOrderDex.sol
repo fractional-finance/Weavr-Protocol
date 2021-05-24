@@ -21,6 +21,8 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
     Suborder[] holders;
   }
 
+  event Logger(uint256 filledAmout);
+
   // Indexed by price
   mapping (uint256 => Order) private _orders;
 
@@ -58,6 +60,7 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
     if (buying) {
       IERC20(address(this)).safeTransfer(msg.sender, filled);
     } else {
+      emit Logger(filled*price);
       _eth[msg.sender] += filled * price;
     }
 
@@ -69,6 +72,7 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
     if (order.holders[h].amount != 0) {
       // Prevents reversion by underflow
       // If we didn't fill any orders, there's nothing left to do
+
       if (h == 0) {
         return filled;
       }
@@ -87,7 +91,7 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
       // Do a O(1) deletion from the holders array for each filled order
       // A shift would be very expensive and the 18 decimal accuracy of Ethereum means preserving the order of orders wouldn't be helpful
       // 1 wei is microscopic, so placing a 1 wei different order...
-      for (uint256 i = 0; i < h; i++) {
+      for (uint256 i = 0; i <= h; i++) {
         if ((h + i) < order.holders.length) {
           order.holders[i] = order.holders[order.holders.length - 1];
         }
