@@ -1,6 +1,6 @@
-# Weave
+# Frabric-protocol
 
-Hey there, Welcome to Weave. :wave:
+Hey there, Welcome to Frabric. :wave:
 
 Weave is Frabric's resource for all blockchain related objects and entities, which means it encompasses almost our entire business infrastructure.
 
