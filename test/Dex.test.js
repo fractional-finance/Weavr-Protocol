@@ -7,7 +7,7 @@ require("chai")
 
 let StubbedDex = artifacts.require("StubbedDex");
 
-contract("IntegratedLimitOrderDex", (accounts) => {
+contract("IntegratedLimitOrderDex: success cases", (accounts) => {
   let dex;
   it("should mint tokens to test with", async () => {
     dex = await StubbedDex.new();
@@ -107,5 +107,79 @@ contract("IntegratedLimitOrderDex", (accounts) => {
     assert.equal(tx.logs[4].event, "Transfer", "Unexpected event emitted")
     assert.equal(tx.logs[6].event, "OrderIncrease", "Unexpected event emitted")
   });
+});
 
+contract("IntegratedLimitOrderDex: error cases", (accounts) => {
+  let dex;
+  beforeEach(async () => {
+    dex = await StubbedDex.new();
+    (await dex.totalSupply.call()).should.be.eq.BN(await dex.balanceOf.call(accounts[0]));
+    (await dex.totalSupply.call()).toString().should.be.equal("1000000000000000000");
+    await dex.approve(dex.address, await dex.totalSupply.call());
+  });
+
+  it("should prevent cheating when buying", async () => {
+    try {
+      const halfEtherInWei = web3.utils.toWei("0.5");
+      const price = web3.utils.toBN(halfEtherInWei);
+      await dex.buy(1, price, {value: 2 * price});
+      assert.fail("should prevent cheating when value is not equal to amount purchased")
+    } catch(err) {
+      const expectedError = "IntegratedLimitOrderDex: Invalid message value"
+      const actualError = err.reason;
+      assert.equal(actualError, expectedError, "should not be permitted")
+    }
+  });
+  
+  it("should prevent 0 buy price", async () => {
+    try {
+      const halfEtherInWei = web3.utils.toWei("0.5");
+      const price = web3.utils.toBN(halfEtherInWei);
+      await dex.buy(1, 0, {value: 2 * price});
+      assert.fail("should prevent 0 buy price");
+    } catch(err) {
+      const expectedError = "IntegratedLimitOrderDex: Price is 0"
+      const actualError = err.reason;
+      assert.equal(actualError, expectedError, "should not be permitted")
+    }
+  });
+
+  it("should prevent 0 buy amount", async () => {
+    try {
+      const halfEtherInWei = web3.utils.toWei("0.5");
+      const price = web3.utils.toBN(halfEtherInWei);
+      await dex.buy(0, price, {value: 2 * price});
+      assert.fail("should prevent 0 buy amount");
+    } catch(err) {
+      const expectedError = "IntegratedLimitOrderDex: Amount is 0"
+      const actualError = err.reason;
+      assert.equal(actualError, expectedError, "should not be permitted")
+    }
+  });
+  
+  it("should prevent 0 sell price", async () => {
+    try {
+      const halfEtherInWei = web3.utils.toWei("0.5");
+      const price = web3.utils.toBN(halfEtherInWei);
+      await dex.sell(1, 0);
+      assert.fail("should prevent 0 buy price");
+    } catch(err) {
+      const expectedError = "IntegratedLimitOrderDex: Price is 0"
+      const actualError = err.reason;
+      assert.equal(actualError, expectedError, "should not be permitted")
+    }
+  });
+
+  it("should prevent 0 sell amount", async () => {
+    try {
+      const halfEtherInWei = web3.utils.toWei("0.5");
+      const price = web3.utils.toBN(halfEtherInWei);
+      await dex.buy(0, price);
+      assert.fail("should prevent 0 buy amount");
+    } catch(err) {
+      const expectedError = "IntegratedLimitOrderDex: Amount is 0"
+      const actualError = err.reason;
+      assert.equal(actualError, expectedError, "should not be permitted")
+    }
+  });
 });
