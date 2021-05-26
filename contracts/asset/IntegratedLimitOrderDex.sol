@@ -69,7 +69,6 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
     if (order.holders[h].amount != 0) {
       // Prevents reversion by underflow
       // If we didn't fill any orders, there's nothing left to do
-
       if (h == 0) {
         return filled;
       }
