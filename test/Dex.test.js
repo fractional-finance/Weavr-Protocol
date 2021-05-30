@@ -7,7 +7,7 @@ require("chai")
 
 let StubbedDex = artifacts.require("StubbedDex");
 
-contract("IntegratedLimitOrderDex: success cases", (accounts) => {
+contract("IntegratedLimitOrderDex", (accounts) => {
   let dex;
   it("should mint tokens to test with", async () => {
     dex = await StubbedDex.new();
@@ -100,6 +100,10 @@ contract("IntegratedLimitOrderDex: success cases", (accounts) => {
 
     assert.equal(orderQuantity, 1, "Buy order did not update quantity")
     assert.equal(tx.logs[0].event, "Filled", "Unexpected event emitted")
+    assert.equal(tx.logs[0].args.sender, accounts[0], "Unexpected sender from event emitted")
+    assert.equal(tx.logs[0].args.recipient, accounts[0], "Unexpected recipient from event emitted")
+    assert.equal(tx.logs[0].args.amount, buyAmount, "Unexpected amount from event emitted")
+    assert.equal(tx.logs[0].args.price, price, "Unexpected price from event emitted")
     assert.equal(tx.logs[1].event, "Filled", "Unexpected event emitted")
     assert.equal(tx.logs[2].event, "Filled", "Unexpected event emitted")
     assert.equal(tx.logs[3].event, "Filled", "Unexpected event emitted")
@@ -107,9 +111,35 @@ contract("IntegratedLimitOrderDex: success cases", (accounts) => {
     assert.equal(tx.logs[5].event, "NewBuyOrder", "Unexpected event emitted")
     assert.equal(tx.logs[6].event, "OrderIncrease", "Unexpected event emitted")
   });
+  
+  it("should support sell/buy pair across multiple account", async () => {
+    const amount = 1;
+    const price = web3.utils.toWei("3");
+    const numBuys = 5;
+    let oldTokenBalance = (await dex.balanceOf.call(accounts[1]))
+    
+    
+    await dex.sell(numBuys, price);
+    let tx;
+    for (let i = 0; i < numBuys; i++) {
+      tx = await dex.buy(amount, price, {from: accounts[1], value: price * amount});
+    }
+    
+    let newTokenBalance = (await dex.balanceOf.call(accounts[1]))
+    let orderQuantity = (await dex.getOrderQuantity(price))
+
+    assert.equal(oldTokenBalance, 0, "Should have initially a token balance of 0")
+    assert.equal(newTokenBalance, numBuys, "Token balance did not update")
+    assert.equal(orderQuantity, 0, "Order quantity did not update balance")
+    assert.equal(tx.logs[0].event, "Filled", "Unexpected event emitted")
+    assert.equal(tx.logs[0].args.sender, accounts[1], "Unexpected sender from event emitted")
+    assert.equal(tx.logs[0].args.recipient, accounts[0], "Unexpected recipient from event emitted")
+    assert.equal(tx.logs[0].args.amount, amount, "Unexpected amount from event emitted")
+    assert.equal(tx.logs[0].args.price, price, "Unexpected price from event emitted")
+  });
 });
 
-contract("IntegratedLimitOrderDex: error cases", (accounts) => {
+contract("IntegratedLimitOrderDex", (accounts) => {
   let dex;
   beforeEach(async () => {
     dex = await StubbedDex.new();
