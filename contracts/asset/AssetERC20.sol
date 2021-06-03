@@ -61,6 +61,8 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     require(msg.sender == platform);
     require(tokenID == nft);
 
+    _setWhitelisted(operator, bytes32(0));
+
     // Only run if this the original NFT; not a re-issue from a platform change
     if (totalSupply() == 0) {
       // Mint the shares
@@ -105,6 +107,8 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   }
 
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+    require(whitelisted(to));
+
     uint256 fromBalance = balanceOf(from);
     uint256 toBalance = balanceOf(to);
 
