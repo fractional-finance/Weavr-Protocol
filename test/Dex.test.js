@@ -23,7 +23,11 @@ contract("IntegratedLimitOrderDex", (accounts) => {
 
     assert.equal(newBalance, oldBalance - 100, "Sell order did not update balance")
     assert.equal(tx.logs[2].event, "NewSellOrder", "Incorrect event")
+    assert.equal(tx.logs[2].args.price, 10, "Incorrect event")
     assert.equal(tx.logs[3].event, "OrderIncrease", "Incorrect event")
+    assert.equal(tx.logs[3].args.sender, accounts[0], "Incorrect event")
+    assert.equal(tx.logs[3].args.price, 10, "Incorrect event")
+    assert.equal(tx.logs[3].args.amount, 100, "Incorrect event")
   });
   
   it("should support placing multiple buy orders", async () => {
@@ -38,6 +42,9 @@ contract("IntegratedLimitOrderDex", (accounts) => {
     let orderQuantity = (await dex.getOrderQuantity(price));
     assert.equal(orderQuantity, numBuys, "Buy order did not update balance");
     assert.equal(tx.logs[0].event, "OrderIncrease", "Unexpected event emitted");
+    assert.equal(tx.logs[0].args.price, price, "Unexpected price from event emitted");
+    assert.equal(tx.logs[0].args.amount, 1, "Unexpected amount from event emitted");
+    assert.equal(tx.logs[0].args.sender, accounts[0], "Unexpected sender from event emitted");
   });
   
   it("should support fully filling sell order", async () => {
@@ -105,11 +112,20 @@ contract("IntegratedLimitOrderDex", (accounts) => {
     assert.equal(tx.logs[0].args.amount, buyAmount, "Unexpected amount from event emitted")
     assert.equal(tx.logs[0].args.price, price, "Unexpected price from event emitted")
     assert.equal(tx.logs[1].event, "Filled", "Unexpected event emitted")
+    assert.equal(tx.logs[1].args.sender, accounts[0], "Unexpected sender from event emitted")
+    assert.equal(tx.logs[1].args.recipient, accounts[0], "Unexpected recipient from event emitted")
+    assert.equal(tx.logs[1].args.price, price, "Unexpected price from event emitted")
+    assert.equal(tx.logs[1].args.amount, buyAmount, "Unexpected amount from event emitted")
     assert.equal(tx.logs[2].event, "Filled", "Unexpected event emitted")
     assert.equal(tx.logs[3].event, "Filled", "Unexpected event emitted")
     assert.equal(tx.logs[4].event, "Transfer", "Unexpected event emitted")
+    assert.equal(tx.logs[4].args.to, accounts[0], "Unexpected recipient from event emitted")
     assert.equal(tx.logs[5].event, "NewBuyOrder", "Unexpected event emitted")
+    assert.equal(tx.logs[5].args.price, price, "Unexpected price from event emitted")
     assert.equal(tx.logs[6].event, "OrderIncrease", "Unexpected event emitted")
+    assert.equal(tx.logs[6].args.sender, accounts[0], "Unexpected sender from event emitted")
+    assert.equal(tx.logs[6].args.price, price, "Unexpected price from event emitted")
+    assert.equal(tx.logs[6].args.amount, buyAmount, "Unexpected amount from event emitted")
   });
   
   it("should support sell/buy pair across multiple account", async () => {
