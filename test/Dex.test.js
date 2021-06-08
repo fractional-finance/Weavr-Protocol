@@ -175,6 +175,18 @@ contract("IntegratedLimitOrderDex", (accounts) => {
       assert.equal(actualError, expectedError, "should not be permitted")
     }
   });
+
+  it("should prevent cheating when selling", async () => {
+    try {
+      const price = web3.utils.toBN(web3.utils.toWei("1"));
+      await dex.sell(1, price, {from: accounts[1]});
+      assert.fail("should prevent cheating when value is not equal to amount purchased")
+    } catch(err) {
+      const expectedError = "ERC20: transfer amount exceeds balance"
+      const actualError = err.reason;
+      assert.equal(actualError, expectedError, "should not be permitted")
+    }
+  });
   
   it("should prevent overpaying when buying", async () => {
     try {
