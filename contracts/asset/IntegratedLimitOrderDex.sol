@@ -87,7 +87,7 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
       // Do a O(1) deletion from the holders array for each filled order
       // A shift would be very expensive and the 18 decimal accuracy of Ethereum means preserving the order of orders wouldn't be helpful
       // 1 wei is microscopic, so placing a 1 wei different order...
-      for (uint256 i = 0; i < h; i++) {
+      for (uint256 i = 0; i <= h; i++) {
         if ((h + i) < order.holders.length) {
           order.holders[i] = order.holders[order.holders.length - 1];
         }
