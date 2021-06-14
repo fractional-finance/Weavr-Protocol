@@ -1,3 +1,4 @@
+const { deploySuperfluid } = require("./fixtures/deploySuperfluid")
 const { assert } = require("chai");
 
 require("chai")

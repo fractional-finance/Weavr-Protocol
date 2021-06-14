@@ -3,7 +3,8 @@ async function deploySuperfluid(web3, from, erc20Address) {
   const SuperfluidJSON = require("@superfluid-finance/ethereum-contracts/build/contracts/Superfluid.json");
   const Superfluid = new web3.eth.Contract(SuperfluidJSON.abi, null, {
     from,
-    data: SuperfluidJSON.bytecode
+    data: SuperfluidJSON.bytecode,
+    gas: 6740000
   });
   let superfluid = await Superfluid.deploy({ arguments: [true, false] }).send();
   // Set ourselves as the governance contract so we can register an agreement
@@ -11,9 +12,9 @@ async function deploySuperfluid(web3, from, erc20Address) {
 
   // Deploy IDA
   const IDAJSON = require("@superfluid-finance/ethereum-contracts/build/contracts/IInstantDistributionAgreementV1.json");
-  const IDA = new web3.eth.Contract(IDAJSON.abi, null {
+  const IDA = new web3.eth.Contract(IDAJSON.abi, null, {
     from,
-    data: IDA.bytecode
+    data: IDAJSON.bytecode
   });
   let ida = await IDA.deploy().send();
   await superfluid.registerAgreementClass(ida.options.address).send();
@@ -29,3 +30,5 @@ async function deploySuperfluid(web3, from, erc20Address) {
 
   return { superfluid, ida, token };
 }
+
+module.exports.deploySuperfluid = deploySuperfluid;
