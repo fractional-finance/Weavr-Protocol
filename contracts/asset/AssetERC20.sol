@@ -15,22 +15,26 @@ import "../interfaces/platform/IPlatform.sol";
 contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLimitOrderDex {
   address public override platform;
   uint256 public override nft;
-  uint256 private _shares;
+  uint256 public shares;
 
   bool public override dissolved;
 
-  address public override dividendToken;
+  struct Checkpoint {
+    uint256 block;
+    uint256 balance;
+  }
+  mapping(address => Checkpoint[]) private _checkpoints;
 
   constructor(
     address _platform,
     uint256 _nft,
-    uint256 shares
+    uint256 shares_
   ) ERC20("Fabric Asset", "FBRC-A") AssetWhitelist(IPlatform(platform).whitelist()) {
     require(shares <= ~uint128(0), "Asset: Too many shares");
 
     platform = _platform;
     nft = _nft;
-    _shares = shares;
+    shares = shares_;
   }
 
   function decimals() public pure override(ERC20, IERC20Metadata) returns (uint8) {
@@ -47,7 +51,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     // Only run if this the original NFT; not a re-issue from a platform change
     if (totalSupply() == 0) {
       // Mint the shares
-      ERC20._mint(operator, _shares);
+      ERC20._mint(operator, shares);
     }
 
     return IERC721Receiver.onERC721Received.selector;
@@ -74,8 +78,52 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     dissolved = true;
   }
 
+  function balanceOfAtHeight(address person, uint256 height) public view returns (uint256) {
+    // Only run when the balances have finalized; prevents flash loans from being used
+    require(height < block.number);
+
+    // No balance or earliest balance was after specified height
+    if ((_checkpoints[person].length == 0) || (_checkpoints[person][0].block > height)) {
+      return 0;
+    }
+
+    // Most recent checkpoint is accurate
+    if (_checkpoints[person][_checkpoints[person].length - 1].block <= height) {
+      return _checkpoints[person][_checkpoints[person].length - 1].balance;
+    }
+
+    // Binary search for the applicable checkpoint
+    // Choose the bottom of the median
+    uint i = (_checkpoints[person].length / 2) - 1;
+    // Look for the most recent checkpoint before this block
+    // i + 1 is guaranteed to exist as it is never the most recent checkpoint
+    // In the case of a single checkpoint, it IS the most recent checkpoint, and therefore would've been caught above
+    while (!((_checkpoints[person][i].block <= height) && (_checkpoints[person][i + 1].block > height))) {
+      if (_checkpoints[person][i].block < height) {
+        // Move up
+        // Will never move up to the most recent checkpoint as 1 (the final step) / 2 is 0
+        i += (_checkpoints[person].length - i) / 2;
+      } else {
+        // Move down
+        i = i / 2;
+      }
+    }
+    return _checkpoints[person][i].balance;
+  }
+
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     require(whitelisted(to));
+
+    // Update the checkpoints
+    if ((_checkpoints[from].length == 0) || (_checkpoints[from][_checkpoints[from].length - 1].block != block.number)) {
+      _checkpoints[from].push(Checkpoint(block.number, 0));
+    }
+    _checkpoints[from][_checkpoints[from].length - 1].balance = balanceOf(from) - amount;
+
+    if ((_checkpoints[to].length == 0) || (_checkpoints[to][_checkpoints[to].length - 1].block != block.number)) {
+      _checkpoints[to].push(Checkpoint(block.number, 0));
+    }
+    _checkpoints[to][_checkpoints[to].length - 1].balance = balanceOf(to) + amount;
   }
 
   function _distribute(IERC20 token, uint256 amount) internal {

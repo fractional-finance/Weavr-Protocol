@@ -14,7 +14,6 @@ interface IAssetERC20 is IOwnable, IERC20, IERC20Metadata, IERC721Receiver, IAss
 
   function platform() external view returns (address);
   function nft() external view returns (uint256);
-  function dividendToken() external view returns (address);
   function dissolved() external view returns (bool);
 
   function setWhitelisted(address person, bytes32 dataHash) external;
