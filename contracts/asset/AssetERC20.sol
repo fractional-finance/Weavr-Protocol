@@ -25,6 +25,14 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   }
   mapping(address => Checkpoint[]) private _checkpoints;
 
+  struct Distribution {
+    IERC20 token;
+    uint256 amount;
+    uint256 block;
+  }
+  Distribution[] private _distributions;
+  mapping(address => mapping(uint256 => bool)) public override claimed;
+
   constructor(
     address _platform,
     uint256 _nft,
@@ -127,12 +135,23 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   }
 
   function _distribute(IERC20 token, uint256 amount) internal {
-    require(false); // TODO
+    _distributions.push(Distribution(token, amount, block.number));
     emit Distributed(address(token), amount);
   }
 
   function distribute(address token, uint256 amount) external override {
     IERC20(token).transferFrom(msg.sender, address(this), amount);
     _distribute(IERC20(token), amount);
+  }
+
+  function claim(address person, uint256 id) external override {
+    require(!claimed[person][id]);
+    claimed[person][id] = true;
+    // Divides first in order to make sure everyone is paid, even if some dust is left in the contract
+    // Should never matter due to large decimal quantity of tokens and comparatively low share quantity
+    uint256 amount = _distributions[id].amount / shares * balanceOfAtHeight(person, _distributions[id].block);
+    require(amount != 0);
+    _distributions[id].token.transfer(person, amount);
+    emit Claimed(person, id, amount);
   }
 }
