@@ -32,17 +32,23 @@ abstract contract Dao is IDao {
   function getTimeExpires(uint256 id) external view override returns (uint256) {
     return _proposals[id].expires;
   }
-  function getCompleted(uint256 id) external view override returns (bool) {
+  function getCompleted(uint256 id) public view override returns (bool) {
     return _proposals[id].completed;
   }
 
+  function isProposalActive(uint256 id) public view returns (bool) {
+    return (
+      // Proposal must actually exist
+      (_proposals[id].submitted != 0) &&
+      // Has yet to expire
+      (block.timestamp < _proposals[id].expires) &&
+      // Wasn't completed
+      (!_proposals[id].completed)
+    );
+  }
+
   modifier activeProposal(uint256 id) {
-    // Proposal must actually exist
-    require(_proposals[id].submitted != 0);
-    // Has yet to expire
-    require(block.timestamp < _proposals[id].expires);
-    // Wasn't completed
-    require(!_proposals[id].completed);
+    require(isProposalActive(id));
     _;
   }
 

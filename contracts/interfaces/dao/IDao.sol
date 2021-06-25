@@ -8,6 +8,8 @@ interface IDao {
   event ProposalCompleted(uint256 indexed id);
   event ProposalWithdrawn(uint256 indexed id);
 
+  function isProposalActive(uint256 id) external view returns (bool);
+
   function getProposalCreator(uint256 id) external view returns (address);
   function getProposalInfo(uint256 id) external view returns (string memory);
   function getVoteStatus(uint256 id, address voter) external view returns (bool);

@@ -22,6 +22,7 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     address purchaser;
     address token;
     uint256 purchaseAmount;
+    bool reclaimed;
   }
 
   mapping(uint256 => PlatformInfo) private _platformChange;
@@ -96,6 +97,7 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
     id = _createProposal(info, block.timestamp + 30 days);
     _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
+    IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount);
     emit ProposedDissolution(id, purchaser, token, purchaseAmount);
   }
 
@@ -118,5 +120,19 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
       _pause();
       emit Dissolved(id, _dissolution[id].purchaser, _dissolution[id].purchaseAmount);
     }
+  }
+
+  function reclaimDissolutionFunds(uint256 id) external override {
+    // Require the proposal have ended
+    require(!isProposalActive(id));
+    // Require the proposal wasn't passed
+    require(!getCompleted(id));
+
+    // Require the dissolution wasn't already reclaimed
+    require(!_dissolution[id].reclaimed);
+    _dissolution[id].reclaimed = true;
+
+    // Transfer the tokens
+    IERC20(_dissolution[id].token).transfer(_dissolution[id].purchaser, _dissolution[id].purchaseAmount);
   }
 }
