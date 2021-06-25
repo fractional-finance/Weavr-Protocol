@@ -72,13 +72,11 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
   }
 
   function proposePaper(string calldata info) beforeProposal() external override returns (uint256) {
-    require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
     return _createProposal(info, block.timestamp + 30 days);
   }
 
   function proposePlatformChange(string calldata info, address platform,
                                  uint256 newNFT) beforeProposal() external override returns (uint256 id) {
-    require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
     id = _createProposal(info, block.timestamp + 30 days);
     _platformChange[id] = PlatformInfo(platform, newNFT);
     emit ProposedPlatformChange(id, platform);
@@ -86,7 +84,6 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
 
   function proposeOracleChange(string calldata info,
                                address newOracle) beforeProposal() external override returns (uint256 id) {
-    require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
     id = _createProposal(info, block.timestamp + 30 days);
     _oracleChange[id] = newOracle;
     emit ProposedOracleChange(id, newOracle);
@@ -94,7 +91,6 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
 
   function proposeDissolution(string calldata info, address purchaser, address token,
                               uint256 purchaseAmount) beforeProposal() external override returns (uint256 id) {
-    require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
     id = _createProposal(info, block.timestamp + 30 days);
     _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
     IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount);
