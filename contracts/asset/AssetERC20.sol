@@ -76,14 +76,11 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
 
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     require(whitelisted(to));
-
-    uint256 fromBalance = balanceOf(from);
-    uint256 toBalance = balanceOf(to);
   }
 
   function _distribute(IERC20 token, uint256 amount) internal {
     require(false); // TODO
-    emit Distributed(token, amount);
+    emit Distributed(address(token), amount);
   }
 
   function distribute(address token, uint256 amount) external override {

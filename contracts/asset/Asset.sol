@@ -91,6 +91,7 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
 
   function proposeDissolution(string calldata info, address purchaser, address token,
                               uint256 purchaseAmount) beforeProposal() external override returns (uint256 id) {
+    require(purchaseAmount != 0);
     id = _createProposal(info, block.timestamp + 30 days);
     _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
     IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount);
@@ -110,7 +111,7 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
       emit OracleChanged(id, oracle, _oracleChange[id]);
       oracle = _oracleChange[id];
     } else if (_dissolution[id].purchaseAmount != 0) {
-      _distribute(_dissolution[id].token, _dissolution[id].purchaseAmount);
+      _distribute(IERC20(_dissolution[id].token), _dissolution[id].purchaseAmount);
       IERC721(platform).safeTransferFrom(address(this), _dissolution[id].purchaser, nft);
       dissolved = true;
       _pause();
@@ -123,6 +124,9 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     require(!isProposalActive(id));
     // Require the proposal wasn't passed
     require(!getCompleted(id));
+
+    // Require this is actually a dissolution
+    require(_dissolution[id].purchaseAmount != 0);
 
     // Require the dissolution wasn't already reclaimed
     require(!_dissolution[id].reclaimed);

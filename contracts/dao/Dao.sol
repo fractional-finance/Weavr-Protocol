@@ -36,7 +36,7 @@ abstract contract Dao is IDao {
     return _proposals[id].completed;
   }
 
-  function isProposalActive(uint256 id) public view returns (bool) {
+  function isProposalActive(uint256 id) public view override returns (bool) {
     return (
       // Proposal must actually exist
       (_proposals[id].submitted != 0) &&
