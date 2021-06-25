@@ -10,7 +10,7 @@ import "./IAssetWhitelist.sol";
 import "./IIntegratedLimitOrderDex.sol";
 
 interface IAssetERC20 is IOwnable, IERC20, IERC20Metadata, IERC721Receiver, IAssetWhitelist, IIntegratedLimitOrderDex {
-  event Distributed(address distributor, uint256 amount);
+  event Distributed(address token, uint256 amount);
 
   function platform() external view returns (address);
   function nft() external view returns (uint256);
@@ -23,5 +23,5 @@ interface IAssetERC20 is IOwnable, IERC20, IERC20Metadata, IERC721Receiver, IAss
   function pause() external;
   function unpause() external;
 
-  function distribute(uint256 amount) external;
+  function distribute(address token, uint256 amount) external;
 }

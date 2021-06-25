@@ -20,6 +20,7 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
 
   struct DissolutionInfo {
     address purchaser;
+    address token;
     uint256 purchaseAmount;
   }
 
@@ -31,11 +32,8 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     address platform,
     address _oracle,
     uint256 nft,
-    uint256 shares,
-    address superfluid,
-    address ida,
-    address dividendToken
-  ) AssetERC20(platform, nft, shares, superfluid, ida, dividendToken) ScoreList(200) {
+    uint256 shares
+  ) AssetERC20(platform, nft, shares) ScoreList(200) {
     votes = shares;
     oracle = _oracle;
   }
@@ -93,12 +91,12 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     emit ProposedOracleChange(id, newOracle);
   }
 
-  function proposeDissolution(string calldata info, address purchaser,
+  function proposeDissolution(string calldata info, address purchaser, address token,
                               uint256 purchaseAmount) beforeProposal() external override returns (uint256 id) {
     require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
     id = _createProposal(info, block.timestamp + 30 days);
-    _dissolution[id] = DissolutionInfo(purchaser, purchaseAmount);
-    emit ProposedDissolution(id, purchaser, purchaseAmount);
+    _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
+    emit ProposedDissolution(id, purchaser, token, purchaseAmount);
   }
 
   function passProposal(uint256 id, address[] calldata voters) public override {
@@ -114,7 +112,7 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
       emit OracleChanged(id, oracle, _oracleChange[id]);
       oracle = _oracleChange[id];
     } else if (_dissolution[id].purchaseAmount != 0) {
-      _distribute(_dissolution[id].purchaser, _dissolution[id].purchaseAmount);
+      _distribute(_dissolution[id].token, _dissolution[id].purchaseAmount);
       IERC721(platform).safeTransferFrom(address(this), _dissolution[id].purchaser, nft);
       dissolved = true;
       _pause();
