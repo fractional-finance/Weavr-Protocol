@@ -25,6 +25,9 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     bool reclaimed;
   }
 
+  // Height at which a proposal was proposed, and the height of which balances are used
+  mapping(uint256 => uint256) public override proposalVoteHeight;
+  // Various extra info for proposals
   mapping(uint256 => PlatformInfo) private _platformChange;
   mapping(uint256 => address) private _oracleChange;
   mapping(uint256 => DissolutionInfo) private _dissolution;
@@ -57,10 +60,10 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     _setScore(person, scoreValue);
   }
 
-  function _tallyVotes(address[] calldata voters) internal view {
+  function _tallyVotes(address[] calldata voters, uint256 height) internal view {
     uint256 tallied = 0;
     for (uint256 i = 0; i < voters.length; i++) {
-      tallied += balanceOf(voters[i]) * score(voters[i]) / 100;
+      tallied += balanceOfAtHeight(voters[i], height) * score(voters[i]) / 100;
     }
     require(tallied >= (votes / 2) + 1);
   }
@@ -72,12 +75,15 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
   }
 
   function proposePaper(string calldata info) beforeProposal() external override returns (uint256) {
-    return _createProposal(info, block.timestamp + 30 days);
+    uint256 id = _createProposal(info, block.timestamp + 30 days);
+    proposalVoteHeight[id] = block.number;
+    return id;
   }
 
   function proposePlatformChange(string calldata info, address platform,
                                  uint256 newNFT) beforeProposal() external override returns (uint256 id) {
     id = _createProposal(info, block.timestamp + 30 days);
+    proposalVoteHeight[id] = block.number;
     _platformChange[id] = PlatformInfo(platform, newNFT);
     emit ProposedPlatformChange(id, platform);
   }
@@ -85,6 +91,7 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
   function proposeOracleChange(string calldata info,
                                address newOracle) beforeProposal() external override returns (uint256 id) {
     id = _createProposal(info, block.timestamp + 30 days);
+    proposalVoteHeight[id] = block.number;
     _oracleChange[id] = newOracle;
     emit ProposedOracleChange(id, newOracle);
   }
@@ -93,13 +100,14 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
                               uint256 purchaseAmount) beforeProposal() external override returns (uint256 id) {
     require(purchaseAmount != 0);
     id = _createProposal(info, block.timestamp + 30 days);
+    proposalVoteHeight[id] = block.number;
     _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
     IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount);
     emit ProposedDissolution(id, purchaser, token, purchaseAmount);
   }
 
   function passProposal(uint256 id, address[] calldata voters) public override {
-    _tallyVotes(voters);
+    _tallyVotes(voters, proposalVoteHeight[id]);
     _completeProposal(id, voters);
 
     if (_platformChange[id].platform != address(0)) {

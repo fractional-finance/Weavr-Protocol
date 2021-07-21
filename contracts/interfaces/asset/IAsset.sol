@@ -15,6 +15,7 @@ interface IAsset is IScoreList, IDao, IAssetERC20 {
 
   function oracle() external returns (address);
   function votes() external returns (uint256);
+  function proposalVoteHeight(uint256 id) external view returns (uint256);
 
   function setScore(address person, uint8 scoreValue) external;
 
