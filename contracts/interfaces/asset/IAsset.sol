@@ -24,6 +24,13 @@ interface IAsset is IScoreList, IDao, IAssetERC20 {
   function proposeOracleChange(string calldata info, address newOracle) external returns (uint256);
   function proposeDissolution(string calldata info, address purchaser, address token, uint256 purchaseAmount) external returns (uint256);
 
-  function passProposal(uint256 id, address[] calldata voters) external;
+  function voteYes(uint256 id) external;
+  function voteNo(uint256 id) external;
+  function abstain(uint256 id) external;
+
+  function passProposal(uint256 id) external;
+  function cancelProposal(uint256 id, address[] calldata rengers) external;
+  function enactProposal(uint256 id) external;
+
   function reclaimDissolutionFunds(uint256 id) external;
 }

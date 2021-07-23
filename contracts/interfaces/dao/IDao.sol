@@ -2,9 +2,18 @@
 pragma solidity >=0.8.4;
 
 interface IDao {
+  enum Vote {
+    Abstain,
+    No,
+    Yes
+  }
+
   event NewProposal(uint256 indexed id, address indexed creator, string info);
-  event VoteAdded(uint256 indexed id, address indexed voter);
-  event VoteRemoved(uint256 indexed id, address indexed voter);
+  event YesVote(uint256 indexed id, address indexed voter);
+  event NoVote(uint256 indexed id, address indexed voter);
+  event Abstain(uint256 indexed id, address indexed voter);
+  event ProposalQueued(uint256 indexed id);
+  event ProposalCancelled(uint256 indexed id);
   event ProposalCompleted(uint256 indexed id);
   event ProposalWithdrawn(uint256 indexed id);
 
@@ -12,12 +21,12 @@ interface IDao {
 
   function getProposalCreator(uint256 id) external view returns (address);
   function getProposalInfo(uint256 id) external view returns (string memory);
-  function getVoteStatus(uint256 id, address voter) external view returns (bool);
+  function getVoteStatus(uint256 id, address voter) external view returns (Vote);
   function getTimeSubmitted(uint256 id) external view returns (uint256);
   function getTimeExpires(uint256 id) external view returns (uint256);
+  function getTimeQueued(uint256 id) external view returns (uint256);
+  function getCancelled(uint256 id) external view returns (bool);
   function getCompleted(uint256 id) external view returns (bool);
 
-  function addVote(uint256 id) external;
-  function removeVote(uint256 id) external;
   function withdrawProposal(uint256 id) external;
 }

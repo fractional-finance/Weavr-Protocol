@@ -60,14 +60,6 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     _setScore(person, scoreValue);
   }
 
-  function _tallyVotes(address[] calldata voters, uint256 height) internal view {
-    uint256 tallied = 0;
-    for (uint256 i = 0; i < voters.length; i++) {
-      tallied += balanceOfAtHeight(voters[i], height) * score(voters[i]) / 100;
-    }
-    require(tallied >= (votes / 2) + 1);
-  }
-
   modifier beforeProposal() {
     require((balanceOf(msg.sender) != 0) ||
             (msg.sender == address(platform)) || (msg.sender == address(oracle)));
@@ -106,9 +98,33 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     emit ProposedDissolution(id, purchaser, token, purchaseAmount);
   }
 
-  function passProposal(uint256 id, address[] calldata voters) public override {
-    _tallyVotes(voters, proposalVoteHeight[id]);
-    _completeProposal(id, voters);
+  function voteYes(uint256 id) external override {
+    _voteYes(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]) * score(msg.sender) / 100);
+  }
+  function voteNo(uint256 id) external override {
+    _voteNo(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]) * score(msg.sender) / 100);
+  }
+  function abstain(uint256 id) external override {
+    _abstain(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]) * score(msg.sender) / 100);
+  }
+
+  function passProposal(uint256 id) external override {
+    _queueProposal(id, totalSupply());
+  }
+
+  // Renegers refers to anyone who has reneged from their stake and therefore should no longer be considered as voters
+  function cancelProposal(uint256 id, address[] calldata renegers) external override {
+    uint256[] memory oldVotes = new uint[](renegers.length);
+    uint256[] memory newVotes = new uint[](renegers.length);
+    for (uint256 i = 0; i < renegers.length; i++) {
+      oldVotes[i] = balanceOfAtHeight(renegers[i], proposalVoteHeight[id]) * score(renegers[i]) / 100;
+      newVotes[i] = balanceOf(renegers[i]) * score(renegers[i]) / 100;
+    }
+    _cancelProposal(id, renegers, oldVotes, newVotes);
+  }
+
+  function enactProposal(uint256 id) external override {
+    _completeProposal(id);
 
     if (_platformChange[id].platform != address(0)) {
       platform = _platformChange[id].platform;
