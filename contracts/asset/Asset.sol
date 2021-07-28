@@ -20,9 +20,14 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
 
   struct DissolutionInfo {
     address purchaser;
+    address token;
     uint256 purchaseAmount;
+    bool reclaimed;
   }
 
+  // Height at which a proposal was proposed, and the height of which balances are used
+  mapping(uint256 => uint256) public override proposalVoteHeight;
+  // Various extra info for proposals
   mapping(uint256 => PlatformInfo) private _platformChange;
   mapping(uint256 => address) private _oracleChange;
   mapping(uint256 => DissolutionInfo) private _dissolution;
@@ -31,11 +36,8 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     address platform,
     address _oracle,
     uint256 nft,
-    uint256 shares,
-    address superfluid,
-    address ida,
-    address dividendToken
-  ) AssetERC20(platform, nft, shares, superfluid, ida, dividendToken) ScoreList(200) {
+    uint256 shares
+  ) AssetERC20(platform, nft, shares) ScoreList(200) {
     votes = shares;
     oracle = _oracle;
   }
@@ -58,14 +60,6 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     _setScore(person, scoreValue);
   }
 
-  function _tallyVotes(address[] calldata voters) internal view {
-    uint256 tallied = 0;
-    for (uint256 i = 0; i < voters.length; i++) {
-      tallied += balanceOf(voters[i]) * score(voters[i]) / 100;
-    }
-    require(tallied >= (votes / 2) + 1);
-  }
-
   modifier beforeProposal() {
     require((balanceOf(msg.sender) != 0) ||
             (msg.sender == address(platform)) || (msg.sender == address(oracle)));
@@ -73,37 +67,64 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
   }
 
   function proposePaper(string calldata info) beforeProposal() external override returns (uint256) {
-    require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
-    return _createProposal(info, block.timestamp + 30 days);
+    uint256 id = _createProposal(info, block.timestamp + 30 days);
+    proposalVoteHeight[id] = block.number;
+    return id;
   }
 
   function proposePlatformChange(string calldata info, address platform,
                                  uint256 newNFT) beforeProposal() external override returns (uint256 id) {
-    require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
     id = _createProposal(info, block.timestamp + 30 days);
+    proposalVoteHeight[id] = block.number;
     _platformChange[id] = PlatformInfo(platform, newNFT);
     emit ProposedPlatformChange(id, platform);
   }
 
   function proposeOracleChange(string calldata info,
                                address newOracle) beforeProposal() external override returns (uint256 id) {
-    require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
     id = _createProposal(info, block.timestamp + 30 days);
+    proposalVoteHeight[id] = block.number;
     _oracleChange[id] = newOracle;
     emit ProposedOracleChange(id, newOracle);
   }
 
-  function proposeDissolution(string calldata info, address purchaser,
+  function proposeDissolution(string calldata info, address purchaser, address token,
                               uint256 purchaseAmount) beforeProposal() external override returns (uint256 id) {
-    require((balanceOf(msg.sender) != 0) || (msg.sender == oracle) || (msg.sender == platform));
+    require(purchaseAmount != 0);
     id = _createProposal(info, block.timestamp + 30 days);
-    _dissolution[id] = DissolutionInfo(purchaser, purchaseAmount);
-    emit ProposedDissolution(id, purchaser, purchaseAmount);
+    proposalVoteHeight[id] = block.number;
+    _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
+    IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount);
+    emit ProposedDissolution(id, purchaser, token, purchaseAmount);
   }
 
-  function passProposal(uint256 id, address[] calldata voters) public override {
-    _tallyVotes(voters);
-    _completeProposal(id, voters);
+  function voteYes(uint256 id) external override {
+    _voteYes(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]) * score(msg.sender) / 100);
+  }
+  function voteNo(uint256 id) external override {
+    _voteNo(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]) * score(msg.sender) / 100);
+  }
+  function abstain(uint256 id) external override {
+    _abstain(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]) * score(msg.sender) / 100);
+  }
+
+  function passProposal(uint256 id) external override {
+    _queueProposal(id, totalSupply());
+  }
+
+  // Renegers refers to anyone who has reneged from their stake and therefore should no longer be considered as voters
+  function cancelProposal(uint256 id, address[] calldata renegers) external override {
+    uint256[] memory oldVotes = new uint[](renegers.length);
+    uint256[] memory newVotes = new uint[](renegers.length);
+    for (uint256 i = 0; i < renegers.length; i++) {
+      oldVotes[i] = balanceOfAtHeight(renegers[i], proposalVoteHeight[id]) * score(renegers[i]) / 100;
+      newVotes[i] = balanceOf(renegers[i]) * score(renegers[i]) / 100;
+    }
+    _cancelProposal(id, renegers, oldVotes, newVotes);
+  }
+
+  function enactProposal(uint256 id) external override {
+    _completeProposal(id);
 
     if (_platformChange[id].platform != address(0)) {
       platform = _platformChange[id].platform;
@@ -114,11 +135,28 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
       emit OracleChanged(id, oracle, _oracleChange[id]);
       oracle = _oracleChange[id];
     } else if (_dissolution[id].purchaseAmount != 0) {
-      _distribute(_dissolution[id].purchaser, _dissolution[id].purchaseAmount);
+      _distribute(IERC20(_dissolution[id].token), _dissolution[id].purchaseAmount);
       IERC721(platform).safeTransferFrom(address(this), _dissolution[id].purchaser, nft);
       dissolved = true;
       _pause();
       emit Dissolved(id, _dissolution[id].purchaser, _dissolution[id].purchaseAmount);
     }
+  }
+
+  function reclaimDissolutionFunds(uint256 id) external override {
+    // Require the proposal have ended
+    require(!isProposalActive(id));
+    // Require the proposal wasn't passed
+    require(!getCompleted(id));
+
+    // Require this is actually a dissolution
+    require(_dissolution[id].purchaseAmount != 0);
+
+    // Require the dissolution wasn't already reclaimed
+    require(!_dissolution[id].reclaimed);
+    _dissolution[id].reclaimed = true;
+
+    // Transfer the tokens
+    IERC20(_dissolution[id].token).transfer(_dissolution[id].purchaser, _dissolution[id].purchaseAmount);
   }
 }
