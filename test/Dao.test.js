@@ -11,7 +11,9 @@ contract("IntegratedDAO", (accounts) => {
     let dao = StubbedDao.new();
     let holder = accounts[0];
 
-    it ("Should be able to propose a Paper Proposal", async () => {});
+    it ("Should be able to propose a Paper Proposal", async () => {
+
+    });
 
     it("Should be able to propose a Platform Change", async () => {});
 
@@ -33,4 +35,4 @@ contract("IntegratedDAO", (accounts) => {
 
 
 
-}
+});
