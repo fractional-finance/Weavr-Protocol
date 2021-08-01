@@ -3,13 +3,12 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-import "../lists/ScoreList.sol";
 import "../dao/Dao.sol";
 import "./AssetERC20.sol";
 
 import "../interfaces/asset/IAsset.sol";
 
-contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
+contract Asset is IAsset, Dao, AssetERC20 {
   address public override oracle;
   uint256 public override votes;
 
@@ -37,27 +36,13 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     address _oracle,
     uint256 nft,
     uint256 shares
-  ) AssetERC20(platform, nft, shares) ScoreList(200) {
+  ) AssetERC20(platform, nft, shares) {
     votes = shares;
     oracle = _oracle;
   }
 
-  function _updateVotes(uint256 oldBalance, uint256 newBalance, uint256 oldScore, uint256 newScore) internal {
-    uint256 currentVotes = (oldBalance * oldScore) / 100;
-    uint256 newVotes = (newBalance * newScore) / 100;
-    votes -= currentVotes;
-    votes += newVotes;
-  }
-
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
-    _updateVotes(balanceOf(from), balanceOf(from) - amount, score(from), score(to));
-    _updateVotes(balanceOf(to), balanceOf(to) + amount, score(to), score(to));
     AssetERC20._beforeTokenTransfer(from, to, amount);
-  }
-
-  function setScore(address person, uint8 scoreValue) public override onlyOwner {
-    _updateVotes(balanceOf(person), balanceOf(person), score(person), scoreValue);
-    _setScore(person, scoreValue);
   }
 
   modifier beforeProposal() {
@@ -99,13 +84,13 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
   }
 
   function voteYes(uint256 id) external override {
-    _voteYes(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]) * score(msg.sender) / 100);
+    _voteYes(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]));
   }
   function voteNo(uint256 id) external override {
-    _voteNo(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]) * score(msg.sender) / 100);
+    _voteNo(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]));
   }
   function abstain(uint256 id) external override {
-    _abstain(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]) * score(msg.sender) / 100);
+    _abstain(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]));
   }
 
   function passProposal(uint256 id) external override {
@@ -117,8 +102,8 @@ contract Asset is IAsset, ScoreList, Dao, AssetERC20 {
     uint256[] memory oldVotes = new uint[](renegers.length);
     uint256[] memory newVotes = new uint[](renegers.length);
     for (uint256 i = 0; i < renegers.length; i++) {
-      oldVotes[i] = balanceOfAtHeight(renegers[i], proposalVoteHeight[id]) * score(renegers[i]) / 100;
-      newVotes[i] = balanceOf(renegers[i]) * score(renegers[i]) / 100;
+      oldVotes[i] = balanceOfAtHeight(renegers[i], proposalVoteHeight[id]);
+      newVotes[i] = balanceOf(renegers[i]);
     }
     _cancelProposal(id, renegers, oldVotes, newVotes);
   }
