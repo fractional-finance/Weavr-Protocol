@@ -54,6 +54,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     require(msg.sender == platform);
     require(tokenID == nft);
 
+    _transferOwnership(operator);
     _setWhitelisted(operator, bytes32(0));
 
     // Only run if this the original NFT; not a re-issue from a platform change

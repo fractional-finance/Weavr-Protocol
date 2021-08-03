@@ -25,9 +25,13 @@ abstract contract Ownable is IOwnable {
         emit OwnershipTransferred(_owner, address(0));
     }
 
-    function transferOwnership(address newOwner) public override onlyOwner {
+    function _transferOwnership(address newOwner) internal {
       require(newOwner != address(0));
-      _owner = newOwner;
       emit OwnershipTransferred(_owner, newOwner);
+      _owner = newOwner;
+    }
+
+    function transferOwnership(address newOwner) public override onlyOwner {
+      _transferOwnership(newOwner);
     }
 }
