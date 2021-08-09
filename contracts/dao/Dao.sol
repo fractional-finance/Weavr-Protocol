@@ -76,7 +76,7 @@ abstract contract Dao is IDao {
     proposal.submitted = block.timestamp;
     proposal.expires = expires;
 
-    emit NewProposal(id, proposal.creator, proposal.info, block.number, expires);
+    emit NewProposal(id, proposal.creator, proposal.info, block.timestamp, expires);
 
     _voteYes(id, votes);
   }
