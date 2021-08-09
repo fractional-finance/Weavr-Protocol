@@ -2,5 +2,5 @@
 pragma solidity >=0.8.4;
 
 interface IAssetDeployer {
-  function deploy(address _oracle, uint256 nft, uint256 shares) external returns (address);
+  function deploy(address oracle, uint256 nft, uint256 shares) external returns (address);
 }
