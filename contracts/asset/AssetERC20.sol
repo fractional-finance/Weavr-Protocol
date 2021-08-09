@@ -55,12 +55,15 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
 
     _transferOwnership(operator);
     _setWhitelisted(operator, bytes32(uint256(1)));
+    _setWhitelisted(IPlatform(platform).owner(), bytes32(uint256(1)));
 
     // Only run if this the original NFT; not a re-issue from a platform change
     if (totalSupply() == 0) {
       // Mint the shares
-      ERC20._mint(operator, shares);
+      _mint(operator, shares);
     }
+    // Transfer 6% to the platform contract's owner
+    _transfer(operator, IPlatform(platform).owner(), (shares / 20) + (shares / 100));
 
     return IERC721Receiver.onERC721Received.selector;
   }
