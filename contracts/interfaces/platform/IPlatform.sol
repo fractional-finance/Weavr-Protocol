@@ -9,7 +9,7 @@ interface IPlatform is IOwnable, IGlobalWhitelist {
   event AddedAssetDeployer(uint256 indexed id, address indexed deployer);
   event DisabledAssetDeployer(uint256 indexed id);
   event AssetDeployed(uint256 indexed deployerID, address indexed oracle,
-                      uint256 indexed assetID, address assetContract, uint256 shares);
+                      uint256 indexed assetID, address assetContract, uint256 shares, string symbol);
 
   function setWhitelisted(address person, bytes32 dataHash) external;
 
@@ -18,7 +18,8 @@ interface IPlatform is IOwnable, IGlobalWhitelist {
   function addAssetDeployer(address deployer) external;
   function removeAssetDeployer(uint256 deployer) external;
 
-  function deployAsset(uint256 deployer, address oracle, uint256 nft, uint256 shares) external returns (address);
+  function deployAsset(uint256 deployer, address oracle, uint256 nft, uint256 shares,
+                       string memory symbol) external returns (address);
 
   function proposePaper(address asset, string calldata info) external returns (uint256);
   function proposePlatformChange(address asset, string calldata info, address platform,

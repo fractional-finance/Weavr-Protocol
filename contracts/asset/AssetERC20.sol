@@ -36,13 +36,12 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   constructor(
     address _platform,
     uint256 _nft,
-    uint256 shares_
-  ) ERC20("Fabric Asset", "FBRC-A") AssetWhitelist(platform) {
-    require(shares <= ~uint128(0), "Asset: Too many shares");
-
+    uint256 _shares,
+    string memory symbol
+  ) ERC20("Fabric Asset", symbol) AssetWhitelist(platform) {
     platform = _platform;
     nft = _nft;
-    shares = shares_;
+    shares = _shares;
   }
 
   function decimals() public pure override(ERC20, IERC20Metadata) returns (uint8) {

@@ -40,10 +40,10 @@ contract Platform is ERC721, Ownable, GlobalWhitelist, IPlatform {
   }
 
   function deployAsset(uint256 deployer, address oracle, uint256 nft,
-                       uint256 shares) onlyOwner external override returns (address asset) {
+                       uint256 shares, string memory symbol) onlyOwner external override returns (address asset) {
     require(address(_assetDeployers[deployer]) != address(0));
-    asset = _assetDeployers[deployer].deploy(oracle, nft, shares);
-    emit AssetDeployed(deployer, oracle, nft, asset, shares);
+    asset = _assetDeployers[deployer].deploy(oracle, nft, shares, symbol);
+    emit AssetDeployed(deployer, oracle, nft, asset, shares, symbol);
   }
 
   function proposePaper(address asset, string calldata info) onlyOwner external override returns (uint256) {

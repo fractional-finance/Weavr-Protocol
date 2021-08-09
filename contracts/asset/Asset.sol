@@ -35,8 +35,9 @@ contract Asset is IAsset, Dao, AssetERC20 {
     address platform,
     address _oracle,
     uint256 nft,
-    uint256 shares
-  ) AssetERC20(platform, nft, shares) {
+    uint256 shares,
+    string memory symbol
+  ) AssetERC20(platform, nft, shares, symbol) {
     votes = shares;
     oracle = _oracle;
   }
