@@ -8,6 +8,8 @@ import "../modifiers/GloballyAccepted.sol";
 
 // Whitelist with the ability for everyone to eventually be considered whitelisted
 contract GlobalWhitelist is IGlobalWhitelist, InfoWhitelist, IGloballyAccepted, GloballyAccepted {
+  constructor() InfoWhitelist() {}
+
   function global() public view override(IGloballyAccepted, GloballyAccepted) returns (bool) {
     return GloballyAccepted.global();
   }

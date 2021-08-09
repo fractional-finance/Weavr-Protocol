@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.4;
 
-interface IPlatform {
+import "../modifiers/IOwnable.sol";
+import "../lists/IGlobalWhitelist.sol";
+
+interface IPlatform is IOwnable, IGlobalWhitelist {
   event AssetMinted(uint256 indexed id, string data);
   event AddedAssetDeployer(uint256 indexed id, address indexed deployer);
   event DisabledAssetDeployer(uint256 indexed id);
   event AssetDeployed(uint256 indexed deployerID, address indexed oracle,
                       uint256 indexed assetID, address assetContract, uint256 shares);
 
-  function whitelist() external returns (address);
+  function setWhitelisted(address person, bytes32 dataHash) external;
 
   function createNFT(string calldata data) external returns (uint256);
 

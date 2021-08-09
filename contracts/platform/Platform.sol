@@ -2,21 +2,23 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
 import "../modifiers/Ownable.sol";
+import "../lists/GlobalWhitelist.sol";
+
 import "../interfaces/asset/IAsset.sol";
 import "../interfaces/platform/IAssetDeployer.sol";
 import "../interfaces/platform/IPlatform.sol";
 
-contract Platform is ERC721, Ownable, IPlatform {
+contract Platform is ERC721, Ownable, GlobalWhitelist, IPlatform {
   uint256 internal _asset = 0;
   uint256 internal _assetDeployer = 0;
   mapping(uint256 => IAssetDeployer) internal _assetDeployers;
 
-  constructor() ERC721("Fractional Platform", "FRACTIONAL") Ownable() {}
+  constructor() ERC721("Fractional Platform", "FRACTIONAL") Ownable() GlobalWhitelist() {}
 
-  function whitelist() external override returns (address) {
-    require(false);
-    return address(0);
+  function setWhitelisted(address person, bytes32 dataHash) onlyOwner external override {
+    _setWhitelisted(person, dataHash);
   }
 
   function createNFT(string calldata data) onlyOwner external override returns (uint256) {

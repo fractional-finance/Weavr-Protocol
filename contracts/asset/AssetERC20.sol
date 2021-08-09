@@ -37,7 +37,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     address _platform,
     uint256 _nft,
     uint256 shares_
-  ) ERC20("Fabric Asset", "FBRC-A") AssetWhitelist(IPlatform(platform).whitelist()) {
+  ) ERC20("Fabric Asset", "FBRC-A") AssetWhitelist(platform) {
     require(shares <= ~uint128(0), "Asset: Too many shares");
 
     platform = _platform;
@@ -46,7 +46,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   }
 
   function decimals() public pure override(ERC20, IERC20Metadata) returns (uint8) {
-      return 0;
+    return 0;
   }
 
   function onERC721Received(address operator, address, uint256 tokenID, bytes calldata) external override returns (bytes4) {
@@ -55,7 +55,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     require(tokenID == nft);
 
     _transferOwnership(operator);
-    _setWhitelisted(operator, bytes32(0));
+    _setWhitelisted(operator, bytes32(uint256(1)));
 
     // Only run if this the original NFT; not a re-issue from a platform change
     if (totalSupply() == 0) {
