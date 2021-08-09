@@ -66,7 +66,7 @@ abstract contract Dao is IDao {
   }
 
   // Should only be called by a function which attaches coded meaning to this metadata
-  function _createProposal(string calldata info, uint256 expires) internal returns (uint256 id) {
+  function _createProposal(string calldata info, uint256 expires, uint256 votes) internal returns (uint256 id) {
     id = _nextProposalId;
     _nextProposalId++;
 
@@ -76,7 +76,9 @@ abstract contract Dao is IDao {
     proposal.submitted = block.timestamp;
     proposal.expires = expires;
 
-    emit NewProposal(id, proposal.creator, proposal.info);
+    emit NewProposal(id, proposal.creator, proposal.info, block.number, expires);
+
+    _voteYes(id, votes);
   }
 
   // This activeProposal should be redundant thanks to the below, yet better safe than sorry
@@ -97,7 +99,7 @@ abstract contract Dao is IDao {
     _removeVotes(id, votes);
     _proposals[id].voters[msg.sender] = Vote.Yes;
     _proposals[id].votesYes += votes;
-    emit YesVote(id, msg.sender);
+    emit YesVote(id, msg.sender, votes);
   }
 
   function _voteNo(uint256 id, uint256 votes) activeProposal(id) internal {
@@ -105,14 +107,14 @@ abstract contract Dao is IDao {
     _removeVotes(id, votes);
     _proposals[id].voters[msg.sender] = Vote.No;
     _proposals[id].votesNo += votes;
-    emit NoVote(id, msg.sender);
+    emit NoVote(id, msg.sender, votes);
   }
 
   function _abstain(uint256 id, uint256 votes) activeProposal(id) internal {
     require(_proposals[id].voters[msg.sender] != Vote.Abstain);
     _removeVotes(id, votes);
     // removeVotes sets Abstain so no need to do it here; just emit the event
-    emit Abstain(id, msg.sender);
+    emit Abstain(id, msg.sender, votes);
   }
 
   // Should only be called by something which acts on the coded meaning of this metadata

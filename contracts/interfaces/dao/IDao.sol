@@ -8,10 +8,10 @@ interface IDao {
     Yes
   }
 
-  event NewProposal(uint256 indexed id, address indexed creator, string info);
-  event YesVote(uint256 indexed id, address indexed voter);
-  event NoVote(uint256 indexed id, address indexed voter);
-  event Abstain(uint256 indexed id, address indexed voter);
+  event NewProposal(uint256 indexed id, address indexed creator, string info, uint256 start, uint256 end);
+  event YesVote(uint256 indexed id, address indexed voter, uint256 votes);
+  event NoVote(uint256 indexed id, address indexed voter, uint256 votes);
+  event Abstain(uint256 indexed id, address indexed voter, uint256 votes);
   event ProposalQueued(uint256 indexed id);
   event ProposalCancelled(uint256 indexed id);
   event ProposalCompleted(uint256 indexed id);
