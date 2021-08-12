@@ -95,6 +95,13 @@ contract Asset is IAsset, Dao, AssetERC20 {
   }
 
   function passProposal(uint256 id) external override {
+    // If this is a dissolution, require they didn't reclaim the funds
+    // There's a temporary time window before this function is called where the proposal has expired, yet isn't queued
+    // Reclaiming funds is allowed during this time as that looks identical to a failed proposal
+    if (_dissolution[id].purchaseAmount != 0) {
+      require(!_dissolution[id].reclaimed, "Asset: Dissolution had its funds reclaimed");
+    }
+
     _queueProposal(id, totalSupply());
   }
 
@@ -131,9 +138,11 @@ contract Asset is IAsset, Dao, AssetERC20 {
 
   function reclaimDissolutionFunds(uint256 id) external override {
     // Require the proposal have ended
-    require(!isProposalActive(id));
-    // Require the proposal wasn't passed
-    require(!getCompleted(id));
+    require(!isProposalActive(id), "Asset: Dissolution proposal is active");
+    // If the proposal was queued, require it to have been cancelled
+    if (getTimeQueued(id) != 0) {
+      require(getCancelled(id), "Asset: Dissolution was queued yet not cancelled");
+    }
 
     // Require this is actually a dissolution
     require(_dissolution[id].purchaseAmount != 0);
