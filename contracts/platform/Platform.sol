@@ -23,8 +23,8 @@ contract Platform is ERC721, Ownable, GlobalWhitelist, IPlatform {
 
   function createNFT(string calldata data) onlyOwner external override returns (uint256) {
     _safeMint(msg.sender, _asset);
-    _asset++;
     emit AssetMinted(_asset, data);
+    _asset++;
     return _asset - 1;
   }
 
