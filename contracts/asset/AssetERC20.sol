@@ -50,8 +50,8 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
 
   function onERC721Received(address operator, address, uint256 tokenID, bytes calldata) external override returns (bytes4) {
     // Confirm the correct NFT is being locked in
-    require(msg.sender == platform);
-    require(tokenID == nft);
+    require(msg.sender == platform, "AssetERC20: NFT isn't from the platform");
+    require(tokenID == nft, "AssetERC20: NFT isn't correct");
 
     _transferOwnership(operator);
     _setWhitelisted(operator, bytes32(uint256(1)));
@@ -81,7 +81,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   }
 
   function unpause() external override onlyOwner {
-    require(!dissolved);
+    require(!dissolved, "AssetERC20: Contract was dissolved");
     _unpause();
   }
 
@@ -91,7 +91,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
 
   function balanceOfAtHeight(address person, uint256 height) public view returns (uint256) {
     // Only run when the balances have finalized; prevents flash loans from being used
-    require(height < block.number);
+    require(height < block.number, "AssetERC20: Height is either this block or in the future");
 
     // No balance or earliest balance was after specified height
     if ((_checkpoints[person].length == 0) || (_checkpoints[person][0].block > height)) {
@@ -123,7 +123,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   }
 
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
-    require(whitelisted(to));
+    require(whitelisted(to), "AssetERC20: Token recipient isn't whitelisted");
 
     // Update the checkpoints
     if ((_checkpoints[from].length == 0) || (_checkpoints[from][_checkpoints[from].length - 1].block != block.number)) {
@@ -148,12 +148,12 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   }
 
   function claim(address person, uint256 id) external override {
-    require(!claimed[person][id]);
+    require(!claimed[person][id], "AssetERC20: Distribution was already claimed");
     claimed[person][id] = true;
     // Divides first in order to make sure everyone is paid, even if some dust is left in the contract
     // Should never matter due to large decimal quantity of tokens and comparatively low share quantity
     uint256 amount = _distributions[id].amount / shares * balanceOfAtHeight(person, _distributions[id].block);
-    require(amount != 0);
+    require(amount != 0, "AssetERC20: Distribution amount is 0");
     _distributions[id].token.transfer(person, amount);
     emit Claimed(person, id, amount);
   }

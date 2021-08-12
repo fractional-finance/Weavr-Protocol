@@ -41,7 +41,7 @@ contract Platform is ERC721, Ownable, GlobalWhitelist, IPlatform {
 
   function deployAsset(uint256 deployer, address oracle, uint256 nft,
                        uint256 shares, string memory symbol) onlyOwner external override returns (address asset) {
-    require(address(_assetDeployers[deployer]) != address(0));
+    require(address(_assetDeployers[deployer]) != address(0), "Platform: Deployer doesn't exist");
     asset = _assetDeployers[deployer].deploy(oracle, nft, shares, symbol);
     emit AssetDeployed(deployer, oracle, nft, asset, shares, symbol);
   }

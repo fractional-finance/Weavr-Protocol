@@ -21,7 +21,7 @@ abstract contract GloballyAccepted {
   // Likely won't be used due to the true/false usage in the whitelist
   // That said, this is good to fill the contract out
   modifier globallyAccepted() {
-    require(_global);
+    require(_global, "GloballyAccepted: Global acceptance hasn't happened yet");
     _;
   }
 }

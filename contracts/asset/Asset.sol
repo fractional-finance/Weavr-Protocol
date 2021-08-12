@@ -48,7 +48,8 @@ contract Asset is IAsset, Dao, AssetERC20 {
 
   modifier beforeProposal() {
     require((balanceOf(msg.sender) != 0) ||
-            (msg.sender == address(platform)) || (msg.sender == address(oracle)));
+            (msg.sender == address(platform)) || (msg.sender == address(oracle)),
+            "Asset: Proposer is not authorized to create a proposal");
     _;
   }
 
@@ -76,7 +77,7 @@ contract Asset is IAsset, Dao, AssetERC20 {
 
   function proposeDissolution(string calldata info, address purchaser, address token,
                               uint256 purchaseAmount) beforeProposal() external override returns (uint256 id) {
-    require(purchaseAmount != 0);
+    require(purchaseAmount != 0, "Asset: Dissolution amount is 0");
     id = _createProposal(info, block.timestamp + 30 days, balanceOfAtHeight(msg.sender, block.number));
     proposalVoteHeight[id] = block.number;
     _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
@@ -145,10 +146,10 @@ contract Asset is IAsset, Dao, AssetERC20 {
     }
 
     // Require this is actually a dissolution
-    require(_dissolution[id].purchaseAmount != 0);
+    require(_dissolution[id].purchaseAmount != 0, "Asset: Proposal isn't a dissolution");
 
     // Require the dissolution wasn't already reclaimed
-    require(!_dissolution[id].reclaimed);
+    require(!_dissolution[id].reclaimed, "Asset: Dissolution was already reclaimed");
     _dissolution[id].reclaimed = true;
 
     // Transfer the tokens

@@ -155,12 +155,13 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
   }
 
   function cancelOrder(uint256 price, uint256 i) external override {
-    require(_orders[price].orderType != OrderType.Null, "IntegratedLimitOrderDex: Trying to cancel a Null order.");
-    require(_orders[price].holders[i].holder == msg.sender);
+    require(_orders[price].orderType != OrderType.Null, "IntegratedLimitOrderDex: Trying to cancel a null order");
+    require(_orders[price].holders[i].holder == msg.sender, "IntegratedLimitOrderDex: Trying to cancel an order which isn't yours");
 
     if (_orders[price].orderType == OrderType.Buy) {
+      // It may be better to have this add to _eth, pushing its flow through withdraw
       (bool success, ) = msg.sender.call{value: (_orders[price].holders[i].amount * price)}("");
-      require(success);
+      require(success, "IntegratedLimitOrderDex: Couldn't transfer the ETH back to the order placer");
     } else if (_orders[price].orderType == OrderType.Sell) {
       IERC20(address(this)).safeTransfer(msg.sender, _orders[price].holders[i].amount);
     } else {
@@ -178,7 +179,7 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
     uint256 balance = _eth[msg.sender];
     _eth[msg.sender] = 0;
     (bool success, ) = msg.sender.call{value: balance}("");
-    require(success);
+    require(success, "IntegratedLimitOrderDex: Couldn't withdraw ETH");
   }
 
   function getOrderType(uint256 price) public view override returns (uint256) {

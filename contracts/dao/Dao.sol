@@ -61,7 +61,7 @@ abstract contract Dao is IDao {
   }
 
   modifier activeProposal(uint256 id) {
-    require(isProposalActive(id));
+    require(isProposalActive(id), "Dao: Proposal isn't active");
     _;
   }
 
@@ -95,7 +95,7 @@ abstract contract Dao is IDao {
 
   function _voteYes(uint256 id, uint256 votes) activeProposal(id) internal {
     // Prevents repeat event emission
-    require(_proposals[id].voters[msg.sender] != Vote.Yes);
+    require(_proposals[id].voters[msg.sender] != Vote.Yes, "Dao: Voter already voted yes");
     _removeVotes(id, votes);
     _proposals[id].voters[msg.sender] = Vote.Yes;
     _proposals[id].votesYes += votes;
@@ -103,7 +103,7 @@ abstract contract Dao is IDao {
   }
 
   function _voteNo(uint256 id, uint256 votes) activeProposal(id) internal {
-    require(_proposals[id].voters[msg.sender] != Vote.No);
+    require(_proposals[id].voters[msg.sender] != Vote.No, "Dao: Voter already voted no");
     _removeVotes(id, votes);
     _proposals[id].voters[msg.sender] = Vote.No;
     _proposals[id].votesNo += votes;
@@ -111,7 +111,7 @@ abstract contract Dao is IDao {
   }
 
   function _abstain(uint256 id, uint256 votes) activeProposal(id) internal {
-    require(_proposals[id].voters[msg.sender] != Vote.Abstain);
+    require(_proposals[id].voters[msg.sender] != Vote.Abstain, "Dao: Voter already abstained");
     _removeVotes(id, votes);
     // removeVotes sets Abstain so no need to do it here; just emit the event
     emit Abstain(id, msg.sender, votes);
@@ -120,36 +120,36 @@ abstract contract Dao is IDao {
   // Should only be called by something which acts on the coded meaning of this metadata
   function _queueProposal(uint256 id, uint256 totalVotes) activeProposal(id) internal {
     ProposalMetaData storage proposal = _proposals[id];
-    require(proposal.votesYes > proposal.votesNo);
-    require((proposal.votesYes + proposal.votesNo) > (totalVotes / 10));
+    require(proposal.votesYes > proposal.votesNo, "Dao: Queueing proposal which didn't pass");
+    require((proposal.votesYes + proposal.votesNo) > (totalVotes / 10), "Dao: Proposal didn't have 10% participation");
     proposal.queued = block.timestamp;
     emit ProposalQueued(id);
   }
 
   function _cancelProposal(uint256 id, address[] calldata voters,
                            uint256[] memory oldVotes, uint256[] memory newVotes) internal {
-    require(voters.length == oldVotes.length);
-    require(oldVotes.length == newVotes.length);
+    require(voters.length == oldVotes.length, "Dao: Length of voters doesn't match length of old votes");
+    require(oldVotes.length == newVotes.length, "Dao: Length of voters doesn't match length of new votes");
 
     uint256 votesYes = _proposals[id].votesYes;
     for (uint256 i = 0; i < voters.length; i++) {
-      require(_proposals[id].voters[voters[i]] == Vote.Yes);
+      require(_proposals[id].voters[voters[i]] == Vote.Yes, "Dao: Specified voter didn't vote yes");
       // Should be checked anyways thanks to Solidity's integration of SafeMath
-      require(oldVotes[i] > newVotes[i]);
+      require(oldVotes[i] > newVotes[i], "Dao: Old amount of votes was not less than the new amount");
       votesYes -= oldVotes[i] - newVotes[i];
     }
 
-    require(votesYes <= _proposals[id].votesNo);
+    require(votesYes <= _proposals[id].votesNo, "Dao: Cancelling a proposal with more yes votes than no votes");
     _proposals[id].cancelled = true;
     emit ProposalCancelled(id);
   }
 
   function _completeProposal(uint256 id) internal {
     ProposalMetaData storage proposal = _proposals[id];
-    require(proposal.queued != 0);
-    require((proposal.queued + (12 hours)) < block.timestamp);
-    require(!proposal.cancelled);
-    require(!proposal.completed);
+    require(proposal.queued != 0, "Dao: Proposal wasn't queued");
+    require((proposal.queued + (12 hours)) < block.timestamp, "Dao: Proposal was queued less than 12 hours ago");
+    require(!proposal.cancelled, "Dao: Proposal was cancelled");
+    require(!proposal.completed, "Dao: Proposal was already completed");
     proposal.completed = true;
     emit ProposalCompleted(id);
   }
@@ -157,7 +157,7 @@ abstract contract Dao is IDao {
   // Enables withdrawing a proposal
   function withdrawProposal(uint256 id) activeProposal(id) external override {
     // Only allow the proposer to withdraw a proposal.
-    require(_proposals[id].creator == msg.sender);
+    require(_proposals[id].creator == msg.sender, "Dao: Only the proposal creator may withdraw it");
     // Could also set completed to true; this is more accurate as completed suggests passed.
     // activeProposal will still catch this.
     _proposals[id].expires = 0;

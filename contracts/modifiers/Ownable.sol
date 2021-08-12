@@ -16,7 +16,7 @@ abstract contract Ownable is IOwnable {
     }
 
     modifier onlyOwner() {
-      require(owner() == msg.sender);
+      require(owner() == msg.sender, "Ownable: msg.sender != owner");
       _;
     }
 
@@ -26,7 +26,7 @@ abstract contract Ownable is IOwnable {
     }
 
     function _transferOwnership(address newOwner) internal {
-      require(newOwner != address(0));
+      require(newOwner != address(0), "Ownable: new owner is the zero address");
       emit OwnershipTransferred(_owner, newOwner);
       _owner = newOwner;
     }

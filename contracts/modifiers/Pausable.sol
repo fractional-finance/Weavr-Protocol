@@ -11,12 +11,12 @@ abstract contract Pausable is IPausable {
   }
 
   modifier whenNotPaused() {
-    require(!_paused);
+    require(!_paused, "Pausable: Contract is paused");
     _;
   }
 
   modifier whenPaused() {
-    require(_paused);
+    require(_paused, "Pausable: Contract isn't paused");
     _;
   }
 
