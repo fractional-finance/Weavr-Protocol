@@ -61,9 +61,9 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     if (totalSupply() == 0) {
       // Mint the shares
       _mint(operator, shares);
+      // Transfer 6% to the platform contract's owner
+      _transfer(operator, IPlatform(platform).owner(), (shares / 20) + (shares / 100));
     }
-    // Transfer 6% to the platform contract's owner
-    _transfer(operator, IPlatform(platform).owner(), (shares / 20) + (shares / 100));
 
     return IERC721Receiver.onERC721Received.selector;
   }
@@ -126,10 +126,12 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     require(whitelisted(to), "AssetERC20: Token recipient isn't whitelisted");
 
     // Update the checkpoints
-    if ((_checkpoints[from].length == 0) || (_checkpoints[from][_checkpoints[from].length - 1].block != block.number)) {
-      _checkpoints[from].push(Checkpoint(block.number, 0));
+    if (from != address(0)) {
+      if ((_checkpoints[from].length == 0) || (_checkpoints[from][_checkpoints[from].length - 1].block != block.number)) {
+        _checkpoints[from].push(Checkpoint(block.number, 0));
+      }
+      _checkpoints[from][_checkpoints[from].length - 1].balance = balanceOf(from) - amount;
     }
-    _checkpoints[from][_checkpoints[from].length - 1].balance = balanceOf(from) - amount;
 
     if ((_checkpoints[to].length == 0) || (_checkpoints[to][_checkpoints[to].length - 1].block != block.number)) {
       _checkpoints[to].push(Checkpoint(block.number, 0));
