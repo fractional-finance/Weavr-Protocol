@@ -42,10 +42,6 @@ contract Asset is IAsset, Dao, AssetERC20 {
     oracle = _oracle;
   }
 
-  function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
-    AssetERC20._beforeTokenTransfer(from, to, amount);
-  }
-
   modifier beforeProposal() {
     require((balanceOf(msg.sender) != 0) ||
             (msg.sender == address(platform)) || (msg.sender == address(oracle)),

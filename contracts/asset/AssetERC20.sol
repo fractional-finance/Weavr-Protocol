@@ -85,10 +85,6 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     _unpause();
   }
 
-  function _dissolved() internal {
-    dissolved = true;
-  }
-
   function balanceOfAtHeight(address person, uint256 height) public view returns (uint256) {
     // Only run when the balances have finalized; prevents flash loans from being used
     require(height < block.number, "AssetERC20: Height is either this block or in the future");

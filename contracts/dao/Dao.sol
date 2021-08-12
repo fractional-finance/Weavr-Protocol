@@ -35,7 +35,7 @@ abstract contract Dao is IDao {
   function getTimeExpires(uint256 id) external view override returns (uint256) {
     return _proposals[id].expires;
   }
-  function getTimeQueued(uint256 id) external view override returns (uint256) {
+  function getTimeQueued(uint256 id) public view override returns (uint256) {
     return _proposals[id].queued;
   }
   function getCancelled(uint256 id) public view override returns (bool) {
