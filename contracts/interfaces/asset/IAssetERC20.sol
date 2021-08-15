@@ -9,7 +9,7 @@ import "../modifiers/IOwnable.sol";
 import "./IAssetWhitelist.sol";
 import "./IIntegratedLimitOrderDex.sol";
 
-interface IAssetERC20 is IOwnable, IERC20, IERC20Metadata, IERC721Receiver, IAssetWhitelist {
+interface IAssetERC20 is IOwnable, IERC20, IERC20Metadata, IERC721Receiver, IAssetWhitelist, IIntegratedLimitOrderDex {
   event Distributed(address indexed token, uint256 amount);
   event Claimed(address indexed person, uint256 indexed id, uint256 amount);
 

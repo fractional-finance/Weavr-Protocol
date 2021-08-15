@@ -12,7 +12,7 @@ import "../interfaces/asset/IAssetERC20.sol";
 
 import "../interfaces/platform/IPlatform.sol";
 
-contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist {
+contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLimitOrderDex {
   address public override platform;
   uint256 public override nft;
   uint256 public shares;
