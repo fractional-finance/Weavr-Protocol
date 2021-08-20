@@ -123,6 +123,10 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     require(whitelisted(to), "AssetERC20: Token recipient isn't whitelisted");
 
     // Update the checkpoints
+    if (from == to) {
+      return;
+    }
+
     if (from != address(0)) {
       if ((_checkpoints[from].length == 0) || (_checkpoints[from][_checkpoints[from].length - 1].block != block.number)) {
         _checkpoints[from].push(Checkpoint(block.number, 0));
