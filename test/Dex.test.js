@@ -7,7 +7,7 @@ require("chai")
 
 let StubbedDex = artifacts.require("StubbedDex");
 
-contract("IntegratedLimitOrderDex", (accounts) => {
+contract("StubbedDex", (accounts) => {
   let dex;
   it("should mint tokens to test with", async () => {
     dex = await StubbedDex.new();
