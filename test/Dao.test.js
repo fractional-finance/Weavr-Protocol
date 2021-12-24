@@ -20,7 +20,14 @@ contract("IntegratedDAO", accounts=> {
          assert.equal(tx.logs[0].args.info, payload);
      });
 
-    it("Should be able to propose a Platform Change", async () => {});
+    it("Should be able to vote on a proposal", async () => {
+        let payload = web3.utils.asciiToHex({"title": "Proposal Title", "description": "Proposal Description", "tags": ["tag1", "tag2"]}.toString());
+        let dao = await IntegratedDAO.new();
+        let tx1 = await dao.proposePaper(payload, {from: holder});
+        let tx2 = await dao.voteYes(tx1.logs[0].args.id.toNumber())
+        assert.equal(tx2.logs[0].event, "YesVote");
+        assert.equal(tx2.logs[0].args.votes.toNumber(), 1);
+    });
 
     it("Should be able to propose an Oracle Change", async () => {});
 
