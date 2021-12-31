@@ -6,9 +6,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - name: checkout
+      uses: actions/checkout@master
     - name: build
-     uses: actions/checkout@master
-     uses: ng-easy/npm-setup@v1.7.2
+      uses: ng-easy/npm-setup@v1.7.2
       run : |
         npm install -g truffle
         npm install -g
