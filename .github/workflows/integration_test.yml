@@ -1,16 +1,17 @@
-name: deploy-to-pypi
+name: integration-test
 
 on: [pull_request]
 
 jobs:
-  build:
+  integration-test:
     runs-on: ubuntu-latest
     steps:
     - name: checkout
       uses: actions/checkout@master
     - name: get-npm
-      run: |
-        - apt-get update && apt-get install npm -y
+      uses: actions/setup-node@v2
+      with:
+        node-version: '17'
     - name: build
       run : |
         npm install -g truffle
