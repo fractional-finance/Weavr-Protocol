@@ -8,8 +8,9 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@master
-    - name: build
+    - name: get-npm
       uses: ng-easy/npm-setup@v1.7.2
+    - name: build
       run : |
         npm install -g truffle
         npm install -g
