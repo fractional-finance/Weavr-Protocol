@@ -1,0 +1,17 @@
+name: deploy-to-pypi
+
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: build
+     uses: actions/checkout@master
+     uses: ng-easy/npm-setup@v1.7.2
+      run : |
+        npm install -g truffle
+        npm install -g
+    - name: test
+      run: |
+        truffle test
