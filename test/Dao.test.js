@@ -12,7 +12,6 @@ contract("IntegratedDAO", (accounts) => {
     let holder = accounts[0];
 
     it ("Should be able to propose a Paper Proposal", async () => {
-
     });
 
     it("Should be able to propose a Platform Change", async () => {});
