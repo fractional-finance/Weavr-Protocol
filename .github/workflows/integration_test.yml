@@ -18,9 +18,4 @@ jobs:
         npm install
     - name: test
       run: CI=true truffle test
-    - name: gas-report
-      run: npx codechecks
-      env:
-        CC_SECRET: ${{ secrets.CC_SECRET }}
-    - name: coverage
-      run: truffle run coverage
+      
