@@ -1,0 +1,21 @@
+name: integration-test
+
+on: [pull_request]
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@master
+    - name: get-npm
+      uses: actions/setup-node@v2
+      with:
+        node-version: '15.x'
+    - name: build
+      run : |
+        npm install truffle -g
+        npm install
+    - name: test
+      run: CI=true truffle test
+      
