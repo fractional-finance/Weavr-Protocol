@@ -23,6 +23,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     uint256 block;
     uint256 balance;
   }
+
   mapping(address => Checkpoint[]) private _checkpoints;
 
   struct Distribution {
