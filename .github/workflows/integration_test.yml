@@ -1,6 +1,9 @@
 name: integration-test
 
-on: [pull_request]
+on:
+  pull_request:
+  push:
+    branches: [main]
 
 jobs:
   integration-test:
@@ -11,11 +14,8 @@ jobs:
     - name: get-npm
       uses: actions/setup-node@v2
       with:
-        node-version: '15.x'
-    - name: build
-      run : |
-        npm install truffle -g
-        npm install
+        node-version: '16.x'
+    - name: dependencies
+      run: npm install
     - name: test
-      run: CI=true truffle test
-      
+      run: CI=true npx truffle test
