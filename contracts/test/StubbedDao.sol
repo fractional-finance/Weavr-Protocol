@@ -79,10 +79,10 @@ contract StubbedDao is Dao, ERC20 {
         emit ProposedOracleChange(id, newOracle);
     }
 
-    function proposeDissolution(string calldata info, address purchaser, address token,
+    function proposeDissolutionShort(string calldata info, address purchaser, address token,
         uint256 purchaseAmount) beforeProposal() external returns (uint256 id) {
         require(purchaseAmount != 0, "Asset: Dissolution amount is 0");
-        id = _createProposal(info, block.timestamp + 30 days, balanceOf(msg.sender));
+        id = _createProposal(info, block.timestamp + 1 seconds, balanceOf(msg.sender));
         proposalVoteHeight[id] = block.number;
         _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
         IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount);
