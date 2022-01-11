@@ -18,4 +18,4 @@ jobs:
     - name: dependencies
       run: npm install
     - name: test
-      run: CI=true truffle test
+      run: CI=true npx truffle test
