@@ -16,6 +16,6 @@ jobs:
       with:
         node-version: '16.x'
     - name: dependencies
-      run: npm i
+      run: npm install
     - name: test
-      run: truffle test
+      run: CI=true truffle test
