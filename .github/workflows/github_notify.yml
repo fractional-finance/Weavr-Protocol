@@ -12,4 +12,4 @@ jobs:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
        uses: Ilshidur/action-discord@master
        with:
-         args: 'The PR {{Event_PAYLOAD.pull_request.id}} for repo {{ EVENT_PAYLOAD.repository.full_name }} has been updated.'
+         args: 'The PR {{EVENT_PAYLOAD.pull_request.id}} for repo {{ EVENT_PAYLOAD.repository.full_name }} has been updated.'
