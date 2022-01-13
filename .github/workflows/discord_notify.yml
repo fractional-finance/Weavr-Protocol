@@ -10,4 +10,4 @@ jobs:
      - name: discord ship
        env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-       uses: Ilshidur/action-discord@master
+       uses: Ilshidur/action-discord@0.3
