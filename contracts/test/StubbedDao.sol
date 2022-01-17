@@ -44,7 +44,7 @@ contract StubbedDao is Dao, ERC20 {
     mapping(uint256 => DissolutionInfo) private _dissolution;
 
     constructor() ERC20("Integrated Limit Order DEX ERC20", "ILOD") {
-        _mint(msg.sender, 1e6);
+        _mint(msg.sender, 1e8);
         _oracle = 0x0000000000000000000000000000000000000001;
         _votes = 0;
         _platform = 0x0000000000000000000000000000000000000000;

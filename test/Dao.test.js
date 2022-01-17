@@ -24,10 +24,11 @@ contract("IntegratedDAO", accounts=> {
         let payload = web3.utils.asciiToHex({"title": "Proposal Title", "description": "Proposal Description", "tags": ["tag1", "tag2"]}.toString());
         let dao = await IntegratedDAO.new();
         let token_qty = 100;
-        let smalL_token_qty = 1;
-        await dao.transfer(other, token_qty, {from: holder});
+        let small_token_qty = 1;
         let tx1 = await dao.proposePaper(payload, {from: holder});
-        await dao.transfer(other, smalL_token_qty, {from: holder});
+        await dao.transfer(other, token_qty, {from: holder});
+        const balance1 = await dao.balanceOf(other);
+        assert.equal(balance1.toNumber(), token_qty);
         let tx2 = await dao.voteYes(tx1.logs[0].args.id.toNumber(), {from: other})
         assert.equal(tx2.logs[0].event, "YesVote", "voteYes event not emitted");
         assert.equal(tx2.logs[0].args.votes.toNumber(), token_qty, "voteYes event emitted with incorrect number of votes");
@@ -45,7 +46,7 @@ contract("IntegratedDAO", accounts=> {
     it("Should be able to propose a Buyout/Dissolution", async () => {
         let payload = web3.utils.asciiToHex({"title": "Proposal Title", "description": "Proposal Description", "tags": ["tag1", "tag2"]}.toString());
         let dao = await IntegratedDAO.new();
-        let tx1 = await dao.proposeDissolution(payload, {from: holder});
+        let tx1 = await dao.proposeDissolutionShort(payload, holder,  {from: holder});
         assert.equal(tx1.logs[0].event, "NewProposal", "NewProposal event not emitted");
         assert.equal(tx1.logs[0].args.id.toNumber(), 0, "NewProposal event emitted with incorrect id");
         assert.equal(tx1.logs[0].args.creator, holder, "NewProposal event emitted with incorrect creator");
