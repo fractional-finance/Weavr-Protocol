@@ -44,7 +44,7 @@ contract StubbedDao is Dao, ERC20 {
     mapping(uint256 => DissolutionInfo) private _dissolution;
 
     constructor() ERC20("Integrated Limit Order DEX ERC20", "ILOD") {
-        _mint(msg.sender, 1e8);
+        _mint(msg.sender, 1e18);
         _oracle = 0x0000000000000000000000000000000000000001;
         _votes = 0;
         _platform = 0x0000000000000000000000000000000000000000;
@@ -79,14 +79,18 @@ contract StubbedDao is Dao, ERC20 {
         emit ProposedOracleChange(id, newOracle);
     }
 
-    function proposeDissolutionShort(string calldata info, address purchaser, address token,
+    function proposeDissolution(string calldata info, address purchaser, address token,
         uint256 purchaseAmount) beforeProposal() external returns (uint256 id) {
         require(purchaseAmount != 0, "Asset: Dissolution amount is 0");
-        id = _createProposal(info, block.timestamp + 1 seconds, balanceOf(msg.sender));
+        id = _createProposal(info, block.timestamp + 30 days, balanceOf(msg.sender));
         proposalVoteHeight[id] = block.number;
         _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
         IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount);
         emit ProposedDissolution(id, purchaser, token, purchaseAmount);
+    }
+
+    function getProposalVoteHeight(uint256 id) external view returns (uint256) {
+        return proposalVoteHeight[id];
     }
 
     function voteYes(uint256 id) external {
@@ -174,10 +178,29 @@ contract StubbedDao is Dao, ERC20 {
 //        }
 //    }
 
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        // Update the checkpoints
+        if (from == to) {
+            return;
+        }
+
+        if (from != address(0)) {
+            if ((_checkpoints[from].length == 0) || (_checkpoints[from][_checkpoints[from].length - 1].block != block.number)) {
+                _checkpoints[from].push(Checkpoint(block.number, 0));
+            }
+            _checkpoints[from][_checkpoints[from].length - 1].balance = balanceOf(from) - amount;
+        }
+
+        if ((_checkpoints[to].length == 0) || (_checkpoints[to][_checkpoints[to].length - 1].block != block.number)) {
+            _checkpoints[to].push(Checkpoint(block.number, 0));
+        }
+        _checkpoints[to][_checkpoints[to].length - 1].balance = balanceOf(to) + amount;
+    }
+
     function reclaimDissolutionFunds(uint256 id) external {
         // Require the proposal have ended
         require(!isProposalActive(id), "Asset: Dissolution proposal is active");
-        // If the proposal was queued, require it to have been cancelled
+//        // If the proposal was queued, require it to have been cancelled
         if (getTimeQueued(id) != 0) {
             require(getCancelled(id), "Asset: Dissolution was queued yet not cancelled");
         }
@@ -188,7 +211,6 @@ contract StubbedDao is Dao, ERC20 {
         // Require the dissolution wasn't already reclaimed
         require(!_dissolution[id].reclaimed, "Asset: Dissolution was already reclaimed");
         _dissolution[id].reclaimed = true;
-
         // Transfer the tokens
         IERC20(_dissolution[id].token).transfer(_dissolution[id].purchaser, _dissolution[id].purchaseAmount);
     }
