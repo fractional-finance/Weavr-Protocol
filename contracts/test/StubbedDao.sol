@@ -58,14 +58,14 @@ contract StubbedDao is Dao, ERC20 {
     }
 
     function proposePaper(string calldata info) beforeProposal() external returns (uint256) {
-        uint256 id = _createProposal(info, block.timestamp + 30 days, balanceOf(msg.sender));
+        uint256 id = _createProposal(info, block.timestamp + 2 seconds, balanceOf(msg.sender));
         proposalVoteHeight[id] = block.number;
         return id;
     }
 
     function proposePlatformChange(string calldata info, address platform,
         uint256 newNFT) beforeProposal() external returns (uint256 id) {
-        id = _createProposal(info, block.timestamp + 30 days, balanceOf(msg.sender));
+        id = _createProposal(info, block.timestamp + 2 seconds, balanceOf(msg.sender));
         proposalVoteHeight[id] = block.number;
         _platformChange[id] = PlatformInfo(platform, newNFT);
         emit ProposedPlatformChange(id, platform);
@@ -73,7 +73,7 @@ contract StubbedDao is Dao, ERC20 {
 
     function proposeOracleChange(string calldata info,
         address newOracle) beforeProposal() external returns (uint256 id) {
-        id = _createProposal(info, block.timestamp + 30 days, balanceOf(msg.sender));
+        id = _createProposal(info, block.timestamp + 2 seconds, balanceOf(msg.sender));
         proposalVoteHeight[id] = block.number;
         _oracleChange[id] = newOracle;
         emit ProposedOracleChange(id, newOracle);
@@ -82,7 +82,7 @@ contract StubbedDao is Dao, ERC20 {
     function proposeDissolution(string calldata info, address purchaser, address token,
         uint256 purchaseAmount) beforeProposal() external returns (uint256 id) {
         require(purchaseAmount != 0, "Asset: Dissolution amount is 0");
-        id = _createProposal(info, block.timestamp + 30 days, balanceOf(msg.sender));
+        id = _createProposal(info, block.timestamp + 2 seconds, balanceOf(msg.sender));
         proposalVoteHeight[id] = block.number;
         _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
         IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount);
