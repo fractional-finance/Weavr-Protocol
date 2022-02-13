@@ -8,13 +8,10 @@
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
     "web3": "^1.6.0",
-    "@codechecks/client": "^0.1.12",
-    "coveralls": "^3.1.1",
-    "eth-gas-reporter": "^0.2.23",
-    "truffle": "^5.4.28"
+    "hardhat": "2.8.4"
   },
   "scripts": {
-    "test": "truffle test"
+    "test": "npx hardhat test"
   },
   "repository": {
     "type": "git",
