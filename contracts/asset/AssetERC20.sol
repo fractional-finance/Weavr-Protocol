@@ -2,8 +2,8 @@
 pragma solidity ^0.8.4;
 pragma abicoder v2;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
 import "../modifiers/Ownable.sol";
 import "./AssetWhitelist.sol";
@@ -12,7 +12,7 @@ import "../interfaces/asset/IAssetERC20.sol";
 
 import "../interfaces/platform/IPlatform.sol";
 
-contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLimitOrderDex {
+abstract contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLimitOrderDex {
   address public override platform;
   uint256 public override nft;
   uint256 public shares;
@@ -33,12 +33,14 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
   Distribution[] private _distributions;
   mapping(address => mapping(uint256 => bool)) public override claimed;
 
-  constructor(
+  function initialize(
     address _platform,
     uint256 _nft,
     uint256 _shares,
     string memory symbol
-  ) ERC20("Fabric Asset", symbol) AssetWhitelist(platform) {
+  ) internal initializer {
+    ERC20.initialize("Fabric Asset", symbol);
+    AssetWhitelist.initialize(platform);
     platform = _platform;
     nft = _nft;
     shares = _shares;

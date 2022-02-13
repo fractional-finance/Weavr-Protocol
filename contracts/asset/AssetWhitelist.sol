@@ -5,7 +5,7 @@ import "../interfaces/asset/IAssetWhitelist.sol";
 import "../lists/GlobalWhitelist.sol";
 import "../modifiers/Pausable.sol";
 
-contract AssetWhitelist is IAssetWhitelist, GlobalWhitelist, Pausable {
+abstract contract AssetWhitelist is IAssetWhitelist, GlobalWhitelist, Pausable {
   // Whitelist used for the entire Frabric platform
   IGlobalWhitelist private _parentWhitelist;
 
@@ -14,7 +14,7 @@ contract AssetWhitelist is IAssetWhitelist, GlobalWhitelist, Pausable {
     _parentWhitelist = IGlobalWhitelist(parentWhitelistAddress);
   }
 
-  constructor(address parentWhitelistAddress) GlobalWhitelist() {
+  function initialize(address parentWhitelistAddress) internal initializer {
     _setParentWhitelist(parentWhitelistAddress);
   }
 

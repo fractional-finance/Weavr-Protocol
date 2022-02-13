@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 contract ERC20Instance is ERC20 {
   uint8 public immutable _decimals;
-  constructor(uint8 __decimals, string memory name, string memory symbol) ERC20(name, symbol) {
+  constructor(uint8 __decimals, string memory name, string memory symbol) {
+    ERC20.initialize(name, symbol);
     _decimals = __decimals;
     _mint(msg.sender, 100 * (10 ** __decimals));
   }

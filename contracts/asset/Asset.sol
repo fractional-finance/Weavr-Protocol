@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 
 import "../dao/Dao.sol";
 import "./AssetERC20.sol";
@@ -31,15 +31,21 @@ contract Asset is IAsset, Dao, AssetERC20 {
   mapping(uint256 => address) private _oracleChange;
   mapping(uint256 => DissolutionInfo) private _dissolution;
 
-  constructor(
+  function initialize(
     address platform,
     address _oracle,
     uint256 nft,
     uint256 shares,
     string memory symbol
-  ) AssetERC20(platform, nft, shares, symbol) {
+  ) external initializer {
+    AssetERC20.initialize(platform, nft, shares, symbol);
     votes = shares;
     oracle = _oracle;
+  }
+
+  // Initialize with null info to prevent anyone from accessing this contract
+  constructor() {
+    initialize(address(0), address(0), 0, 0, "");
   }
 
   modifier beforeProposal() {

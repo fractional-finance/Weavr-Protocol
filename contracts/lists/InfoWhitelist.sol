@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 
 import "../interfaces/lists/IInfoWhitelist.sol";
 
-contract InfoWhitelist is IInfoWhitelist {
+abstract contract InfoWhitelist is IInfoWhitelist {
   event InfoChange(address indexed person, bytes32 info);
 
   // Intended to point to a hash of the whitelisted party's personal info
@@ -12,8 +12,6 @@ contract InfoWhitelist is IInfoWhitelist {
   // This is simple and works for Fractional's overall requirements
   // To use this as a boolean, simply use a data hash of 0x1
   mapping(address => bytes32) private _whitelist;
-
-  constructor() {}
 
   // Set dataHash of 0x0 to remove from whitelist
   function _setWhitelisted(address person, bytes32 dataHash) internal {

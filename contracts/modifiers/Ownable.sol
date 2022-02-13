@@ -6,10 +6,12 @@ import "../interfaces/modifiers/IOwnable.sol";
 abstract contract Ownable is IOwnable {
     address private _owner;
 
-    constructor() {
-      _owner = msg.sender;
-      emit OwnershipTransferred(address(0), msg.sender);
+    function initialize(address owner) internal initializer {
+      _owner = owner;
+      emit OwnershipTransferred(address(0), _owner);
     }
+
+    // No constructor included as _owner will be address(0)
 
     function owner() public view override returns (address) {
       return _owner;

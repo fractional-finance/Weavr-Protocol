@@ -7,8 +7,6 @@ abstract contract GloballyAccepted {
 
   bool private _global = false;
 
-  constructor() {}
-
   function _globallyAccept() internal {
     _global = true;
     emit GlobalAcceptance();

@@ -1,21 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 
 import "../modifiers/Ownable.sol";
 import "../lists/GlobalWhitelist.sol";
 
 import "../interfaces/asset/IAsset.sol";
-import "../interfaces/platform/IAssetDeployer.sol";
+import "../interfaces/platform/IFactory.sol";
 import "../interfaces/platform/IPlatform.sol";
 
 contract Platform is ERC721, Ownable, GlobalWhitelist, IPlatform {
   uint256 internal _asset = 0;
   uint256 internal _assetDeployer = 0;
-  mapping(uint256 => IAssetDeployer) internal _assetDeployers;
+  mapping(uint256 => IFactory) internal _assetDeployers;
 
-  constructor() ERC721("Fractional Platform", "FRACTIONAL") Ownable() GlobalWhitelist() {}
+  function initialize() external initializer {
+    ERC721.initialize("Fractional Platform", "FRACTIONAL");
+    Ownable.initialize(msg.sender);
+  }
+
+  constructor() {
+    ERC721.initialize("", "");
+    Ownable.initialize(address(0));
+  }
 
   function setWhitelisted(address person, bytes32 dataHash) onlyOwner external override {
     _setWhitelisted(person, dataHash);
@@ -29,20 +37,20 @@ contract Platform is ERC721, Ownable, GlobalWhitelist, IPlatform {
   }
 
   function addAssetDeployer(address deployer) onlyOwner external override {
-    _assetDeployers[_assetDeployer] = IAssetDeployer(deployer);
+    _assetDeployers[_assetDeployer] = IFactory(deployer);
     emit AddedAssetDeployer(_assetDeployer, deployer);
     _assetDeployer++;
   }
 
   function removeAssetDeployer(uint256 deployer) onlyOwner external override {
-    _assetDeployers[deployer] = IAssetDeployer(address(0));
+    _assetDeployers[deployer] = IFactory(address(0));
     emit DisabledAssetDeployer(deployer);
   }
 
   function deployAsset(uint256 deployer, address oracle, uint256 nft,
                        uint256 shares, string memory symbol) onlyOwner external override returns (address asset) {
     require(address(_assetDeployers[deployer]) != address(0), "Platform: Deployer doesn't exist");
-    asset = _assetDeployers[deployer].deploy(oracle, nft, shares, symbol);
+    asset = _assetDeployers[deployer].deploy(abi.encode(IAsset.initialize.selector, address(this), oracle, nft, shares, symbol));
     emit AssetDeployed(deployer, oracle, nft, asset, shares, symbol);
   }
 
