@@ -9,6 +9,9 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 import "../interfaces/erc20/IIntegratedLimitOrderDex.sol";
 
+// Doesn't support fee on transfer/rebase yet various USD stablecoins do theoretically have fee on transfer
+// Either add an explicit require for non-fee on transfer or support fee on transfer?
+// TODO
 abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex, Initializable, ReentrancyGuardUpgradeable {
   using SafeERC20 for IERC20;
 
