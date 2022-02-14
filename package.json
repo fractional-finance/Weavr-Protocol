@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Blockchain components of the Frabric platform.",
   "dependencies": {
+    "@codechecks/client": "^0.1.12",
     "@openzeppelin/contracts": "^4.1.0",
     "bn-chai": "^1.0.1",
     "chai": "^4.3.4",

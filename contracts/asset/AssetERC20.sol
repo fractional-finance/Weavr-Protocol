@@ -23,6 +23,7 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     uint256 block;
     uint256 balance;
   }
+
   mapping(address => Checkpoint[]) private _checkpoints;
 
   struct Distribution {
@@ -160,4 +161,17 @@ contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLi
     _distributions[id].token.transfer(person, amount);
     emit Claimed(person, id, amount);
   }
+
+/*  function deposit(address token, uint256 amount) external override {
+    require(!dissolved, "AssetERC20: Contract was dissolved");
+    require(!paused, "AssetERC20: Contract is paused");
+    require(!_deposited[token], "AssetERC20: Token has already been deposited");
+    require(amount > 0, "AssetERC20: Amount must be greater than 0");
+    require(amount <= balanceOf(msg.sender), "AssetERC20: Insufficient funds");
+    require(whitelisted(msg.sender), "AssetERC20: Sender isn't whitelisted");
+    require(!_deposited[token], "AssetERC20: Token has already been deposited");
+    _deposited[token] = true;
+    _deposits[token] = amount;
+    emit Deposited(token, amount);
+  }*/
 }
