@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.9;
 
-// Controls whether or not *anyone* can participate or only those explicitly specified by a Whitelist
-abstract contract GloballyAccepted {
-  event GlobalAcceptance();
+import "../interfaces/modifiers/IGloballyAccepted.sol";
 
+// Controls whether or not *anyone* can participate or only those explicitly specified by a Whitelist
+abstract contract GloballyAccepted is IGloballyAccepted {
   bool private _global = false;
 
   function _globallyAccept() internal {
@@ -12,7 +12,7 @@ abstract contract GloballyAccepted {
     emit GlobalAcceptance();
   }
 
-  function global() public view virtual returns (bool) {
+  function global() public view override returns (bool) {
     return _global;
   }
 

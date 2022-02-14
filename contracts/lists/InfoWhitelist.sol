@@ -4,8 +4,6 @@ pragma solidity ^0.8.9;
 import "../interfaces/lists/IInfoWhitelist.sol";
 
 abstract contract InfoWhitelist is IInfoWhitelist {
-  event InfoChange(address indexed person, bytes32 info);
-
   // Intended to point to a hash of the whitelisted party's personal info
   // A simpler, more cost effective whitelist, would use a bool or small int
   // A set could also be extremely efficient
@@ -15,8 +13,11 @@ abstract contract InfoWhitelist is IInfoWhitelist {
 
   // Set dataHash of 0x0 to remove from whitelist
   function _setWhitelisted(address person, bytes32 dataHash) internal {
+    require(_whitelist[person] != dataHash);
+    if ((_whitelist[person] == bytes32(0)) != (dataHash == bytes32(0))) {
+      emit WhitelistChange(person, dataHash != bytes32(0));
+    }
     _whitelist[person] = dataHash;
-    emit WhitelistChange(person, dataHash != bytes32(0));
     emit InfoChange(person, dataHash);
   }
 

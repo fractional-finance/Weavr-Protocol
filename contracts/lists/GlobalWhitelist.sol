@@ -7,11 +7,7 @@ import "./InfoWhitelist.sol";
 import "../modifiers/GloballyAccepted.sol";
 
 // Whitelist with the ability for everyone to eventually be considered whitelisted
-abstract contract GlobalWhitelist is IGlobalWhitelist, InfoWhitelist, IGloballyAccepted, GloballyAccepted {
-  function global() public view override(IGloballyAccepted, GloballyAccepted) returns (bool) {
-    return GloballyAccepted.global();
-  }
-
+abstract contract GlobalWhitelist is IGlobalWhitelist, GloballyAccepted, InfoWhitelist {
   function whitelisted(address person) public view virtual override(IWhitelist, InfoWhitelist) returns (bool) {
     return global() || InfoWhitelist.whitelisted(person);
   }

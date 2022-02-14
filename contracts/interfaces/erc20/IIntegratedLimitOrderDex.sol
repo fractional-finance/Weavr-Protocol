@@ -7,14 +7,15 @@ interface IIntegratedLimitOrderDex {
   event NewSellOrder(uint256 indexed price);
   event OrderIncrease(address indexed sender, uint256 indexed price, uint256 amount);
 
-  function buy(uint256 amount, uint256 price) external payable;
-  function sell(uint256 amount, uint256 price) external;
-  function cancelOrder(uint256 price, uint256 i) external;
-  function withdraw() external;
+  function dexToken() external view returns (address);
+  function locked(address person) external view returns (uint256);
 
-  function getOrderType(uint256 price) external view returns (uint256);
+  function buy(uint256 price, uint256 amount) external;
+  function sell(uint256 price, uint256 amount) external;
+  function cancelOrder(uint256 price, uint256 i) external;
+
+  function getPointType(uint256 price) external view returns (uint256);
   function getOrderQuantity(uint256 price) external view returns (uint256);
   function getOrderHolder(uint256 price, uint256 i) external view returns (address);
   function getOrderAmount(uint256 price, uint256 i) external view returns (uint256);
-  function getEthBalance(address holder) external view returns (uint256);
 }
