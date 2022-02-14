@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.4;
+pragma solidity >=0.8.9;
 
 import "../dao/IDao.sol";
 import "./IAssetERC20.sol";
@@ -11,6 +11,8 @@ interface IAsset is IDao, IAssetERC20 {
   event PlatformChanged(uint256 indexed id, address indexed platform);
   event OracleChanged(uint256 indexed id, address indexed oldOracle, address indexed newOracle);
   event Dissolved(uint256 indexed id, address indexed purchaser, uint256 purchaseAmount);
+
+  function initialize(address platform, address oracle, uint256 nft, uint256 shares, string memory symbol) external;
 
   function oracle() external returns (address);
   function votes() external returns (uint256);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
 // Controls whether or not *anyone* can participate or only those explicitly specified by a Whitelist
 abstract contract GloballyAccepted {

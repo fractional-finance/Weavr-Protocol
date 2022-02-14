@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.4;
-pragma abicoder v2;
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
@@ -12,7 +11,7 @@ import "../interfaces/asset/IAssetERC20.sol";
 
 import "../interfaces/platform/IPlatform.sol";
 
-abstract contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, IntegratedLimitOrderDex {
+abstract contract AssetERC20 is IAssetERC20, Ownable, ERC20Upgradeable, AssetWhitelist, IntegratedLimitOrderDex {
   address public override platform;
   uint256 public override nft;
   uint256 public shares;
@@ -38,15 +37,15 @@ abstract contract AssetERC20 is IAssetERC20, Ownable, ERC20, AssetWhitelist, Int
     uint256 _nft,
     uint256 _shares,
     string memory symbol
-  ) internal initializer {
-    ERC20.initialize("Fabric Asset", symbol);
+  ) internal onlyInitializing {
+    __ERC20_init("Fabric Asset", symbol);
     AssetWhitelist.initialize(platform);
     platform = _platform;
     nft = _nft;
     shares = _shares;
   }
 
-  function decimals() public pure override(ERC20, IERC20Metadata) returns (uint8) {
+  function decimals() public pure override(ERC20Upgradeable, IERC20MetadataUpgradeable) returns (uint8) {
     return 0;
   }
 

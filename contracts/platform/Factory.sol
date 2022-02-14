@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity >=0.8.4;
+pragma solidity >=0.8.9;
 
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import "../modifiers/Ownable.sol";
+import "../interfaces/platform/IFactory.sol";
 
 contract Factory is Ownable, IFactory {
   address public implementation;
 
-  function initialize(address _implementation) external initializer {
-    Ownable.initialize(msg.sender);
+  function initialize(address _implementation) external override initializer {
+    __Ownable_init(msg.sender);
     implementation = _implementation;
   }
 
   constructor() {
-    Ownable.initialize(address(0));
+    __Ownable_init(address(0));
   }
 
 

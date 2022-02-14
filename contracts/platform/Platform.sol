@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 
 import "../modifiers/Ownable.sol";
@@ -10,19 +11,19 @@ import "../interfaces/asset/IAsset.sol";
 import "../interfaces/platform/IFactory.sol";
 import "../interfaces/platform/IPlatform.sol";
 
-contract Platform is ERC721, Ownable, GlobalWhitelist, IPlatform {
+contract Platform is ERC721Upgradeable, Ownable, GlobalWhitelist, IPlatform {
   uint256 internal _asset = 0;
   uint256 internal _assetDeployer = 0;
   mapping(uint256 => IFactory) internal _assetDeployers;
 
   function initialize() external initializer {
-    ERC721.initialize("Fractional Platform", "FRACTIONAL");
-    Ownable.initialize(msg.sender);
+    __ERC721_init("Fractional Platform", "FRACTIONAL");
+    __Ownable_init(msg.sender);
   }
 
   constructor() {
-    ERC721.initialize("", "");
-    Ownable.initialize(address(0));
+    __ERC721_init("", "");
+    __Ownable_init(address(0));
   }
 
   function setWhitelisted(address person, bytes32 dataHash) onlyOwner external override {

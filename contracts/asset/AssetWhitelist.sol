@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../interfaces/asset/IAssetWhitelist.sol";
 import "../lists/GlobalWhitelist.sol";
 import "../modifiers/Pausable.sol";
 
-abstract contract AssetWhitelist is IAssetWhitelist, GlobalWhitelist, Pausable {
+abstract contract AssetWhitelist is Initializable, IAssetWhitelist, GlobalWhitelist, Pausable {
   // Whitelist used for the entire Frabric platform
   IGlobalWhitelist private _parentWhitelist;
 
@@ -14,7 +15,7 @@ abstract contract AssetWhitelist is IAssetWhitelist, GlobalWhitelist, Pausable {
     _parentWhitelist = IGlobalWhitelist(parentWhitelistAddress);
   }
 
-  function initialize(address parentWhitelistAddress) internal initializer {
+  function initialize(address parentWhitelistAddress) internal onlyInitializing {
     _setParentWhitelist(parentWhitelistAddress);
   }
 

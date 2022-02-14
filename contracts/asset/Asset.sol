@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 import "../dao/Dao.sol";
 import "./AssetERC20.sol";
@@ -37,7 +37,7 @@ contract Asset is IAsset, Dao, AssetERC20 {
     uint256 nft,
     uint256 shares,
     string memory symbol
-  ) external initializer {
+  ) public override initializer {
     AssetERC20.initialize(platform, nft, shares, symbol);
     votes = shares;
     oracle = _oracle;

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.4;
+pragma solidity >=0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "../modifiers/IOwnable.sol";
 import "./IAssetWhitelist.sol";
 import "./IIntegratedLimitOrderDex.sol";
 
-interface IAssetERC20 is IOwnable, IERC20, IERC20Metadata, IERC721Receiver, IAssetWhitelist, IIntegratedLimitOrderDex {
+interface IAssetERC20 is IOwnable, IERC20Upgradeable, IERC20MetadataUpgradeable, IERC721Receiver, IAssetWhitelist, IIntegratedLimitOrderDex {
   event Distributed(address indexed token, uint256 amount);
   event Claimed(address indexed person, uint256 indexed id, uint256 amount);
 
