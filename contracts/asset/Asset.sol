@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 import "../dao/Dao.sol";
 import "./AssetERC20.sol";
-
 import "../interfaces/asset/IAsset.sol";
 
 contract Asset is IAsset, Dao, AssetERC20 {
@@ -98,7 +97,6 @@ contract Asset is IAsset, Dao, AssetERC20 {
     if (_dissolution[id].purchaseAmount != 0) {
       require(!_dissolution[id].reclaimed, "Asset: Dissolution had its funds reclaimed");
     }
-
     _queueProposal(id, totalSupply());
   }
 
