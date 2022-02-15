@@ -15,6 +15,8 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable, IntegratedLimitOrderDex, ERC20VotesUpgradeable, FrabricWhitelist {
   using SafeERC20 for IERC20;
 
+  bool public mintable;
+
   struct Distribution {
     IERC20 token;
     uint256 amount;
@@ -27,6 +29,7 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     string memory name,
     string memory symbol,
     uint256 supply,
+    bool _mintable,
     address parentWhitelist
   ) external initializer {
     __ERC20_init(name, symbol);
@@ -36,6 +39,7 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     __Pausable_init();
     __FrabricWhitelist_init(parentWhitelist);
     _mint(msg.sender, supply);
+    mintable = _mintable;
   }
 
   function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDex) {
@@ -46,6 +50,7 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
   }
 
   function mint(address to, uint256 amount) external onlyOwner {
+    require(mintable);
     _mint(to, amount);
   }
 
