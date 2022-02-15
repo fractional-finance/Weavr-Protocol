@@ -52,7 +52,7 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     address _thread,
     address _token,
     uint256 _target
-  ) external initializer {
+  ) public initializer {
     __ERC20_init(string(abi.encodePacked("Crowdfund ", name)), string(abi.encodePacked("CF", symbol)));
     whitelist = _whitelist;
     agent = _agent;
@@ -64,6 +64,10 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     // This could be packed into the following, yet we'd lose indexing
     emit CrowdfundStarted(agent, thread, token, target);
     emit StateChange(uint256(_state), bytes(""));
+  }
+
+  constructor() {
+    initialize("", "", address(0), address(0), address(0), address(0), 0);
   }
 
   // Match the decimals of the underlying ERC20 which this ERC20 maps to
