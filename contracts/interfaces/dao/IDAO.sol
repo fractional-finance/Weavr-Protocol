@@ -2,7 +2,7 @@
 pragma solidity >=0.8.9;
 
 interface IDAO {
-  event NewProposal(uint256 indexed id, address indexed creator, string info);
+  event NewProposal(uint256 indexed id, address indexed creator, uint256 indexed proposalType, string info);
   event ProposalStateChanged(uint256 indexed id, uint256 indexed state);
   event Vote(uint256 indexed id, uint256 indexed direction, address indexed voter, uint256 votes);
   event NoVote(uint256 indexed id, address indexed voter, uint256 votes);

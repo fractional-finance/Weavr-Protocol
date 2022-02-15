@@ -16,6 +16,7 @@ interface IFrabricERC20 is IFrabricWhitelistExposed {
   function setWhitelisted(address person, bytes32 dataHash) external;
   function globallyAccept() external;
 
+  function paused() external returns (bool);
   function pause() external;
   function unpause() external;
 

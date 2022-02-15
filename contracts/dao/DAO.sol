@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+import "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/erc20/IVotes.sol";
 import "../interfaces/dao/IDAO.sol";
 
@@ -38,13 +39,14 @@ abstract contract DAO is IDAO, Initializable {
     // Safe due to the FrabricERC20 being uint224
     int256 votes;
     uint256 totalVotes;
-    Action[] actions;
+    // Used by inheriting contracts
+    uint256 proposalType;
   }
 
   address public erc20;
 
   mapping(uint256 => Proposal) private _proposals;
-  uint256 private _nextProposalId;
+  uint256 internal _nextProposalID;
 
   function __DAO_init(address _erc20) internal onlyInitializing {
     erc20 = _erc20;
@@ -85,10 +87,9 @@ abstract contract DAO is IDAO, Initializable {
   }
 
   // Not exposed as despite working with arbitrary calldata, this calldata is currently contract crafted for specific purposes
-  // The usage of calldata is used to void special constructors and executors for solely constructors
-  function _createProposal(string calldata info, Action[] calldata actions) internal returns (uint256 id) {
-    id = _nextProposalId;
-    _nextProposalId++;
+  function _createProposal(string calldata info, uint256 proposalType) internal returns (uint256 id) {
+    id = _nextProposalID;
+    _nextProposalID++;
 
     Proposal storage proposal = _proposals[id];
     proposal.creator = msg.sender;
@@ -99,10 +100,10 @@ abstract contract DAO is IDAO, Initializable {
     // While the creator could have sold in this block, they can also sell over the next few weeks
     // This is why cancelProposal exists
     proposal.voteBlock = block.number - 1;
-    proposal.actions = actions;
+    proposal.proposalType = proposalType;
 
     // Separate event to allow indexing by creator
-    emit NewProposal(id, proposal.creator, info);
+    emit NewProposal(id, proposal.creator, proposalType, info);
     emit ProposalStateChanged(id, uint256(_proposals[id].state));
 
     // Automatically vote Yes for the creator
@@ -171,8 +172,12 @@ abstract contract DAO is IDAO, Initializable {
     emit ProposalStateChanged(id, uint256(_proposals[id].state));
   }
 
+  function _completeProposal(uint256 id, uint256 proposalType) internal virtual;
+
   // Does not require canonically ordering when executing proposals in case a proposal has invalid actions, halting everything
   function completeProposal(uint256 id) external {
+    require(!IFrabricERC20(erc20).paused(), "DAO: ERC20 is paused");
+
     Proposal storage proposal = _proposals[id];
     require(proposal.state == ProposalState.Queued, "DAO: Proposal wasn't queued");
     require((proposal.stateStartTime + (12 hours)) < block.timestamp, "DAO: Proposal was queued less than 12 hours ago");
@@ -180,10 +185,7 @@ abstract contract DAO is IDAO, Initializable {
     proposal.stateStartTime = block.timestamp;
     emit ProposalStateChanged(id, uint256(proposal.state));
 
-    for (uint i = 0; i < proposal.actions.length; i++) {
-      (bool success, ) = proposal.actions[i].target.call(proposal.actions[i].data);
-      require(success, "DAO: Proposal action failed");
-    }
+    _completeProposal(id, proposal.proposalType);
   }
 
   // Enables withdrawing a proposal

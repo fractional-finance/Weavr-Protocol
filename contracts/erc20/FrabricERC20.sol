@@ -31,7 +31,7 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     uint256 supply,
     bool _mintable,
     address parentWhitelist
-  ) external initializer {
+  ) public initializer {
     __ERC20_init(name, symbol);
     __ERC20Permit_init(name);
     __ERC20Votes_init();
@@ -40,6 +40,10 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     __FrabricWhitelist_init(parentWhitelist);
     _mint(msg.sender, supply);
     mintable = _mintable;
+  }
+
+  constructor() {
+    initialize("", "", 0, false, address(0));
   }
 
   function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDex) {
@@ -75,6 +79,9 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
   }
 
   // Pause functions
+  function paused() public view override(PausableUpgradeable, IFrabricERC20) returns (bool) {
+    return PausableUpgradeable.paused();
+  }
   function pause() external override onlyOwner {
     _pause();
   }
