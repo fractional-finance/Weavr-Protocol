@@ -8,6 +8,8 @@ interface ICrowdfund {
   event Withdraw(address indexed depositor, uint256 amount);
   event Refund(address indexed depositor, uint256 refundAmount);
 
+  function whitelist() external view returns (address);
+
   function agent() external view returns (address);
   function thread() external view returns (address);
 
@@ -17,6 +19,16 @@ interface ICrowdfund {
 
   function state() external view returns (uint256);
   function refunded() external view returns (uint256);
+
+  function initialize(
+    string memory name,
+    string memory symbol,
+    address _whitelist,
+    address _agent,
+    address _thread,
+    address _token,
+    uint256 _target
+  ) external;
 
   function deposit(uint256 amount) external;
   function withdraw(uint256 amount) external;

@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
+import "../interfaces/lists/IWhitelist.sol";
 import "../interfaces/thread/ICrowdfund.sol";
 
 // TODO also resolve the fee on transfer/rebase commentary from the DEX here
@@ -25,6 +26,7 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     Finished
   }
 
+  address public whitelist;
   address public agent;
   address public thread;
   address public token;
@@ -42,8 +44,17 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     return totalSupply();
   }
 
-  function initialize(string memory name, string memory symbol, address _agent, address _thread, address _token, uint256 _target) external initializer {
-    __ERC20_init(name, symbol);
+  function initialize(
+    string memory name,
+    string memory symbol,
+    address _whitelist,
+    address _agent,
+    address _thread,
+    address _token,
+    uint256 _target
+  ) external initializer {
+    __ERC20_init(string(abi.encodePacked("Crowdfund ", name)), string(abi.encodePacked("CF", symbol)));
+    whitelist = _whitelist;
     agent = _agent;
     thread = _thread;
     token = _token;
@@ -83,6 +94,8 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
       amount = target - deposited();
     }
     require(amount != 0, "Crowdfund: Amount is 0");
+
+    require(IWhitelist(whitelist).whitelisted(msg.sender));
 
     // Mint before transferring to prevent re-entrancy causing the Crowdfund to exceed its target
     transferAllowed = true;
