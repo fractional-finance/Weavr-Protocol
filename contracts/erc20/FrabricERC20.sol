@@ -10,7 +10,7 @@ import "../lists/FrabricWhitelist.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 // FrabricERC20s are tokens with a built in limit order DEX, along with governance and dividend functionality
-// A whitelist is also enforced unless disabled by owner, defaulting to a parent whitelist
+// The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
 contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable, IntegratedLimitOrderDex, ERC20VotesUpgradeable, FrabricWhitelist {
   using SafeERC20 for IERC20;
@@ -43,6 +43,10 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
   }
   function balanceOf(address account) public view override(ERC20Upgradeable, IntegratedLimitOrderDex) returns (uint256) {
     return ERC20Upgradeable.balanceOf(account);
+  }
+
+  function mint(address to, uint256 amount) external onlyOwner {
+    _mint(to, amount);
   }
 
   // Disable delegation to enable dividends
@@ -96,8 +100,8 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
   function claim(address person, uint256 id) external override {
     require(!claimedDistribution[person][id], "FrabricERC20: Distribution was already claimed");
     claimedDistribution[person][id] = true;
-    // Divides first in order to make sure everyone is paid, even if some dust is left in the contract
-    uint256 amount = _distributions[id].amount / totalSupply() * getPastVotes(person, _distributions[id].block);
+    uint256 blockNumber = _distributions[id].block;
+    uint256 amount = _distributions[id].amount * getPastVotes(person, blockNumber) / getPastTotalSupply(blockNumber);
     require(amount != 0, "FrabricERC20: Distribution amount is 0");
     _distributions[id].token.safeTransfer(person, amount);
     emit Claimed(person, id, amount);
