@@ -148,7 +148,7 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex, Initializ
 
   function sell(uint256 price, uint256 amount) external override {
     locked[msg.sender] += amount;
-    require(balanceOf(msg.sender) > locked[msg.sender]);
+    require(balanceOf(msg.sender) > locked[msg.sender], "IntegratedLimitOrderDex: Not enough balance");
     action(OrderType.Sell, OrderType.Buy, price, amount);
   }
 

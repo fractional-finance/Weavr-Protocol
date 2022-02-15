@@ -47,7 +47,7 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     agent = _agent;
     thread = _thread;
     token = _token;
-    require(_target != 0);
+    require(_target != 0, "Crowdfund: Fundraising target is 0");
     target = _target;
     _state = State.Active;
     // This could be packed into the following, yet we'd lose indexing
@@ -68,7 +68,7 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
   // Internal variable to allow transfers which is only set when minting/burning
   // Could also override transfer/transferFrom with reverts
   function _beforeTokenTransfer(address, address, uint256) internal view override {
-    require(transferAllowed);
+    require(transferAllowed, "Crowdfund: Token transfers are not allowed");
   }
 
   function burnInternal(address depositor, uint256 amount) private {
@@ -78,11 +78,11 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
   }
 
   function deposit(uint256 amount) external {
-    require(_state == State.Active);
+    require(_state == State.Active, "Crowdfund: Crowdfund isn't active");
     if (amount > (target - deposited())) {
       amount = target - deposited();
     }
-    require(amount != 0);
+    require(amount != 0, "Crowdfund: Amount is 0");
 
     // Mint before transferring to prevent re-entrancy causing the Crowdfund to exceed its target
     transferAllowed = true;
@@ -95,9 +95,9 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
 
   // Enable withdrawing funds before the target is reached
   function withdraw(uint256 amount) external {
-    require(_state == State.Active);
-    require(deposited() != target);
-    require(amount != 0);
+    require(_state == State.Active, "Crowdfund: Crowdfund isn't active");
+    require(deposited() != target, "Crowdfund: Crowdfund reached target");
+    require(amount != 0, "Crowdfund: Amount is 0");
 
     burnInternal(msg.sender, amount);
 
@@ -107,16 +107,16 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
 
   // Cancel a Crowdfund before execution starts
   function cancel() external {
-    require(msg.sender == agent);
-    require(_state == State.Active);
+    require(msg.sender == agent, "Crowdfund: Only the agent can cancel");
+    require(_state == State.Active, "Crowdfund: Crowdfund isn't active");
     _state = State.Cancelled;
     emit StateChange(uint256(_state), abi.encodePacked(deposited()));
   }
 
   // Transfer the funds from a Crowdfund to the agent for execution
   function execute() external {
-    require(deposited() == target);
-    require(_state == State.Active);
+    require(deposited() == target, "Crowdfund: Crowdfund didn't reach target");
+    require(_state == State.Active, "Crowdfund: Crowdfund isn't active");
     _state = State.Executing;
     emit StateChange(uint256(_state), bytes(""));
 
@@ -125,8 +125,8 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
 
   // Take a executing Crowdfund which externally failed and return the leftover funds
   function refund(uint256 amount) external {
-    require(msg.sender == agent);
-    require(_state == State.Executing);
+    require(msg.sender == agent, "Crowdfund: Only the agent can trigger a refund");
+    require(_state == State.Executing, "Crowdfund: Crowdfund isn't executing");
     _state = State.Refunding;
     emit StateChange(uint256(_state), abi.encodePacked(refunded));
 
@@ -138,15 +138,15 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
 
   function claimRefund(address depositor) external {
     uint256 balance = balanceOf(depositor);
-    require(balance != 0);
+    require(balance != 0, "Crowdfund: Balance is 0");
     uint256 refundAmount;
 
     if (_state == State.Cancelled) {
       refundAmount = balance;
     } else if (_state == State.Refunding) {
-      require(refunded != 0);
-      refundAmount = balance * refunded / target;
-      require(refundAmount != 0);
+      require(refunded != 0, "Crowdfund: No refund was issued");
+      refundAmount = refunded * balance / target;
+      require(refundAmount != 0, "Crowdfund: Refund amount is 0");
     } else {
       require(false, "Crowdfund: Not Cancelled nor Refunding");
     }
@@ -157,16 +157,16 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
   }
 
   function finish() external {
-    require(msg.sender == agent);
-    require(_state == State.Executing);
+    require(msg.sender == agent, "Crowdfund: Only the agent can finish");
+    require(_state == State.Executing, "Crowdfund: Crowdfund isn't executing");
     _state = State.Finished;
     emit StateChange(uint256(_state), bytes(""));
   }
 
   // Allow the Thread to burn Crowdfund tokens so it can safely issue Thread tokens
   function burn(address depositor, uint256 amount) external {
-    require(msg.sender == thread);
-    require(_state == State.Finished);
+    require(msg.sender == thread, "Crowdfund: Only the thread can burn");
+    require(_state == State.Finished, "Crowdfund: Crowdfund isn't finished");
     burnInternal(depositor, amount);
   }
 }
