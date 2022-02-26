@@ -3,11 +3,19 @@
   "version": "0.0.1",
   "description": "Blockchain components of the Frabric platform.",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.5.0",
-    "@openzeppelin/contracts-upgradeable": "^4.5.1"
+    "@nomiclabs/hardhat-truffle5": "^2.0.4",
+    "@openzeppelin/contracts": "^4.1.0",
+    "bn-chai": "^1.0.1",
+    "chai": "^4.3.4",
+    "chai-as-promised": "^7.1.1",
+    "hardhat": "2.8.4",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "hardhat-web3": "^1.0.1",
+    "web3": "^1.6.0",
+    "ethers": "^5.5.4"
   },
   "scripts": {
-    "test": "hardhat test"
+    "test": "npx hardhat test"
   },
   "repository": {
     "type": "git",
@@ -18,8 +26,5 @@
   "bugs": {
     "url": "https://github.com/Frabric/weave/issues"
   },
-  "homepage": "https://github.com/Frabric/weave#readme",
-  "devDependencies": {
-    "hardhat": "^2.8.4"
-  }
+  "homepage": "https://github.com/Frabric/weave#readme"
 }
