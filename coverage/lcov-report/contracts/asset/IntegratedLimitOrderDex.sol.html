@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/asset/IntegratedLimitOrderDex.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../../index.html">all files</a> / <a href="index.html">contracts/asset/</a> IntegratedLimitOrderDex.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">72.09% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>62/86</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">51.67% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>31/60</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">50% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>5/10</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">71.08% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>59/83</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line medium'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">18×</span>
+<span class="cline-any cline-yes">18×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">18×</span>
+<span class="cline-any cline-yes">18×</span>
+<span class="cline-any cline-yes">18×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">18×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: AGPLv3
+pragma solidity ^0.8.4;
+&nbsp;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+&nbsp;
+import "../interfaces/asset/IIntegratedLimitOrderDex.sol";
+&nbsp;
+// In order to be integrated into an ERC20, the ERC20 must allow itself to transfer from any holder
+abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex {
+  using SafeERC20 for IERC20;
+&nbsp;
+  enum OrderType { Null, Buy, Sell }
+  struct Suborder {
+    address holder;
+    uint256 amount;
+  }
+&nbsp;
+  struct Order {
+    OrderType orderType;
+    Suborder[] holders;
+  }
+&nbsp;
+  // Indexed by price
+  mapping (uint256 =&gt; Order) private _orders;
+&nbsp;
+  // ETH balances
+  // Used when an order is filled as ETH cannot be directly transferred
+  // While it technically can be, it risks causing the transaction to fail
+  mapping (address =&gt; uint256) private _eth;
+&nbsp;
+  // Fill an order
+  function fill(bool buying, uint256 amount, uint256 price, Order storage order) private returns (uint256) {
+    // Fill orders until there are either no orders or our order is filled
+    uint256 filled = 0;
+    uint256 h = 0;
+    for (; (h &lt; order.holders.length) &amp;&amp; (amount != filled); h++) {
+      uint256 thisAmount = order.holders[h].amount;
+      if (thisAmount &gt; amount) {
+        thisAmount = amount;
+      }
+      order.holders[h].amount -= thisAmount;
+      filled += thisAmount;
+      emit Filled(msg.sender, order.holders[h].holder, price, amount);
+&nbsp;
+      if (buying) {
+        // Internally transfer ETH
+        // We can't directly transfer ETH due to the ability for any recipient of ETH to cause the transaction to fail
+        _eth[order.holders[h].holder] += thisAmount * price;
+      } else {
+        // Internally transfer the sold ERC20s
+        // Uses an external call in order to set msg.sender to address(this)
+        IERC20(address(this)).safeTransfer(order.holders[h].holder, thisAmount);
+      }
+    }
+&nbsp;
+    // Transfer the purchased ERC20 sum
+    if (buying) {
+      IERC20(address(this)).safeTransfer(msg.sender, filled);
+    } else {
+      _eth[msg.sender] += filled * price;
+    }
+&nbsp;
+    // h will always be after the last edited order
+    h--;
+&nbsp;
+    // This crux order may have been partially filled or fully filled
+    // If it's partially filled, decrement again
+    if (order.holders[h].amount != 0) {
+      // Prevents reversion by underflow
+      // If we didn't fill any orders, there's nothing left to do
+      <span class="missing-if-branch" title="else path not taken" >E</span>if (h == 0) {
+        return filled;
+      }
+      h--;
+    }
+&nbsp;
+    // If we filled every order, set the order type to null
+    if (h == (order.holders.length - 1)) {
+      order.orderType = OrderType.Null;
+      // Clear the holders array
+      // For now, this also offers a gas refund, yet future EIPs will remove this
+      while (order.holders.length != 0) {
+        order.holders.pop();
+      }
+    } else {
+      // Do a O(1) deletion from the holders array for each filled order
+      // A shift would be very expensive and the 18 decimal accuracy of Ethereum means preserving the order of orders wouldn't be helpful
+      // 1 wei is microscopic, so placing a 1 wei different order...
+      for (uint256 i = 0; i &lt;= h; i++) {
+        if ((h + i) &lt; order.holders.length) {
+          order.holders[i] = order.holders[order.holders.length - 1];
+        }
+        order.holders.pop();
+      }
+    }
+&nbsp;
+    return filled;
+  }
+&nbsp;
+  // Price is always denoted in ETH
+  function buy(uint256 amount, uint256 price) public override payable {
+    <span class="missing-if-branch" title="else path not taken" >E</span>require(amount != 0, "IntegratedLimitOrderDex: Amount is 0");
+    <span class="missing-if-branch" title="else path not taken" >E</span>require(price != 0, "IntegratedLimitOrderDex: Price is 0");
+    <span class="missing-if-branch" title="else path not taken" >E</span>require(msg.value == amount * price, "IntegratedLimitOrderDex: Invalid message value");
+&nbsp;
+    Order storage order = _orders[price];
+    if (order.orderType == OrderType.Null) {
+      order.orderType = OrderType.Buy;
+      order.holders.push(Suborder(msg.sender, amount));
+      emit NewBuyOrder(price);
+      emit OrderIncrease(msg.sender, price, amount);
+    } else if (order.orderType == OrderType.Buy) {
+      order.holders.push(Suborder(msg.sender, amount));
+      emit OrderIncrease(msg.sender, price, amount);
+    } else <span class="missing-if-branch" title="else path not taken" >E</span>if (order.orderType == OrderType.Sell) {
+      uint256 filled = fill(true, amount, price, order);
+&nbsp;
+      // Create a buy order for any outstanding amount
+      if (filled &lt; amount) {
+        order.orderType = OrderType.Buy;
+        order.holders.push(Suborder(msg.sender, amount - filled));
+        emit NewBuyOrder(price);
+        emit OrderIncrease(msg.sender, price, amount);
+      }
+    } else {
+<span class="cstat-no" title="statement not covered" >      require(false, "IntegratedLimitOrderDex: OrderType enum expanded yet not case handler")</span>;
+    }
+  }
+&nbsp;
+  function sell(uint256 amount, uint256 price) public override {
+    <span class="missing-if-branch" title="else path not taken" >E</span>require(amount != 0, "IntegratedLimitOrderDex: Amount is 0");
+    <span class="missing-if-branch" title="else path not taken" >E</span>require(price != 0, "IntegratedLimitOrderDex: Price is 0");
+    IERC20(address(this)).safeTransferFrom(msg.sender, address(this), amount);
+&nbsp;
+    Order storage order = _orders[price];
+    if (order.orderType == OrderType.Null) {
+      order.orderType = OrderType.Sell;
+      order.holders.push(Suborder(msg.sender, amount));
+      emit NewSellOrder(price);
+      emit OrderIncrease(msg.sender, price, amount);
+    } else if (order.orderType == OrderType.Buy) {
+      uint256 filled = fill(false, amount, price, order);
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (filled &lt; amount) {
+<span class="cstat-no" title="statement not covered" >        order.orderType = OrderType.Sell</span>;
+<span class="cstat-no" title="statement not covered" >        order.holders.push(Suborder(msg.sender, amount - filled))</span>;
+<span class="cstat-no" title="statement not covered" >        emit NewSellOrder(price);</span>
+<span class="cstat-no" title="statement not covered" >        emit OrderIncrease(msg.sender, price, amount - filled);</span>
+      }
+    } else <span class="missing-if-branch" title="else path not taken" >E</span>if (order.orderType == OrderType.Sell) {
+      order.holders.push(Suborder(msg.sender, amount));
+    } else {
+<span class="cstat-no" title="statement not covered" >      require(false, "IntegratedLimitOrderDex: OrderType enum expanded yet not case handler")</span>;
+    }
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function cancelOrder(uint256 price, uint256 i) external override {</span>
+<span class="cstat-no" title="statement not covered" >    require(_orders[price].orderType != OrderType.Null, "IntegratedLimitOrderDex: Trying to cancel a null order")</span>;
+<span class="cstat-no" title="statement not covered" >    require(_orders[price].holders[i].holder == msg.sender, "IntegratedLimitOrderDex: Trying to cancel an order which isn't yours")</span>;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    if (_orders[price].orderType == OrderType.Buy) {</span>
+      // It may be better to have this add to _eth, pushing its flow through withdraw
+<span class="cstat-no" title="statement not covered" >      (bool success, ) = msg.sender.call{value: (_orders[price].holders[i].amount * price)}("");</span>
+<span class="cstat-no" title="statement not covered" >      require(success, "IntegratedLimitOrderDex: Couldn't transfer the ETH back to the order placer")</span>;
+    } else <span class="cstat-no" title="statement not covered" >if (_orders[price].orderType == OrderType.Sell) {</span>
+<span class="cstat-no" title="statement not covered" >      IERC20(address(this)).safeTransfer(msg.sender, _orders[price].holders[i].amount)</span>;
+    } else {
+<span class="cstat-no" title="statement not covered" >      require(false, "IntegratedLimitOrderDex: OrderType enum expanded yet not case handler")</span>;
+    }
+&nbsp;
+    // If this is not the last order, shift the last order down
+<span class="cstat-no" title="statement not covered" >    if (i != (_orders[price].holders.length - 1)) {</span>
+<span class="cstat-no" title="statement not covered" >      _orders[price].holders[i] = _orders[price].holders[_orders[price].holders.length - 1]</span>;
+    }
+<span class="cstat-no" title="statement not covered" >    _orders[price].holders.pop()</span>;
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function withdraw() public override {</span>
+<span class="cstat-no" title="statement not covered" >    uint256 balance = _eth[msg.sender];</span>
+<span class="cstat-no" title="statement not covered" >    _eth[msg.sender] = 0</span>;
+<span class="cstat-no" title="statement not covered" >    (bool success, ) = msg.sender.call{value: balance}("");</span>
+<span class="cstat-no" title="statement not covered" >    require(success, "IntegratedLimitOrderDex: Couldn't withdraw ETH")</span>;
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function getOrderType(uint256 price) public view override returns (uint256) {</span>
+<span class="cstat-no" title="statement not covered" >    return uint256(_orders[price].orderType);</span>
+  }
+&nbsp;
+  function getOrderQuantity(uint256 price) public view override returns (uint256) {
+    return _orders[price].holders.length;
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function getOrderHolder(uint256 price, uint256 i) public view override returns (address) {</span>
+<span class="cstat-no" title="statement not covered" >    return _orders[price].holders[i].holder;</span>
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function getOrderAmount(uint256 price, uint256 i) public view override returns (uint256) {</span>
+<span class="cstat-no" title="statement not covered" >    return _orders[price].holders[i].amount;</span>
+  }
+&nbsp;
+  function getEthBalance(address holder) public view override returns (uint256) {
+    return _eth[holder];
+  }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Mar 04 2022 17:14:56 GMT+0100 (Central European Standard Time)
+</div>
+</div>
+<script src="../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../sorter.js"></script>
+</body>
+</html>

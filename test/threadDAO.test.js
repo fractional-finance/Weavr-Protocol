@@ -1,4 +1,7 @@
 const { assert } = require("chai");
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+
 
 require("chai")
     .use(require("bn-chai")(web3.utils.BN))
@@ -73,4 +76,26 @@ contract("IntegratedDAO", accounts=> {
 
     it("Proposal's voting period should terminate after 30 days", async () => {});
 
+});
+
+
+describe("HARDHAT threadDAO tests", function(){
+  let addr;
+  beforeEach(async function(){
+    
+    daoContract = await ethers.getContractFactory("StubbedDAO");
+    daoContract = await daoContract.deploy();
+    await daoContract.deployed();
+    token_qty = 100;
+    
+  });
+
+  describe("Voting", async function(){
+    
+    describe("Should be able to vote on a proposal", async function(){
+      const [owner, addr1] = await ethers.getSigners();
+      addr = owner.address;
+      console.log(owner.address);
+    });
+  });
 });

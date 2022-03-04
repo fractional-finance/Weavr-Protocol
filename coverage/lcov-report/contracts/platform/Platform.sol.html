@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/platform/Platform.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../../index.html">all files</a> / <a href="index.html">contracts/platform/</a> Platform.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>0/16</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>0/2</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>0/10</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">0% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>0/18</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line low'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+&nbsp;
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+&nbsp;
+import "../modifiers/Ownable.sol";
+import "../lists/GlobalWhitelist.sol";
+&nbsp;
+import "../interfaces/asset/IAsset.sol";
+import "../interfaces/platform/IAssetDeployer.sol";
+import "../interfaces/platform/IPlatform.sol";
+&nbsp;
+contract Platform is ERC721, Ownable, GlobalWhitelist, IPlatform {
+  uint256 internal _asset = 0;
+  uint256 internal _assetDeployer = 0;
+  mapping(uint256 =&gt; IAssetDeployer) internal _assetDeployers;
+&nbsp;
+<span class="fstat-no" title="function not covered" >  constructor() ERC721("Fractional Platform", "FRACTIONAL") Ownable() GlobalWhitelist() {}</span>
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function setWhitelisted(address person, bytes32 dataHash) onlyOwner external override {</span>
+<span class="cstat-no" title="statement not covered" >    _setWhitelisted(person, dataHash)</span>;
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function createNFT(string calldata data) onlyOwner external override returns (uint256) {</span>
+<span class="cstat-no" title="statement not covered" >    _safeMint(msg.sender, _asset)</span>;
+<span class="cstat-no" title="statement not covered" >    emit AssetMinted(_asset, data);</span>
+    _asset++;
+<span class="cstat-no" title="statement not covered" >    return _asset - 1;</span>
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function addAssetDeployer(address deployer) onlyOwner external override {</span>
+<span class="cstat-no" title="statement not covered" >    _assetDeployers[_assetDeployer] = IAssetDeployer(deployer)</span>;
+<span class="cstat-no" title="statement not covered" >    emit AddedAssetDeployer(_assetDeployer, deployer);</span>
+    _assetDeployer++;
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function removeAssetDeployer(uint256 deployer) onlyOwner external override {</span>
+<span class="cstat-no" title="statement not covered" >    _assetDeployers[deployer] = IAssetDeployer(address(0))</span>;
+<span class="cstat-no" title="statement not covered" >    emit DisabledAssetDeployer(deployer);</span>
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function deployAsset(uint256 deployer, address oracle, uint256 nft,</span>
+                       uint256 shares, string memory symbol) onlyOwner external override returns (address asset) {
+<span class="cstat-no" title="statement not covered" >    require(address(_assetDeployers[deployer]) != address(0), "Platform: Deployer doesn't exist")</span>;
+<span class="cstat-no" title="statement not covered" >    asset = _assetDeployers[deployer].deploy(oracle, nft, shares, symbol)</span>;
+<span class="cstat-no" title="statement not covered" >    emit AssetDeployed(deployer, oracle, nft, asset, shares, symbol);</span>
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function proposePaper(address asset, string calldata info) onlyOwner external override returns (uint256) {</span>
+<span class="cstat-no" title="statement not covered" >    return IAsset(asset).proposePaper(info);</span>
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function proposePlatformChange(address asset, string calldata info, address platform,</span>
+                                 uint256 newNFT) onlyOwner external override returns (uint256) {
+<span class="cstat-no" title="statement not covered" >    return IAsset(asset).proposePlatformChange(info, platform, newNFT);</span>
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function proposeOracleChange(address asset, string calldata info, address newOracle) onlyOwner external override returns (uint256) {</span>
+<span class="cstat-no" title="statement not covered" >    return IAsset(asset).proposeOracleChange(info, newOracle);</span>
+  }
+&nbsp;
+<span class="fstat-no" title="function not covered" >  function proposeDissolution(address asset, string calldata info, address purchaser,</span>
+                              address token, uint256 purchaseAmount) onlyOwner external override returns (uint256) {
+<span class="cstat-no" title="statement not covered" >    IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount)</span>;
+<span class="cstat-no" title="statement not covered" >    return IAsset(asset).proposeDissolution(info, purchaser, token, purchaseAmount);</span>
+  }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Mar 04 2022 17:14:56 GMT+0100 (Central European Standard Time)
+</div>
+</div>
+<script src="../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../sorter.js"></script>
+</body>
+</html>

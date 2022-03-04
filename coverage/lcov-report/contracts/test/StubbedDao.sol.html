@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/test/StubbedDao.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../../index.html">all files</a> / <a href="index.html">contracts/test/</a> StubbedDao.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">53.23% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>33/62</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">41.18% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>14/34</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">53.33% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>8/15</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">53.97% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>34/63</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line medium'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: AGPLv3
+pragma solidity ^0.8.4;
+&nbsp;
+import "../dao/Dao.sol";
+import "../asset/AssetERC20.sol";
+import "./ERC20.sol";
+&nbsp;
+contract StubbedDao is Dao, ERC20 {
+&nbsp;
+    mapping(address =&gt; Checkpoint[]) private _checkpoints;
+    event ProposedPlatformChange(uint256 indexed id, address indexed platform);
+    event ProposedOracleChange(uint256 indexed id, address indexed oracle);
+    event ProposedDissolution(uint256 indexed id, address indexed purchaser, address token, uint256 purchaseAmount);
+    event PlatformChanged(uint256 indexed id, address indexed platform);
+    event OracleChanged(uint256 indexed id, address indexed oldOracle, address indexed newOracle);
+    event Dissolved(uint256 indexed id, address indexed purchaser, uint256 purchaseAmount);
+&nbsp;
+    address public _oracle;
+    address public _platform;
+    uint256 public _votes;
+&nbsp;
+    struct Checkpoint {
+        uint256 block;
+        uint256 balance;
+    }
+&nbsp;
+&nbsp;
+    struct PlatformInfo {
+        address platform;
+        uint256 nft;
+    }
+&nbsp;
+    struct DissolutionInfo {
+        address purchaser;
+        address token;
+        uint256 purchaseAmount;
+        bool reclaimed;
+    }
+&nbsp;
+    mapping(uint256 =&gt; uint256) public proposalVoteHeight;
+    // Various extra info for proposals
+    mapping(uint256 =&gt; PlatformInfo) private _platformChange;
+    mapping(uint256 =&gt; address) private _oracleChange;
+    mapping(uint256 =&gt; DissolutionInfo) private _dissolution;
+&nbsp;
+    constructor() ERC20("Integrated Limit Order DEX ERC20", "ILOD") {
+        _mint(msg.sender, 1e18);
+        _oracle = 0x0000000000000000000000000000000000000001;
+        _votes = 0;
+        _platform = 0x0000000000000000000000000000000000000000;
+    }
+&nbsp;
+    modifier beforeProposal() {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require((balanceOf(msg.sender) != 0) ||
+        (msg.sender == address(_platform)) || (msg.sender == address(_oracle)),
+            "Asset: Proposer is not authorized to create a proposal");
+        _;
+    }
+&nbsp;
+    function proposePaper(string calldata info) beforeProposal() external returns (uint256) {
+        uint256 id = _createProposal(info, block.timestamp + 2 seconds, balanceOf(msg.sender));
+        proposalVoteHeight[id] = block.number;
+        return id;
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function proposePlatformChange(string calldata info, address platform,</span>
+        uint256 newNFT) beforeProposal() external returns (uint256 id) {
+<span class="cstat-no" title="statement not covered" >        id = _createProposal(info, block.timestamp + 2 seconds, balanceOf(msg.sender))</span>;
+<span class="cstat-no" title="statement not covered" >        proposalVoteHeight[id] = block.number</span>;
+<span class="cstat-no" title="statement not covered" >        _platformChange[id] = PlatformInfo(platform, newNFT)</span>;
+<span class="cstat-no" title="statement not covered" >        emit ProposedPlatformChange(id, platform);</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function proposeOracleChange(string calldata info,</span>
+        address newOracle) beforeProposal() external returns (uint256 id) {
+<span class="cstat-no" title="statement not covered" >        id = _createProposal(info, block.timestamp + 2 seconds, balanceOf(msg.sender))</span>;
+<span class="cstat-no" title="statement not covered" >        proposalVoteHeight[id] = block.number</span>;
+<span class="cstat-no" title="statement not covered" >        _oracleChange[id] = newOracle</span>;
+<span class="cstat-no" title="statement not covered" >        emit ProposedOracleChange(id, newOracle);</span>
+    }
+&nbsp;
+    function proposeDissolution(string calldata info, address purchaser, address token,
+        uint256 purchaseAmount) beforeProposal() external returns (uint256 id) {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(purchaseAmount != 0, "Asset: Dissolution amount is 0");
+        id = _createProposal(info, block.timestamp + 2 seconds, balanceOf(msg.sender));
+        proposalVoteHeight[id] = block.number;
+        _dissolution[id] = DissolutionInfo(purchaser, token, purchaseAmount, false);
+        IERC20(token).transferFrom(msg.sender, address(this), purchaseAmount);
+        emit ProposedDissolution(id, purchaser, token, purchaseAmount);
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function getProposalVoteHeight(uint256 id) external view returns (uint256) {</span>
+<span class="cstat-no" title="statement not covered" >        return proposalVoteHeight[id];</span>
+    }
+&nbsp;
+    function voteYes(uint256 id) external {
+        _voteYes(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]));
+    }
+<span class="fstat-no" title="function not covered" >    function voteNo(uint256 id) external {</span>
+<span class="cstat-no" title="statement not covered" >        _voteNo(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]))</span>;
+    }
+<span class="fstat-no" title="function not covered" >    function abstain(uint256 id) external {</span>
+<span class="cstat-no" title="statement not covered" >        _abstain(id, balanceOfAtHeight(msg.sender, proposalVoteHeight[id]))</span>;
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function passProposal(uint256 id) external {</span>
+        // If this is a dissolution, require they didn't reclaim the funds
+        // There's a temporary time window before this function is called where the proposal has expired, yet isn't queued
+        // Reclaiming funds is allowed during this time as that looks identical to a failed proposal
+<span class="cstat-no" title="statement not covered" >        if (_dissolution[id].purchaseAmount != 0) {</span>
+<span class="cstat-no" title="statement not covered" >            require(!_dissolution[id].reclaimed, "Asset: Dissolution had its funds reclaimed")</span>;
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        _queueProposal(id, totalSupply())</span>;
+    }
+&nbsp;
+    // Renegers refers to anyone who has reneged from their stake and therefore should no longer be considered as voters
+<span class="fstat-no" title="function not covered" >    function cancelProposal(uint256 id, address[] calldata renegers) external {</span>
+<span class="cstat-no" title="statement not covered" >        uint256[] memory oldVotes = new uint[](renegers.length);</span>
+<span class="cstat-no" title="statement not covered" >        uint256[] memory newVotes = new uint[](renegers.length);</span>
+<span class="cstat-no" title="statement not covered" >        for (uint256 i = 0; i &lt; renegers.length; i++) {</span>
+<span class="cstat-no" title="statement not covered" >            oldVotes[i] = balanceOfAtHeight(renegers[i], proposalVoteHeight[id])</span>;
+<span class="cstat-no" title="statement not covered" >            newVotes[i] = balanceOf(renegers[i])</span>;
+        }
+<span class="cstat-no" title="statement not covered" >        _cancelProposal(id, renegers, oldVotes, newVotes)</span>;
+    }
+&nbsp;
+    function balanceOfAtHeight(address person, uint256 height) public view returns (uint256) {
+        // Only run when the balances have finalized; prevents flash loans from being used
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(height &lt; block.number, "AssetERC20: Height is either this block or in the future");
+&nbsp;
+        // No balance or earliest balance was after specified height
+        <span class="missing-if-branch" title="if path not taken" >I</span>if ((_checkpoints[person].length == 0) || (_checkpoints[person][0].block &gt; height)) {
+<span class="cstat-no" title="statement not covered" >            return 0;</span>
+        }
+&nbsp;
+        // Most recent checkpoint is accurate
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (_checkpoints[person][_checkpoints[person].length - 1].block &lt;= height) {
+            return _checkpoints[person][_checkpoints[person].length - 1].balance;
+        }
+&nbsp;
+        // Binary search for the applicable checkpoint
+        // Choose the bottom of the median
+<span class="cstat-no" title="statement not covered" >        uint i = (_checkpoints[person].length / 2) - 1;</span>
+        // Look for the most recent checkpoint before this block
+        // i + 1 is guaranteed to exist as it is never the most recent checkpoint
+        // In the case of a single checkpoint, it IS the most recent checkpoint, and therefore would've been caught above
+<span class="cstat-no" title="statement not covered" >        while (!((_checkpoints[person][i].block &lt;= height) &amp;&amp; (_checkpoints[person][i + 1].block &gt; height))) {</span>
+<span class="cstat-no" title="statement not covered" >            if (_checkpoints[person][i].block &lt; height) {</span>
+                // Move up
+                // Will never move up to the most recent checkpoint as 1 (the final step) / 2 is 0
+<span class="cstat-no" title="statement not covered" >                i += (_checkpoints[person].length - i) / 2</span>;
+            } else {
+                // Move down
+<span class="cstat-no" title="statement not covered" >                i = i / 2</span>;
+            }
+        }
+<span class="cstat-no" title="statement not covered" >        return _checkpoints[person][i].balance;</span>
+    }
+&nbsp;
+//    function enactProposal(uint256 id) external override {
+//        _completeProposal(id);
+//
+//        if (_platformChange[id].platform != address(0)) {
+//            platform = _platformChange[id].platform;
+//            nft = _platformChange[id].nft;
+//            IERC721(platform).safeTransferFrom(platform, address(this), nft);
+//            emit PlatformChanged(id, platform);
+//        } else if (_oracleChange[id] != address(0)) {
+//            emit OracleChanged(id, oracle, _oracleChange[id]);
+//            oracle = _oracleChange[id];
+//        } else if (_dissolution[id].purchaseAmount != 0) {
+//            _distribute(IERC20(_dissolution[id].token), _dissolution[id].purchaseAmount);
+//            IERC721(platform).safeTransferFrom(address(this), _dissolution[id].purchaser, nft);
+//            dissolved = true;
+//            _pause();
+//            emit Dissolved(id, _dissolution[id].purchaser, _dissolution[id].purchaseAmount);
+//        }
+//    }
+&nbsp;
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        // Update the checkpoints
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (from == to) {
+<span class="cstat-no" title="statement not covered" >            return;</span>
+        }
+&nbsp;
+        if (from != address(0)) {
+            <span class="missing-if-branch" title="else path not taken" >E</span>if ((_checkpoints[from].length == 0) || (_checkpoints[from][_checkpoints[from].length - 1].block != block.number)) {
+                _checkpoints[from].push(Checkpoint(block.number, 0));
+            }
+            _checkpoints[from][_checkpoints[from].length - 1].balance = balanceOf(from) - amount;
+        }
+&nbsp;
+        <span class="missing-if-branch" title="else path not taken" >E</span>if ((_checkpoints[to].length == 0) || (_checkpoints[to][_checkpoints[to].length - 1].block != block.number)) {
+            _checkpoints[to].push(Checkpoint(block.number, 0));
+        }
+        _checkpoints[to][_checkpoints[to].length - 1].balance = balanceOf(to) + amount;
+    }
+&nbsp;
+    function reclaimDissolutionFunds(uint256 id) external {
+        // Require the proposal have ended
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(!isProposalActive(id), "Asset: Dissolution proposal is active");
+//        // If the proposal was queued, require it to have been cancelled
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (getTimeQueued(id) != 0) {
+<span class="cstat-no" title="statement not covered" >            require(getCancelled(id), "Asset: Dissolution was queued yet not cancelled")</span>;
+        }
+&nbsp;
+        // Require this is actually a dissolution
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(_dissolution[id].purchaseAmount != 0, "Asset: Proposal isn't a dissolution");
+&nbsp;
+        // Require the dissolution wasn't already reclaimed
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(!_dissolution[id].reclaimed, "Asset: Dissolution was already reclaimed");
+        _dissolution[id].reclaimed = true;
+        // Transfer the tokens
+        IERC20(_dissolution[id].token).transfer(_dissolution[id].purchaser, _dissolution[id].purchaseAmount);
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Mar 04 2022 17:14:56 GMT+0100 (Central European Standard Time)
+</div>
+</div>
+<script src="../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../sorter.js"></script>
+</body>
+</html>
