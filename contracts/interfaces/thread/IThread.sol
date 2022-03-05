@@ -4,14 +4,19 @@ pragma solidity >=0.8.9;
 import "../dao/IDAO.sol";
 
 interface IThread is IDAO {
-  event OracleChangeProposed(uint256 indexed id, address indexed oracle);
+  event PaperProposed(uint256 indexed id, string info);
+  event AgentChangeProposed(uint256 indexed id, address indexed agent);
+  event FrabricChangeProposed(uint256 indexed id, address indexed frabric);
   event DissolutionProposed(uint256 indexed id, address indexed purchaser, address indexed token, uint256 amount);
+
   event PaperDecision(uint256 indexed id);
-  event OracleChanged(address indexed oldOracle, address indexed newOracle);
+  event AgentChanged(address indexed oldAgent, address indexed newAgent);
+  event FrabricChanged(address indexed oldAgent, address indexed newAgent);
   event Dissolved(uint256 indexed id);
 
-  function oracle() external view returns (address);
   function crowdfund() external view returns (address);
+  function agent() external view returns (address);
+  function frabric() external view returns (address);
 
   function initialize(
     address _crowdfund,
@@ -27,9 +32,13 @@ interface IThread is IDAO {
   function migrateFromCrowdfund() external;
 
   function proposePaper(string calldata info) external returns (uint256 id);
-  function proposeOracleChange(
+  function proposeAgentChange(
     string calldata info,
-    address _oracle
+    address _agent
+  ) external returns (uint256 id);
+  function proposeFrabricChange(
+    string calldata info,
+    address _frabric
   ) external returns (uint256 id);
   function proposeDissolution(
     string calldata info,

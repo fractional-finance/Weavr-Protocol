@@ -17,8 +17,9 @@ import "../dao/DAO.sol";
 contract Thread is IThread, Initializable, DAO {
   using SafeERC20 for IERC20;
 
-  address public crowdfund;
-  address public oracle;
+  address public override crowdfund;
+  address public override agent;
+  address public override frabric;
 
   struct Dissolution {
     address purchaser;
@@ -26,7 +27,9 @@ contract Thread is IThread, Initializable, DAO {
     uint256 amount;
   }
 
-  mapping(uint256 => address) private _oracles;
+  // Private as all this info is available via events
+  mapping(uint256 => address) private _agents;
+  mapping(uint256 => address) private _frabrics;
   mapping(uint256 => Dissolution) private _dissolutions;
 
   // Normalize the Crowdfund token amount to the Thread's
@@ -40,16 +43,16 @@ contract Thread is IThread, Initializable, DAO {
     string memory name,
     string memory symbol,
     address parentWhitelist,
-    address agent,
+    address _agent,
     address raiseToken,
     uint256 target
   ) public initializer {
     __DAO_init(_erc20);
     crowdfund = _crowdfund;
-    ICrowdfund(crowdfund).initialize(name, symbol, parentWhitelist, agent, address(this), raiseToken, target);
+    ICrowdfund(crowdfund).initialize(name, symbol, parentWhitelist, _agent, address(this), raiseToken, target);
     IFrabricERC20(erc20).initialize(name, symbol, normalize(target), false, parentWhitelist);
-    oracle = agent;
-    emit OracleChanged(address(0), oracle);
+    agent = _agent;
+    emit AgentChanged(address(0), agent);
   }
 
   // Initialize with null info to prevent anyone from accessing this contract
@@ -66,23 +69,34 @@ contract Thread is IThread, Initializable, DAO {
   modifier beforeProposal() {
     require(
       (IERC20(erc20).balanceOf(msg.sender) != 0) ||
-      (msg.sender == address(oracle)),
+      (msg.sender == address(agent)) ||
+      (msg.sender == address(frabric)),
       "Thread: Proposer is not authorized to create a proposal"
     );
     _;
   }
 
   function proposePaper(string calldata info) external beforeProposal() override returns (uint256) {
+    emit PaperProposed(_nextProposalID, info);
     return _createProposal(info, 0);
   }
 
-  function proposeOracleChange(
+  function proposeAgentChange(
     string calldata info,
-    address _oracle
+    address _agent
   ) external beforeProposal() override returns (uint256 id) {
-    _oracles[_nextProposalID] = _oracle;
-    emit OracleChangeProposed(_nextProposalID, _oracle);
+    _agents[_nextProposalID] = _agent;
+    emit AgentChangeProposed(_nextProposalID, _agent);
     return _createProposal(info, 1);
+  }
+
+  function proposeFrabricChange(
+    string calldata info,
+    address _frabric
+  ) external beforeProposal() override returns (uint256 id) {
+    _frabrics[_nextProposalID] = _frabric;
+    emit FrabricChangeProposed(_nextProposalID, _frabric);
+    return _createProposal(info, 2);
   }
 
   function proposeDissolution(
@@ -94,17 +108,20 @@ contract Thread is IThread, Initializable, DAO {
     require(amount != 0, "Thread: Dissolution amount is 0");
     _dissolutions[_nextProposalID] = Dissolution(purchaser, token, amount);
     emit DissolutionProposed(_nextProposalID, purchaser, token, amount);
-    return _createProposal(info, 2);
+    return _createProposal(info, 3);
   }
 
   function _completeProposal(uint256 id, uint256 proposalType) internal override {
     if (proposalType == 0) {
-      // Oracle should view the Proposal's info
+      // Agent should view the Proposal's info
       emit PaperDecision(id);
     } else if (proposalType == 1) {
-      emit OracleChanged(oracle, _oracles[id]);
-      oracle = _oracles[id];
+      emit AgentChanged(agent, _agents[id]);
+      agent = _agents[id];
     } else if (proposalType == 2) {
+      emit FrabricChanged(frabric, _frabrics[id]);
+      frabric = _frabrics[id];
+    } else if (proposalType == 3) {
       Dissolution memory dissolution = _dissolutions[id];
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.amount);
       IFrabricERC20(erc20).pause();
