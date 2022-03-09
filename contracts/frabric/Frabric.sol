@@ -77,6 +77,33 @@ contract Frabric is DAO {
     return _createProposal(info, 1);
   }
 
+  struct ThreadProposalProposal {
+    address thread;
+    bytes4 selector;
+    string info;
+    bytes data;
+  }
+  mapping(uint256 => ThreadProposalProposal) internal _threadProposals;
+  event ThreadProposalProposed(uint256 indexed id, address indexed thread, uint256 proposalType, string info);
+
+  function proposeThreadProposal(string calldata info, address thread, uint256 proposalType, bytes calldata data) external beforeProposal() returns (uint256) {
+    bytes4 selector;
+    if (proposalType == 0) {
+      selector = IThread.proposePaper.selector;
+    } else if (proposalType == 1) {
+      selector = IThread.proposeAgentChange.selector;
+    } else if (proposalType == 2) {
+      require(false, "Frabric: Can't request a Thread to change its Frabric");
+    } else if (proposalType == 3) {
+      selector = IThread.proposeDissolution.selector;
+    } else {
+      require(false, "Frabric: Unknown Thread Proposal type specified");
+    }
+    _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, info, data);
+    emit ThreadProposalProposed(_nextProposalID, thread, proposalType, info);
+    return _createProposal(info, 2);
+  }
+
   function _completeProposal(uint256 id, uint256 proposalType) internal override {
     if (proposalType == 0) {
       Participant storage participant = _participants[id];
@@ -101,6 +128,16 @@ contract Frabric is DAO {
       ThreadProposal memory proposal = _threads[id];
       // erc20 here is used as the parent whitelist as it's built into the Frabric ERC20
       ThreadDeployer(threadDeployer).deploy(proposal.name, proposal.symbol, erc20, proposal.agent, proposal.raiseToken, proposal.target);
+    } else if (proposalType == 2) {
+      (bool success, ) = _threadProposals[id].thread.call(
+        abi.encodePacked(
+          _threadProposals[id].selector,
+          abi.encodePacked(abi.encode(_threadProposals[id].info), _threadProposals[id].data)
+        )
+      );
+      require(success, "Frabric: Creating the Thread Proposal failed");
+    } else {
+      require(false, "Frabric: Trying to complete an unknown proposal type");
     }
   }
 

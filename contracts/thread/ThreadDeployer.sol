@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../interfaces/thread/IThread.sol";
 
 contract ThreadDeployer is Initializable, OwnableUpgradeable {
-  event DeployedThread(address indexed agent, address indexed raiseToken, address crowdfund, address erc20, address thread);
+  event Thread(address indexed agent, address indexed raiseToken, address crowdfund, address erc20, address thread);
 
   address public crowdfundProxy;
   address public erc20Beacon;
@@ -62,6 +62,6 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable {
         target
       )
     ));
-    emit DeployedThread(agent, raiseToken, crowdfund, erc20, thread);
+    emit Thread(agent, raiseToken, crowdfund, erc20, thread);
   }
 }
