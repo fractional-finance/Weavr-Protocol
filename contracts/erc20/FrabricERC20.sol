@@ -38,7 +38,11 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     __Ownable_init();
     __Pausable_init();
     __FrabricWhitelist_init(parentWhitelist);
-    _mint(msg.sender, supply);
+    // Shim to allow the default constructor to successfully execute
+    // Actual deployments should have the msg.sender in the parent whitelist
+    if (supply != 0) {
+      _mint(msg.sender, supply);
+    }
     mintable = _mintable;
   }
 
@@ -92,7 +96,8 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
   // Transfer requirements
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     super._beforeTokenTransfer(from, to, amount);
-    require(whitelisted(to), "FrabricERC20: Token recipient isn't whitelisted");
+    require(whitelisted(from) || (from == address(0)), "FrabricERC20: Token sender isn't whitelisted");
+    require(whitelisted(to) || (to == address(0)), "FrabricERC20: Token recipient isn't whitelisted");
     require(!paused(), "FrabricERC20: Transfers are paused");
   }
 
