@@ -20,7 +20,7 @@ abstract contract FrabricWhitelist is Initializable, GlobalWhitelist, IFrabricWh
     _setParentWhitelist(parentWhitelistAddress);
   }
 
-  function whitelisted(address person) public view override returns (bool) {
+  function whitelisted(address person) public view virtual override returns (bool) {
     return (
       // Check our own whitelist first
       GlobalWhitelist.whitelisted(person) ||

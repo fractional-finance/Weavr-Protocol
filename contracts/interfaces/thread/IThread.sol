@@ -42,7 +42,6 @@ interface IThread is IDAO {
   ) external returns (uint256 id);
   function proposeDissolution(
     string calldata info,
-    address purchaser,
     address token,
     uint256 purchaseAmount
   ) external returns (uint256 id);

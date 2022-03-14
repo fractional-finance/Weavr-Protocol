@@ -34,6 +34,7 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex, Initializ
   // Indexed by price
   mapping (uint256 => PricePoint) private _points;
 
+  function whitelisted(address person) public view virtual returns (bool);
   function _transfer(address from, address to, uint256 amount) internal virtual;
   function balanceOf(address account) public virtual returns (uint256);
 
@@ -142,6 +143,7 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex, Initializ
   }
 
   function buy(uint256 price, uint256 amount) external override {
+    require(whitelisted(msg.sender), "IntegratedLimitOrderDex: Not whitelisted to hold this token");
     IERC20(dexToken).safeTransferFrom(msg.sender, address(this), price * amount);
     action(OrderType.Buy, OrderType.Sell, price, amount);
   }

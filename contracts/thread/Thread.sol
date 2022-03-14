@@ -104,13 +104,12 @@ contract Thread is IThread, Initializable, DAO {
 
   function proposeDissolution(
     string calldata info,
-    address purchaser,
     address token,
     uint256 amount
   ) external beforeProposal() override returns (uint256 id) {
     require(amount != 0, "Thread: Dissolution amount is 0");
-    _dissolutions[_nextProposalID] = Dissolution(purchaser, token, amount);
-    emit DissolutionProposed(_nextProposalID, purchaser, token, amount);
+    _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, amount);
+    emit DissolutionProposed(_nextProposalID, msg.sender, token, amount);
     return _createProposal(info, 3);
   }
 
