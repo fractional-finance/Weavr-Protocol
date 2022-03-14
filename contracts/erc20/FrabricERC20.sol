@@ -57,7 +57,7 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     return ERC20Upgradeable.balanceOf(account);
   }
 
-  function mint(address to, uint256 amount) external onlyOwner {
+  function mint(address to, uint256 amount) external override onlyOwner {
     require(mintable);
     _mint(to, amount);
   }

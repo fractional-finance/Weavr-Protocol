@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "../interfaces/erc20/IFrabricERC20.sol";
+import "../interfaces/erc20/IIntegratedLimitOrderDex.sol";
 import "../thread/ThreadDeployer.sol";
 
 import "../dao/DAO.sol";
 
 contract Frabric is DAO {
+  using SafeERC20 for IERC20;
+
   address public kyc;
   event KYCChanged(address indexed oldKYC, address indexed newKYC);
 
@@ -86,6 +91,9 @@ contract Frabric is DAO {
   mapping(uint256 => ThreadProposalProposal) internal _threadProposals;
   event ThreadProposalProposed(uint256 indexed id, address indexed thread, uint256 proposalType, string info);
 
+  // This does assume the Thread's API meets expectations compiled into the Frabric
+  // They can individually change their Frabric, invalidating this entirely, or upgrade their code, potentially breaking specific parts
+  // These are both valid behaviors intended to be accessible by Threads
   function proposeThreadProposal(string calldata info, address thread, uint256 proposalType, bytes calldata data) external beforeProposal() returns (uint256) {
     bytes4 selector;
     if (proposalType == 0) {
@@ -102,6 +110,26 @@ contract Frabric is DAO {
     _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, info, data);
     emit ThreadProposalProposed(_nextProposalID, thread, proposalType, info);
     return _createProposal(info, 2);
+  }
+
+  struct TokenProposal {
+    address token;
+    address target;
+    bool mint;
+    uint256 price;
+    uint256 amount;
+  }
+  mapping(uint256 => TokenProposal) internal _tokenProposals;
+  event TokenActionProposed(uint256 indexed id, address indexed token, address indexed target, bool mint, uint256 price, uint256 amount);
+
+  function proposeTokenAction(string calldata info, address token, address target, bool mint, uint256 price, uint256 amount) external beforeProposal() returns (uint256) {
+    require(mint == (token == erc20), "Frabric: Proposing minting a different token");
+    // Target is ignorable. This allows simplifying the mint case where minted tokens are immediately sold
+    // Also removes mutability and reduces scope
+    require((price == 0) == (target == address(this)), "Frabric: Token sales must set self as the target");
+    _tokenProposals[_nextProposalID] = TokenProposal(token, target, mint, price, amount);
+    emit TokenActionProposed(_nextProposalID, token, target, mint, price, amount);
+    return _createProposal(info, 3);
   }
 
   function _completeProposal(uint256 id, uint256 proposalType) internal override {
@@ -136,12 +164,24 @@ contract Frabric is DAO {
         )
       );
       require(success, "Frabric: Creating the Thread Proposal failed");
+    } else if (proposalType == 3) {
+      if (_tokenProposals[id].mint) {
+        IFrabricERC20(erc20).mint(_tokenProposals[id].target, _tokenProposals[id].amount);
+      // The ILO DEX doesn't require transfer or even approve
+      } else if (_tokenProposals[id].price == 0) {
+        IERC20(_tokenProposals[id].token).safeTransfer(_tokenProposals[id].target, _tokenProposals[id].amount);
+      }
+
+      // Not else to allow direct mint + sell
+      if (_tokenProposals[id].price != 0) {
+        IIntegratedLimitOrderDex(_tokenProposals[id].token).sell(_tokenProposals[id].price, _tokenProposals[id].amount);
+      }
     } else {
       require(false, "Frabric: Trying to complete an unknown proposal type");
     }
   }
 
-  function whitelist(uint256 id, bytes32 kycHash) external {
+  function approve(uint256 id, bytes32 kycHash) external {
     require(msg.sender == kyc);
     require(_participants[id].passed);
     require(!_participants[id].whitelisted);

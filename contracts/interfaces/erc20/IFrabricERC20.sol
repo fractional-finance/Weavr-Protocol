@@ -12,6 +12,8 @@ interface IFrabricERC20 is IFrabricWhitelistExposed {
 
   function initialize(string memory name, string memory symbol, uint256 supply, bool mintable, address parentWhitelist) external;
 
+  function mint(address to, uint256 amount) external;
+
   function setParentWhitelist(address whitelist) external;
   function setWhitelisted(address person, bytes32 dataHash) external;
   function globallyAccept() external;
