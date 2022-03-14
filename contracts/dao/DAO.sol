@@ -44,12 +44,14 @@ abstract contract DAO is IDAO, Initializable {
   }
 
   address public erc20;
+  uint256 public votingPeriod;
 
   mapping(uint256 => Proposal) private _proposals;
   uint256 internal _nextProposalID;
 
-  function __DAO_init(address _erc20) internal onlyInitializing {
+  function __DAO_init(address _erc20, uint256 _votingPeriod) internal onlyInitializing {
     erc20 = _erc20;
+    votingPeriod = _votingPeriod;
   }
 
   function proposalCreator(uint256 id) external view override returns (address) {
@@ -78,7 +80,7 @@ abstract contract DAO is IDAO, Initializable {
   }
 
   function proposalActive(uint256 id) public view override returns (bool) {
-    return (_proposals[id].state == ProposalState.Active) && ((_proposals[id].stateStartTime + (2 weeks)) > block.timestamp);
+    return (_proposals[id].state == ProposalState.Active) && ((_proposals[id].stateStartTime + votingPeriod) > block.timestamp);
   }
 
   modifier activeProposal(uint256 id) {

@@ -47,7 +47,10 @@ contract Thread is IThread, Initializable, DAO {
     address raiseToken,
     uint256 target
   ) public initializer {
-    __DAO_init(_erc20);
+    // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
+    // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
+    // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
+    __DAO_init(_erc20, 1 weeks);
     crowdfund = _crowdfund;
     ICrowdfund(crowdfund).initialize(name, symbol, parentWhitelist, _agent, address(this), raiseToken, target);
     IFrabricERC20(erc20).initialize(name, symbol, normalize(target), false, parentWhitelist);
