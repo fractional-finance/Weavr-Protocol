@@ -5,7 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/erc20/IIntegratedLimitOrderDex.sol";
-import "../thread/ThreadDeployer.sol";
+import "../interfaces/thread/IThread.sol";
+import "../interfaces/thread/IThreadDeployer.sol";
 
 import "../dao/DAO.sol";
 
@@ -155,10 +156,10 @@ contract Frabric is DAO {
     } else if (proposalType == 1) {
       ThreadProposal memory proposal = _threads[id];
       // erc20 here is used as the parent whitelist as it's built into the Frabric ERC20
-      ThreadDeployer(threadDeployer).deploy(proposal.name, proposal.symbol, erc20, proposal.agent, proposal.raiseToken, proposal.target);
+      IThreadDeployer(threadDeployer).deploy(proposal.name, proposal.symbol, erc20, proposal.agent, proposal.raiseToken, proposal.target);
     } else if (proposalType == 2) {
       (bool success, ) = _threadProposals[id].thread.call(
-        abi.encodePacked(
+        abi.encodeWithSelector(
           _threadProposals[id].selector,
           abi.encodePacked(abi.encode(_threadProposals[id].info), _threadProposals[id].data)
         )

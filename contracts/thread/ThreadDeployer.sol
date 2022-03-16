@@ -7,8 +7,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "../interfaces/thread/IThread.sol";
+import "../interfaces/thread/IThreadDeployer.sol";
 
-contract ThreadDeployer is Initializable, OwnableUpgradeable {
+contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
   event Thread(address indexed agent, address indexed raiseToken, address crowdfund, address erc20, address thread);
 
   address public crowdfundProxy;
@@ -20,7 +21,7 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable {
     address _crowdfundProxy,
     address _erc20Beacon,
     address _threadBeacon
-  ) public initializer {
+  ) public override initializer {
     __Ownable_init();
     _transferOwnership(frabric);
 
@@ -45,12 +46,12 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable {
     address agent,
     address raiseToken,
     uint256 target
-  ) external onlyOwner {
+  ) external override onlyOwner {
     address crowdfund = address(new BeaconProxy(crowdfundProxy, bytes("")));
     address erc20 = address(new BeaconProxy(erc20Beacon, bytes("")));
     address thread = address(new BeaconProxy(
       threadBeacon,
-      abi.encodePacked(
+      abi.encode(
         IThread.initialize.selector,
         crowdfund,
         erc20,
