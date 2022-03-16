@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.9;
 
-import "../dao/IDAO.sol";
+import "../dao/IFrabricDAO.sol";
 
-interface IThread is IDAO {
-  event PaperProposed(uint256 indexed id, string info);
+interface IThread is IFrabricDAO {
   event AgentChangeProposed(uint256 indexed id, address indexed agent);
   event FrabricChangeProposed(uint256 indexed id, address indexed frabric);
   event DissolutionProposed(uint256 indexed id, address indexed purchaser, address indexed token, uint256 amount);
 
-  event PaperDecision(uint256 indexed id);
   event AgentChanged(address indexed oldAgent, address indexed newAgent);
   event FrabricChanged(address indexed oldAgent, address indexed newAgent);
   event Dissolved(uint256 indexed id);
+
+  enum ThreadProposalType {
+    AgentChange,
+    FrabricChange,
+    Dissolution
+  }
 
   function crowdfund() external view returns (address);
   function agent() external view returns (address);
@@ -31,7 +35,6 @@ interface IThread is IDAO {
 
   function migrateFromCrowdfund() external;
 
-  function proposePaper(string calldata info) external returns (uint256 id);
   function proposeAgentChange(
     string calldata info,
     address _agent

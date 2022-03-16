@@ -30,15 +30,19 @@ abstract contract DAO is IDAO, Initializable {
   }
 
   struct Proposal {
+    // The following are embedded into easily accessible events
     address creator;
-    string info;
     ProposalState state;
+    // This actually requires getting the block of the event as well, yet generally isn't needed
     uint256 stateStartTime;
+
+    // The following are exposed via getters
     uint256 voteBlock;
     mapping(address => VoteDirection) voters;
     // Safe due to the FrabricERC20 being uint224
     int256 votes;
     uint256 totalVotes;
+
     // Used by inheriting contracts
     uint256 proposalType;
   }
@@ -54,18 +58,6 @@ abstract contract DAO is IDAO, Initializable {
     votingPeriod = _votingPeriod;
   }
 
-  function proposalCreator(uint256 id) external view override returns (address) {
-    return _proposals[id].creator;
-  }
-  function proposalInfo(uint256 id) external view override returns (string memory) {
-    return _proposals[id].info;
-  }
-  function proposalState(uint256 id) external view override returns (uint256) {
-    return uint256(_proposals[id].state);
-  }
-  function proposalStateStartTime(uint256 id) external view override returns (uint256) {
-    return _proposals[id].stateStartTime;
-  }
   function proposalVoteBlock(uint256 id) external view override returns (uint256) {
     return _proposals[id].voteBlock;
   }
@@ -95,7 +87,6 @@ abstract contract DAO is IDAO, Initializable {
 
     Proposal storage proposal = _proposals[id];
     proposal.creator = msg.sender;
-    proposal.info = info;
     proposal.state = ProposalState.Active;
     proposal.stateStartTime = block.timestamp;
     // Use the previous block as it's finalized
@@ -104,8 +95,9 @@ abstract contract DAO is IDAO, Initializable {
     proposal.voteBlock = block.number - 1;
     proposal.proposalType = proposalType;
 
-    // Separate event to allow indexing by creator
-    emit NewProposal(id, proposal.creator, proposalType, info);
+    // Separate event to allow indexing by type/creator while maintaining state machine consistency
+    // Also exposes info
+    emit NewProposal(id, proposalType, proposal.creator, info);
     emit ProposalStateChanged(id, uint256(_proposals[id].state));
 
     // Automatically vote Yes for the creator
@@ -180,6 +172,9 @@ abstract contract DAO is IDAO, Initializable {
   function completeProposal(uint256 id) external {
     require(!IFrabricERC20(erc20).paused(), "DAO: ERC20 is paused");
 
+    // Safe against re-entrancy as long as this block is untouched as internal
+    // While paused can re-enter (theoretically, it never should), it hasn't verified the proposal state yet
+    // Said state will be cleared by the first instance to run
     Proposal storage proposal = _proposals[id];
     require(proposal.state == ProposalState.Queued, "DAO: Proposal wasn't queued");
     require((proposal.stateStartTime + (12 hours)) < block.timestamp, "DAO: Proposal was queued less than 12 hours ago");
@@ -187,6 +182,7 @@ abstract contract DAO is IDAO, Initializable {
     proposal.stateStartTime = block.timestamp;
     emit ProposalStateChanged(id, uint256(proposal.state));
 
+    // Re-entrancy here would do nothing as the proposal has had its state updated
     _completeProposal(id, proposal.proposalType);
   }
 

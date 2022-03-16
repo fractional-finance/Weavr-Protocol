@@ -2,7 +2,7 @@
 pragma solidity >=0.8.9;
 
 interface IDAO {
-  event NewProposal(uint256 indexed id, address indexed creator, uint256 indexed proposalType, string info);
+  event NewProposal(uint256 indexed id, uint256 indexed proposalType, address indexed creator, string info);
   event ProposalStateChanged(uint256 indexed id, uint256 indexed state);
   event Vote(uint256 indexed id, uint256 indexed direction, address indexed voter, uint256 votes);
   event NoVote(uint256 indexed id, address indexed voter, uint256 votes);
@@ -10,10 +10,6 @@ interface IDAO {
 
   function erc20() external view returns (address);
 
-  function proposalCreator(uint256 id) external view returns (address);
-  function proposalInfo(uint256 id) external view returns (string memory);
-  function proposalState(uint256 id) external view returns (uint256);
-  function proposalStateStartTime(uint256 id) external view returns (uint256);
   function proposalVoteBlock(uint256 id) external view returns (uint256);
   function proposalVoteDirection(uint256 id, address voter) external view returns (uint256);
   function proposalVotes(uint256 id) external view returns (int256);

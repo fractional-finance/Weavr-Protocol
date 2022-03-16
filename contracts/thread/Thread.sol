@@ -12,9 +12,9 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/thread/ICrowdfund.sol";
 import "../interfaces/thread/IThread.sol";
 
-import "../dao/DAO.sol";
+import "../dao/FrabricDAO.sol";
 
-contract Thread is IThread, Initializable, DAO {
+contract Thread is IThread, Initializable, FrabricDAO {
   using SafeERC20 for IERC20;
 
   address public override crowdfund;
@@ -69,19 +69,12 @@ contract Thread is IThread, Initializable, DAO {
     IERC20(erc20).transfer(msg.sender, normalize(balance));
   }
 
-  modifier beforeProposal() {
-    require(
+  function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {
+    return (
       (IERC20(erc20).balanceOf(msg.sender) != 0) ||
       (msg.sender == address(agent)) ||
-      (msg.sender == address(frabric)),
-      "Thread: Proposer is not authorized to create a proposal"
+      (msg.sender == address(frabric))
     );
-    _;
-  }
-
-  function proposePaper(string calldata info) external beforeProposal() override returns (uint256) {
-    emit PaperProposed(_nextProposalID, info);
-    return _createProposal(info, 0);
   }
 
   function proposeAgentChange(
@@ -90,7 +83,7 @@ contract Thread is IThread, Initializable, DAO {
   ) external beforeProposal() override returns (uint256 id) {
     _agents[_nextProposalID] = _agent;
     emit AgentChangeProposed(_nextProposalID, _agent);
-    return _createProposal(info, 1);
+    return _createProposal(info, uint256(ThreadProposalType.AgentChange));
   }
 
   function proposeFrabricChange(
@@ -99,7 +92,7 @@ contract Thread is IThread, Initializable, DAO {
   ) external beforeProposal() override returns (uint256 id) {
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
-    return _createProposal(info, 2);
+    return _createProposal(info, uint256(ThreadProposalType.FrabricChange));
   }
 
   function proposeDissolution(
@@ -110,20 +103,18 @@ contract Thread is IThread, Initializable, DAO {
     require(amount != 0, "Thread: Dissolution amount is 0");
     _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, amount);
     emit DissolutionProposed(_nextProposalID, msg.sender, token, amount);
-    return _createProposal(info, 3);
+    return _createProposal(info, uint256(ThreadProposalType.Dissolution));
   }
 
-  function _completeProposal(uint256 id, uint256 proposalType) internal override {
-    if (proposalType == 0) {
-      // Agent should view the Proposal's info
-      emit PaperDecision(id);
-    } else if (proposalType == 1) {
+  function _completeSpecificProposal(uint256 id, uint256 _proposalType) internal override {
+    ThreadProposalType proposalType = ThreadProposalType(_proposalType);
+    if (proposalType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);
       agent = _agents[id];
-    } else if (proposalType == 2) {
+    } else if (proposalType == ThreadProposalType.FrabricChange) {
       emit FrabricChanged(frabric, _frabrics[id]);
       frabric = _frabrics[id];
-    } else if (proposalType == 3) {
+    } else if (proposalType == ThreadProposalType.Dissolution) {
       Dissolution memory dissolution = _dissolutions[id];
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.amount);
       IFrabricERC20(erc20).pause();
@@ -131,7 +122,7 @@ contract Thread is IThread, Initializable, DAO {
       IFrabricERC20(erc20).distribute(dissolution.token, dissolution.amount);
       emit Dissolved(id);
     } else {
-      require(false, "Thread: Proposal type doesn't exist");
+      require(false, "Thread: Trying to complete an unknown proposal type");
     }
   }
 }
