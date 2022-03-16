@@ -10,11 +10,13 @@ import "../interfaces/thread/IThreadDeployer.sol";
 
 import "../dao/DAO.sol";
 
-contract Frabric is DAO {
+import "../interfaces/frabric/IFrabric.sol";
+
+contract Frabric is DAO, IFrabric {
   using SafeERC20 for IERC20;
 
-  address public kyc;
-  event KYCChanged(address indexed oldKYC, address indexed newKYC);
+  address public override kyc;
+  address public override threadDeployer;
 
   enum ParticipantType {
     Null,
@@ -23,6 +25,7 @@ contract Frabric is DAO {
     Individual,
     Corporation
   }
+
   struct Participant {
     ParticipantType participantType;
     address participant;
@@ -30,8 +33,6 @@ contract Frabric is DAO {
     bool whitelisted;
   }
   mapping(uint256 => Participant) internal _participants;
-  event ParticipantProposed(uint256 indexed id, address participant, uint256 indexed participantType);
-  event ParticipantUpdated(uint256 indexed id, address participant, uint256 indexed participantType);
 
   enum GuardianStatus {
     Null,
@@ -39,7 +40,7 @@ contract Frabric is DAO {
     Active,
     Removed
   }
-  mapping(address => GuardianStatus) public guardian;
+  mapping(address => GuardianStatus) internal _guardian;
 
   struct ThreadProposal {
     string name;
@@ -49,9 +50,27 @@ contract Frabric is DAO {
     uint256 target;
   }
   mapping(uint256 => ThreadProposal) internal _threads;
-  event ThreadProposed(uint256 indexed id, address indexed agent, address indexed raiseToken, uint256 target);
 
-  address public threadDeployer;
+  struct ThreadProposalProposal {
+    address thread;
+    bytes4 selector;
+    string info;
+    bytes data;
+  }
+  mapping(uint256 => ThreadProposalProposal) internal _threadProposals;
+
+  struct TokenProposal {
+    address token;
+    address target;
+    bool mint;
+    uint256 price;
+    uint256 amount;
+  }
+  mapping(uint256 => TokenProposal) internal _tokenProposals;
+
+  function guardian(address __guardian) external view override returns (uint256) {
+    return uint256(_guardian[__guardian]);
+  }
 
   modifier beforeProposal() {
     require(IFrabricERC20(erc20).whitelisted(msg.sender), "Frabric: Proposer isn't whitelisted");
@@ -60,8 +79,7 @@ contract Frabric is DAO {
 
   // Can set to Null to remove Guardians/Individuals/Corporations
   // KYC must be replaced
-  function proposeParticipant(string calldata info, uint256 participantType, address participant) external beforeProposal() returns (uint256) {
-    require(participantType <= uint256(ParticipantType.Corporation), "Frabric: Invalid participant type");
+  function proposeParticipant(string calldata info, uint256 participantType, address participant) external override beforeProposal() returns (uint256) {
     _participants[_nextProposalID] = Participant(ParticipantType(participantType), participant, false, false);
     emit ParticipantProposed(_nextProposalID, participant, participantType);
     return _createProposal(info, 0);
@@ -74,23 +92,14 @@ contract Frabric is DAO {
     address agent,
     address raiseToken,
     uint256 target
-  ) external beforeProposal() returns (uint256) {
+  ) external override beforeProposal() returns (uint256) {
     require(bytes(name).length >= 3, "Frabric: Thread name has less than three characters");
     require(bytes(symbol).length >= 2, "Frabric: Thread symbol has less than two characters");
-    require(guardian[agent] == GuardianStatus.Active, "Frabric: Guardian selected to be agent isn't active");
+    require(_guardian[agent] == GuardianStatus.Active, "Frabric: Guardian selected to be agent isn't active");
     _threads[_nextProposalID] = ThreadProposal(name, symbol, agent, raiseToken, target);
     emit ThreadProposed(_nextProposalID, agent, raiseToken, target);
     return _createProposal(info, 1);
   }
-
-  struct ThreadProposalProposal {
-    address thread;
-    bytes4 selector;
-    string info;
-    bytes data;
-  }
-  mapping(uint256 => ThreadProposalProposal) internal _threadProposals;
-  event ThreadProposalProposed(uint256 indexed id, address indexed thread, uint256 proposalType, string info);
 
   // This does assume the Thread's API meets expectations compiled into the Frabric
   // They can individually change their Frabric, invalidating this entirely, or upgrade their code, potentially breaking specific parts
@@ -113,16 +122,6 @@ contract Frabric is DAO {
     return _createProposal(info, 2);
   }
 
-  struct TokenProposal {
-    address token;
-    address target;
-    bool mint;
-    uint256 price;
-    uint256 amount;
-  }
-  mapping(uint256 => TokenProposal) internal _tokenProposals;
-  event TokenActionProposed(uint256 indexed id, address indexed token, address indexed target, bool mint, uint256 price, uint256 amount);
-
   function proposeTokenAction(string calldata info, address token, address target, bool mint, uint256 price, uint256 amount) external beforeProposal() returns (uint256) {
     require(mint == (token == erc20), "Frabric: Proposing minting a different token");
     // Target is ignorable. This allows simplifying the mint case where minted tokens are immediately sold
@@ -142,14 +141,16 @@ contract Frabric is DAO {
         kyc = participant.participant;
       } else {
         if (participant.participantType == ParticipantType.Guardian) {
-          require(guardian[participant.participant] == GuardianStatus.Null);
-          guardian[participant.participant] = GuardianStatus.Unverified;
+          require(_guardian[participant.participant] == GuardianStatus.Null);
+          _guardian[participant.participant] = GuardianStatus.Unverified;
         } else if (participant.participantType == ParticipantType.Null) {
-          if (guardian[participant.participant] != GuardianStatus.Null) {
-            guardian[participant.participant] = GuardianStatus.Removed;
+          if (_guardian[participant.participant] != GuardianStatus.Null) {
+            _guardian[participant.participant] = GuardianStatus.Removed;
           }
           // Remove them from the whitelist
           IFrabricERC20(erc20).setWhitelisted(participant.participant, bytes32(0));
+          // Prevent the KYC from using this proposal to whitelist them
+          _participants[id].whitelisted = true;
         }
         emit ParticipantUpdated(id, participant.participant, uint256(participant.participantType));
       }
@@ -182,10 +183,10 @@ contract Frabric is DAO {
     }
   }
 
-  function approve(uint256 id, bytes32 kycHash) external {
-    require(msg.sender == kyc);
-    require(_participants[id].passed);
-    require(!_participants[id].whitelisted);
+  function approve(uint256 id, bytes32 kycHash) external override {
+    require(msg.sender == kyc, "Frabric: Only the KYC can approve users");
+    require(_participants[id].passed, "Frabric: Proposal didn't pass");
+    require(!_participants[id].whitelisted, "Frabric: Whitelisting has already happened");
     _participants[id].whitelisted = true;
     IFrabricERC20(erc20).setWhitelisted(_participants[id].participant, kycHash);
   }

@@ -7,8 +7,8 @@ interface IFrabricERC20 is IFrabricWhitelistExposed {
   event Distributed(address indexed token, uint256 amount);
   event Claimed(address indexed person, uint256 indexed id, uint256 amount);
 
-  function mintable() external returns (bool);
-  function claimedDistribution(address person, uint256 id) external returns (bool);
+  function mintable() external view returns (bool);
+  function claimedDistribution(address person, uint256 id) external view returns (bool);
 
   function initialize(string memory name, string memory symbol, uint256 supply, bool mintable, address parentWhitelist) external;
 
@@ -18,7 +18,7 @@ interface IFrabricERC20 is IFrabricWhitelistExposed {
   function setWhitelisted(address person, bytes32 dataHash) external;
   function globallyAccept() external;
 
-  function paused() external returns (bool);
+  function paused() external view returns (bool);
   function pause() external;
   function unpause() external;
 
