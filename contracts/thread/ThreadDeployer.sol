@@ -51,7 +51,7 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     address erc20 = address(new BeaconProxy(erc20Beacon, bytes("")));
     address thread = address(new BeaconProxy(
       threadBeacon,
-      abi.encode(
+      abi.encodeWithSelector(
         IThread.initialize.selector,
         crowdfund,
         erc20,

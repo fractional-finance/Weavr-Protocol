@@ -33,6 +33,7 @@ contract Thread is IThread, Initializable, FrabricDAO {
   mapping(uint256 => Dissolution) private _dissolutions;
 
   // Normalize the Crowdfund token amount to the Thread's
+  // This function's behavior is shared with Crowdfund
   function normalize(uint256 amount) internal view returns (uint256) {
     return amount * (10 ** (18 - IERC20Metadata(crowdfund).decimals()));
   }
@@ -52,8 +53,9 @@ contract Thread is IThread, Initializable, FrabricDAO {
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
     __DAO_init(_erc20, 1 weeks);
     crowdfund = _crowdfund;
-    ICrowdfund(crowdfund).initialize(name, symbol, parentWhitelist, _agent, address(this), raiseToken, target);
     IFrabricERC20(erc20).initialize(name, symbol, normalize(target), false, parentWhitelist);
+    ICrowdfund(crowdfund).initialize(name, symbol, parentWhitelist, _agent, raiseToken, target);
+    IERC20(erc20).safeTransfer(crowdfund, normalize(target));
     agent = _agent;
     emit AgentChanged(address(0), agent);
   }
@@ -61,12 +63,6 @@ contract Thread is IThread, Initializable, FrabricDAO {
   // Initialize with null info to prevent anyone from accessing this contract
   constructor() {
     initialize(address(0), address(0), "", "", address(0), address(0), address(0), 0);
-  }
-
-  function migrateFromCrowdfund() external {
-    uint256 balance = IERC20(crowdfund).balanceOf(msg.sender);
-    ICrowdfund(crowdfund).burn(msg.sender, balance);
-    IERC20(erc20).transfer(msg.sender, normalize(balance));
   }
 
   function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {

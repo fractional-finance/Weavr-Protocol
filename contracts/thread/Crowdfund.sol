@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "../interfaces/lists/IWhitelist.sol";
 import "../interfaces/thread/ICrowdfund.sol";
+import "../interfaces/thread/IThread.sol";
 
 // TODO also resolve the fee on transfer/rebase commentary from the DEX here
 contract Crowdfund is ICrowdfund, ERC20Upgradeable {
@@ -49,14 +50,13 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     string memory symbol,
     address _whitelist,
     address _agent,
-    address _thread,
     address _token,
     uint256 _target
   ) public initializer {
     __ERC20_init(string(abi.encodePacked("Crowdfund ", name)), string(abi.encodePacked("CF", symbol)));
     whitelist = _whitelist;
     agent = _agent;
-    thread = _thread;
+    thread = msg.sender;
     token = _token;
     require(_target != 0, "Crowdfund: Fundraising target is 0");
     target = _target;
@@ -67,7 +67,7 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
   }
 
   constructor() {
-    initialize("", "", address(0), address(0), address(0), address(0), 0);
+    initialize("", "", address(0), address(0), address(0), 0);
   }
 
   // Match the decimals of the underlying ERC20 which this ERC20 maps to
@@ -168,6 +168,9 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
       require(false, "Crowdfund: Not Cancelled nor Refunding");
     }
 
+    // If for some reason, we move to an ERC777, re-entrancy may be possible here
+    // with the balance at the start of the transaction.
+    // burn will throw on the second execution however, making this irrelevant
     burnInternal(depositor, balance);
     IERC20(token).safeTransfer(depositor, refundAmount);
     emit Refund(depositor, refundAmount);
@@ -180,10 +183,19 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     emit StateChange(uint256(_state), bytes(""));
   }
 
-  // Allow the Thread to burn Crowdfund tokens so it can safely issue Thread tokens
-  function burn(address depositor, uint256 amount) external {
-    require(msg.sender == thread, "Crowdfund: Only the thread can burn");
+  // Normalize the Crowdfund token amount to the Thread's
+  // This function's behavior is shared with Thread
+  function normalize(uint256 amount) internal view returns (uint256) {
+    return amount * (10 ** (18 - decimals()));
+  }
+
+  // Allow users to burn Crowdfund tokens to receive Thread tokens
+  // This is shared with Thread
+  function burn(address depositor) external override {
     require(_state == State.Finished, "Crowdfund: Crowdfund isn't finished");
-    burnInternal(depositor, amount);
+    uint256 balance = balanceOf(depositor);
+    require(balance != 0, "Crowdfund: Balance is 0");
+    burnInternal(depositor, balance);
+    IERC20(IThread(thread).erc20()).safeTransfer(depositor, normalize(balance));
   }
 }

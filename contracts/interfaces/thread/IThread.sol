@@ -33,8 +33,6 @@ interface IThread is IFrabricDAO {
     uint256 target
   ) external;
 
-  function migrateFromCrowdfund() external;
-
   function proposeAgentChange(
     string calldata info,
     address _agent

@@ -25,7 +25,6 @@ interface ICrowdfund {
     string memory symbol,
     address _whitelist,
     address _agent,
-    address _thread,
     address _token,
     uint256 _target
   ) external;
@@ -37,5 +36,5 @@ interface ICrowdfund {
   function refund(uint256 amount) external;
   function claimRefund(address depositor) external;
   function finish() external;
-  function burn(address person, uint256 amount) external;
+  function burn(address depositor) external;
 }
