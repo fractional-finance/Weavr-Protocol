@@ -30,7 +30,8 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     string memory symbol,
     uint256 supply,
     bool _mintable,
-    address parentWhitelist
+    address parentWhitelist,
+    address dexToken
   ) public initializer {
     __ERC20_init(name, symbol);
     __ERC20Permit_init(name);
@@ -38,6 +39,7 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     __Ownable_init();
     __Pausable_init();
     __FrabricWhitelist_init(parentWhitelist);
+    __IntegratedLimitOrderDEX_init(dexToken);
     // Shim to allow the default constructor to successfully execute
     // Actual deployments should have the msg.sender in the parent whitelist
     if (supply != 0) {

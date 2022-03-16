@@ -10,7 +10,7 @@ import "../interfaces/thread/IThread.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
 
 contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
-  event Thread(address indexed agent, address indexed raiseToken, address crowdfund, address erc20, address thread);
+  event Thread(address indexed agent, address indexed tradeToken, address crowdfund, address erc20, address thread);
 
   address public crowdfundProxy;
   address public erc20Beacon;
@@ -44,7 +44,7 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     string memory symbol,
     address parentWhitelist,
     address agent,
-    address raiseToken,
+    address tradeToken,
     uint256 target
   ) external override onlyOwner {
     address crowdfund = address(new BeaconProxy(crowdfundProxy, bytes("")));
@@ -59,10 +59,10 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
         symbol,
         parentWhitelist,
         agent,
-        raiseToken,
+        tradeToken,
         target
       )
     ));
-    emit Thread(agent, raiseToken, crowdfund, erc20, thread);
+    emit Thread(agent, tradeToken, crowdfund, erc20, thread);
   }
 }

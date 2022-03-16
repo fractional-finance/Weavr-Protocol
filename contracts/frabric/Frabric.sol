@@ -53,7 +53,7 @@ contract Frabric is FrabricDAO, IFrabric {
     string name;
     string symbol;
     address agent;
-    address raiseToken;
+    address tradeToken;
     uint256 target;
   }
   mapping(uint256 => ThreadProposal) internal _threads;
@@ -87,14 +87,14 @@ contract Frabric is FrabricDAO, IFrabric {
     string memory name,
     string memory symbol,
     address agent,
-    address raiseToken,
+    address tradeToken,
     uint256 target
   ) external override beforeProposal() returns (uint256) {
     require(bytes(name).length >= 3, "Frabric: Thread name has less than three characters");
     require(bytes(symbol).length >= 2, "Frabric: Thread symbol has less than two characters");
     require(_guardian[agent] == GuardianStatus.Active, "Frabric: Guardian selected to be agent isn't active");
-    _threads[_nextProposalID] = ThreadProposal(name, symbol, agent, raiseToken, target);
-    emit ThreadProposed(_nextProposalID, agent, raiseToken, target);
+    _threads[_nextProposalID] = ThreadProposal(name, symbol, agent, tradeToken, target);
+    emit ThreadProposed(_nextProposalID, agent, tradeToken, target);
     return _createProposal(info, uint256(FrabricProposalType.Thread));
   }
 
@@ -172,7 +172,7 @@ contract Frabric is FrabricDAO, IFrabric {
     } else if (proposalType == FrabricProposalType.Thread) {
       ThreadProposal memory proposal = _threads[id];
       // erc20 here is used as the parent whitelist as it's built into the Frabric ERC20
-      IThreadDeployer(threadDeployer).deploy(proposal.name, proposal.symbol, erc20, proposal.agent, proposal.raiseToken, proposal.target);
+      IThreadDeployer(threadDeployer).deploy(proposal.name, proposal.symbol, erc20, proposal.agent, proposal.tradeToken, proposal.target);
       delete _threads[id];
 
     } else if (proposalType == FrabricProposalType.ThreadProposal) {

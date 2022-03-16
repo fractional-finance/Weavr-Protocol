@@ -106,7 +106,18 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     _mint(msg.sender, amount);
     transferAllowed = false;
 
+    // Ban fee on transfer tokens as they'll make the Crowdfund target not feasibly reachable
+    // This pattern of checking balance change is generally vulnerable to re-entrancy
+    // This usage, which solely checks it received the exact amount expected, is not
+    // Any transfers != 0 while re-entered will cause this to error
+    // Any transfer == 0 will error due to a check above, and wouldn't have any effect anyways
+    // If a fee on transfer is toggled mid raise, withdraw will work without issue,
+    // unless the target is actually reached, in which case we continue
+    uint256 balance = IERC20(token).balanceOf(address(this));
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+    if ((IERC20(token).balanceOf(address(this)) - balance) != amount) {
+      require(false, "Crowdfund: Fee on transfer tokens are not supported");
+    }
     emit Deposit(msg.sender, amount);
   }
 

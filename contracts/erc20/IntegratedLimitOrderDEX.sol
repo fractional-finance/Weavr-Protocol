@@ -144,8 +144,16 @@ abstract contract IntegratedLimitOrderDEX is IIntegratedLimitOrderDEX, Initializ
 
   function buy(uint256 price, uint256 amount) external override {
     require(whitelisted(msg.sender), "IntegratedLimitOrderDEX: Not whitelisted to hold this token");
+    // Support fee on transfer tokens
+    // Safe against re-entrancy as action has nonReentrant
+    // The Crowdfund contract actually verifies its token isn't fee on transfer
+    // The Thread initializer uses the same token for both that and this
+    // That said, any token which can have its fee set may be set to 0 during Crowdfund,
+    // allowing it to pass, yet set to non-0 later in its life, causing this to fail
+    // USDT notably has fee on transfer code, currently set to 0, that may someday activate
+    uint256 balance = IERC20(dexToken).balanceOf(address(this));
     IERC20(dexToken).safeTransferFrom(msg.sender, address(this), price * amount);
-    action(OrderType.Buy, OrderType.Sell, price, amount);
+    action(OrderType.Buy, OrderType.Sell, price, IERC20(dexToken).balanceOf(address(this)) - balance);
   }
 
   function sell(uint256 price, uint256 amount) external override {
@@ -166,6 +174,7 @@ abstract contract IntegratedLimitOrderDEX is IIntegratedLimitOrderDEX, Initializ
     }
     point.orders.pop();
 
+    // Safe to re-enter as the order has already been deleted
     if (point.orderType == OrderType.Buy) {
       IERC20(dexToken).safeTransfer(msg.sender, amount * price);
     } else if (point.orderType == OrderType.Sell) {

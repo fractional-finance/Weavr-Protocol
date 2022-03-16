@@ -45,7 +45,7 @@ contract Thread is IThread, Initializable, FrabricDAO {
     string memory symbol,
     address parentWhitelist,
     address _agent,
-    address raiseToken,
+    address tradeToken, // Used for both the Crowdfund and DEX
     uint256 target
   ) public initializer {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
@@ -53,8 +53,8 @@ contract Thread is IThread, Initializable, FrabricDAO {
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
     __DAO_init(_erc20, 1 weeks);
     crowdfund = _crowdfund;
-    IFrabricERC20(erc20).initialize(name, symbol, normalize(target), false, parentWhitelist);
-    ICrowdfund(crowdfund).initialize(name, symbol, parentWhitelist, _agent, raiseToken, target);
+    IFrabricERC20(erc20).initialize(name, symbol, normalize(target), false, parentWhitelist, tradeToken);
+    ICrowdfund(crowdfund).initialize(name, symbol, parentWhitelist, _agent, tradeToken, target);
     IERC20(erc20).safeTransfer(crowdfund, normalize(target));
     agent = _agent;
     emit AgentChanged(address(0), agent);
