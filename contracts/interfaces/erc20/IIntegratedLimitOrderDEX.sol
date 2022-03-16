@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.9;
 
-interface IIntegratedLimitOrderDex {
+interface IIntegratedLimitOrderDEX {
   event Filled(address indexed sender, address indexed recipient, uint256 indexed price, uint256 amount);
   event NewBuyOrder(uint256 indexed price);
   event NewSellOrder(uint256 indexed price);

@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
-import "../interfaces/erc20/IIntegratedLimitOrderDex.sol";
+import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 import "../interfaces/thread/IThread.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
 
@@ -176,7 +176,7 @@ contract Frabric is DAO, IFrabric {
 
       // Not else to allow direct mint + sell
       if (_tokenProposals[id].price != 0) {
-        IIntegratedLimitOrderDex(_tokenProposals[id].token).sell(_tokenProposals[id].price, _tokenProposals[id].amount);
+        IIntegratedLimitOrderDEX(_tokenProposals[id].token).sell(_tokenProposals[id].price, _tokenProposals[id].amount);
       }
     } else {
       require(false, "Frabric: Trying to complete an unknown proposal type");

@@ -5,14 +5,14 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
-import "./IntegratedLimitOrderDex.sol";
+import "./IntegratedLimitOrderDEX.sol";
 import "../lists/FrabricWhitelist.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 // FrabricERC20s are tokens with a built in limit order DEX, along with governance and dividend functionality
 // The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
-contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable, IntegratedLimitOrderDex, ERC20VotesUpgradeable, FrabricWhitelist {
+contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable, IntegratedLimitOrderDEX, ERC20VotesUpgradeable, FrabricWhitelist {
   using SafeERC20 for IERC20;
 
   bool public mintable;
@@ -50,10 +50,10 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     initialize("", "", 0, false, address(0));
   }
 
-  function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDex) {
+  function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {
     ERC20Upgradeable._transfer(from, to, amount);
   }
-  function balanceOf(address account) public view override(ERC20Upgradeable, IntegratedLimitOrderDex) returns (uint256) {
+  function balanceOf(address account) public view override(ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint256) {
     return ERC20Upgradeable.balanceOf(account);
   }
 
@@ -72,7 +72,7 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
   }
 
   // Whitelist functions
-  function whitelisted(address person) public view override(IntegratedLimitOrderDex, IWhitelist, FrabricWhitelist) returns (bool) {
+  function whitelisted(address person) public view override(IntegratedLimitOrderDEX, IWhitelist, FrabricWhitelist) returns (bool) {
     return FrabricWhitelist.whitelisted(person);
   }
   function setParentWhitelist(address whitelist) external override onlyOwner {

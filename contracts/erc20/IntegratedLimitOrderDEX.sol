@@ -7,12 +7,12 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import "../interfaces/erc20/IIntegratedLimitOrderDex.sol";
+import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
 // Doesn't support fee on transfer/rebase yet various USD stablecoins do theoretically have fee on transfer
 // Either add an explicit require for non-fee on transfer or support fee on transfer?
 // TODO
-abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex, Initializable, ReentrancyGuardUpgradeable {
+abstract contract IntegratedLimitOrderDEX is IIntegratedLimitOrderDEX, Initializable, ReentrancyGuardUpgradeable {
   using SafeERC20 for IERC20;
 
   // Token to trade against, presumably a USD stablecoin or WETH
@@ -38,7 +38,7 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex, Initializ
   function _transfer(address from, address to, uint256 amount) internal virtual;
   function balanceOf(address account) public virtual returns (uint256);
 
-  function __IntegratedLimitOrderDex_init(address _dexToken) private onlyInitializing {
+  function __IntegratedLimitOrderDEX_init(address _dexToken) private onlyInitializing {
     __ReentrancyGuard_init();
     dexToken = _dexToken;
   }
@@ -112,8 +112,8 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex, Initializ
 
   // nonReentrant to prevent the same order from being filled multiple times
   function action(OrderType current, OrderType other, uint256 price, uint256 amount) private nonReentrant {
-    require(price != 0, "IntegratedLimitOrderDex: Price is 0");
-    require(amount != 0, "IntegratedLimitOrderDex: Amount is 0");
+    require(price != 0, "IntegratedLimitOrderDEX: Price is 0");
+    require(amount != 0, "IntegratedLimitOrderDEX: Amount is 0");
 
     PricePoint storage point = _points[price];
     // If there's counter orders at this price, fill them
@@ -143,21 +143,21 @@ abstract contract IntegratedLimitOrderDex is IIntegratedLimitOrderDex, Initializ
   }
 
   function buy(uint256 price, uint256 amount) external override {
-    require(whitelisted(msg.sender), "IntegratedLimitOrderDex: Not whitelisted to hold this token");
+    require(whitelisted(msg.sender), "IntegratedLimitOrderDEX: Not whitelisted to hold this token");
     IERC20(dexToken).safeTransferFrom(msg.sender, address(this), price * amount);
     action(OrderType.Buy, OrderType.Sell, price, amount);
   }
 
   function sell(uint256 price, uint256 amount) external override {
     locked[msg.sender] += amount;
-    require(balanceOf(msg.sender) > locked[msg.sender], "IntegratedLimitOrderDex: Not enough balance");
+    require(balanceOf(msg.sender) > locked[msg.sender], "IntegratedLimitOrderDEX: Not enough balance");
     action(OrderType.Sell, OrderType.Buy, price, amount);
   }
 
   function cancelOrder(uint256 price, uint256 i) external override {
     PricePoint storage point = _points[price];
-    require(point.orderType != OrderType.Null, "IntegratedLimitOrderDex: Trying to cancel a null order");
-    require(point.orders[i].holder == msg.sender, "IntegratedLimitOrderDex: Trying to cancel an point which isn't yours");
+    require(point.orderType != OrderType.Null, "IntegratedLimitOrderDEX: Trying to cancel a null order");
+    require(point.orders[i].holder == msg.sender, "IntegratedLimitOrderDEX: Trying to cancel an point which isn't yours");
 
     uint256 amount = point.orders[i].amount;
     // If this is not the last order, shift the last order down
