@@ -18,19 +18,13 @@ interface IThread is IFrabricDAO {
     Dissolution
   }
 
-  function crowdfund() external view returns (address);
   function agent() external view returns (address);
   function frabric() external view returns (address);
 
   function initialize(
-    address _crowdfund,
     address _erc20,
-    string memory name,
-    string memory symbol,
-    address parentWhitelist,
-    address agent,
-    address raiseToken,
-    uint256 target
+    address _agent,
+    address _frabric
   ) external;
 
   function proposeAgentChange(

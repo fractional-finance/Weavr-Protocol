@@ -10,7 +10,14 @@ interface IFrabricERC20 is IFrabricWhitelistExposed {
   function mintable() external view returns (bool);
   function claimedDistribution(address person, uint256 id) external view returns (bool);
 
-  function initialize(string memory name, string memory symbol, uint256 supply, bool mintable, address parentWhitelist) external;
+  function initialize(
+    string memory name,
+    string memory symbol,
+    uint256 supply,
+    bool mintable,
+    address parentWhitelist,
+    address dexToken
+  ) external;
 
   function mint(address to, uint256 amount) external;
 

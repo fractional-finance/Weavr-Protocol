@@ -25,9 +25,12 @@ interface ICrowdfund {
     string memory symbol,
     address _whitelist,
     address _agent,
+    address _thread,
     address _token,
     uint256 _target
   ) external;
+
+  function normalizeRaiseToThread(uint256 amount) external returns (uint256);
 
   function deposit(uint256 amount) external;
   function withdraw(uint256 amount) external;

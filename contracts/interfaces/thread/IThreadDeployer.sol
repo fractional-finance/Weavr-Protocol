@@ -2,6 +2,14 @@
 pragma solidity >=0.8.9;
 
 interface IThreadDeployer {
+  event Thread(
+    address indexed agent,
+    address indexed tradeToken,
+    address erc20,
+    address thread,
+    address crowdfund
+  );
+
   function initialize(
     address frabric,
     address _crowdfundProxy,

@@ -9,7 +9,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
-import "../interfaces/thread/ICrowdfund.sol";
 import "../interfaces/thread/IThread.sol";
 
 import "../dao/FrabricDAO.sol";
@@ -17,7 +16,6 @@ import "../dao/FrabricDAO.sol";
 contract Thread is IThread, Initializable, FrabricDAO {
   using SafeERC20 for IERC20;
 
-  address public override crowdfund;
   address public override agent;
   address public override frabric;
 
@@ -32,37 +30,24 @@ contract Thread is IThread, Initializable, FrabricDAO {
   mapping(uint256 => address) private _frabrics;
   mapping(uint256 => Dissolution) private _dissolutions;
 
-  // Normalize the Crowdfund token amount to the Thread's
-  // This function's behavior is shared with Crowdfund
-  function normalize(uint256 amount) internal view returns (uint256) {
-    return amount * (10 ** (18 - IERC20Metadata(crowdfund).decimals()));
-  }
-
   function initialize(
-    address _crowdfund,
     address _erc20,
-    string memory name,
-    string memory symbol,
-    address parentWhitelist,
     address _agent,
-    address tradeToken, // Used for both the Crowdfund and DEX
-    uint256 target
+    address _frabric
   ) public initializer {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
     __DAO_init(_erc20, 1 weeks);
-    crowdfund = _crowdfund;
-    IFrabricERC20(erc20).initialize(name, symbol, normalize(target), false, parentWhitelist, tradeToken);
-    ICrowdfund(crowdfund).initialize(name, symbol, parentWhitelist, _agent, tradeToken, target);
-    IERC20(erc20).safeTransfer(crowdfund, normalize(target));
     agent = _agent;
+    frabric = _frabric;
     emit AgentChanged(address(0), agent);
+    emit FrabricChanged(address(0), frabric);
   }
 
   // Initialize with null info to prevent anyone from accessing this contract
   constructor() {
-    initialize(address(0), address(0), "", "", address(0), address(0), address(0), 0);
+    initialize(address(0), address(0), address(0));
   }
 
   function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {

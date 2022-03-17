@@ -29,6 +29,9 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
 
   address public whitelist;
   address public agent;
+  // Thread isn't needed, just its ERC20
+  // This keeps data relative and accessible though, being able to jump to a Thread via its Crowdfund
+  // Being able to jump to its token isn't enough as the token doesn't know of the Thread
   address public thread;
   address public token;
   uint256 public target;
@@ -50,13 +53,14 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     string memory symbol,
     address _whitelist,
     address _agent,
+    address _thread,
     address _token,
     uint256 _target
   ) public initializer {
-    __ERC20_init(string(abi.encodePacked("Crowdfund ", name)), string(abi.encodePacked("CF", symbol)));
+    __ERC20_init(string(abi.encodePacked("Crowdfund ", name)), string(abi.encodePacked("CF-", symbol)));
     whitelist = _whitelist;
     agent = _agent;
-    thread = msg.sender;
+    thread = _thread;
     token = _token;
     require(_target != 0, "Crowdfund: Fundraising target is 0");
     target = _target;
@@ -64,19 +68,39 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     // This could be packed into the following, yet we'd lose indexing
     emit CrowdfundStarted(agent, thread, token, target);
     emit StateChange(uint256(_state), bytes(""));
+
+    // Normalize 1 of the raise token to the thread token to ensure normalization won't fail
+    normalizeRaiseToThread(1);
   }
 
   constructor() {
-    initialize("", "", address(0), address(0), address(0), 0);
+    initialize("", "", address(0), address(0), address(0), address(0), 0);
   }
 
   // Match the decimals of the underlying ERC20 which this ERC20 maps to
+  // If no decimals are specified, assumes 18
   function decimals() public view override returns (uint8) {
     try IERC20Metadata(token).decimals() returns (uint8 result) {
       return result;
     } catch {
       return 18;
     }
+  }
+
+  // Frabric ERC20s have 18 decimals. The raise token may have any value (such as 6) or not specify
+  // The above function, as documented, handles the raise token's decimals
+  // This function normalizes the raise token quantity to the matching thread token quantity
+  // If the token in question has more than 18 decimals, this will error
+  // The initializer accordingly calls this to confirm normalization won't error at the end of the raise
+  // The Frabric could also perform this check, to avoid voting to create a Thread that will fail during deployment
+  // Human review is trusted to be sufficient there with this solely being a fallback before funds actually start moving
+  function normalizeRaiseToThread(uint256 amount) public view override returns (uint256) {
+    // This calls Thread's decimals function BUT according to ThreadDeployer, Thread isn't initialized yet
+    // Thread is initialized after Crowdfund due to Crowdfund having the amount conversion code
+    // Therefore, Thread's decimals function must be static and work without initialization OR ThreadDeployer must be updated
+    // To ensure this is never missed, ThreadDeployer checks for decimal accuracy before and after initialization
+    // That way, if anyone edits FrabricERC20 and edits its initializer calls without reading the surrounding code, it'll fail, forcing review
+    return amount * (10 ** (18 - decimals()));
   }
 
   // Don't allow Crowdfund tokens to be transferred, yet mint/burn will still call this hook
@@ -194,12 +218,6 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     emit StateChange(uint256(_state), bytes(""));
   }
 
-  // Normalize the Crowdfund token amount to the Thread's
-  // This function's behavior is shared with Thread
-  function normalize(uint256 amount) internal view returns (uint256) {
-    return amount * (10 ** (18 - decimals()));
-  }
-
   // Allow users to burn Crowdfund tokens to receive Thread tokens
   // This is shared with Thread
   function burn(address depositor) external override {
@@ -207,6 +225,6 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     uint256 balance = balanceOf(depositor);
     require(balance != 0, "Crowdfund: Balance is 0");
     burnInternal(depositor, balance);
-    IERC20(IThread(thread).erc20()).safeTransfer(depositor, normalize(balance));
+    IERC20(IThread(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
   }
 }

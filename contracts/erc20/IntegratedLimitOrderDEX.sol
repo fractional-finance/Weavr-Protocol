@@ -38,7 +38,7 @@ abstract contract IntegratedLimitOrderDEX is IIntegratedLimitOrderDEX, Initializ
   function _transfer(address from, address to, uint256 amount) internal virtual;
   function balanceOf(address account) public virtual returns (uint256);
 
-  function __IntegratedLimitOrderDEX_init(address _dexToken) private onlyInitializing {
+  function __IntegratedLimitOrderDEX_init(address _dexToken) internal onlyInitializing {
     __ReentrancyGuard_init();
     dexToken = _dexToken;
   }

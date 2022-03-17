@@ -49,7 +49,7 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
   }
 
   constructor() {
-    initialize("", "", 0, false, address(0));
+    initialize("", "", 0, false, address(0), address(0));
   }
 
   function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {
