@@ -1,25 +1,28 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import "../interfaces/modifiers/IGloballyAccepted.sol";
 
 // Controls whether or not *anyone* can participate or only those explicitly specified by a Whitelist
-abstract contract GloballyAccepted is IGloballyAccepted {
-  bool private _global = false;
+abstract contract GloballyAccepted is Initializable, IGloballyAccepted {
+  bool public override global;
 
-  function _globallyAccept() internal {
-    _global = true;
-    emit GlobalAcceptance();
+  // Should be pointless as-is, yet it's minimally run
+  function __GloballyAccepted_init() internal onlyInitializing {
+    global = false;
   }
 
-  function global() public view override returns (bool) {
-    return _global;
+  function _globallyAccept() internal {
+    global = true;
+    emit GlobalAcceptance();
   }
 
   // Likely won't be used due to the true/false usage in the whitelist
   // That said, this is good to fill the contract out
   modifier globallyAccepted() {
-    require(_global, "GloballyAccepted: Global acceptance hasn't happened yet");
+    require(global, "GloballyAccepted: Global acceptance hasn't happened yet");
     _;
   }
 }
