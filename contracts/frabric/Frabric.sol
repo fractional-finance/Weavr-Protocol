@@ -70,6 +70,18 @@ contract Frabric is FrabricDAO, IFrabric {
     return uint256(_guardian[__guardian]);
   }
 
+  // The erc20 is expected to be initialized via JS
+  // This is distinct from Thread which calls initialize itself
+  // This is because Threads are automically deployed and must be initialized via Solidity
+  // The Frabric should only be deployed once, enabling us to take over
+  function initialize(address erc20) public initializer {
+    __DAO_init(erc20, 2 weeks);
+  }
+
+  constructor() {
+    initialize(address(0));
+  }
+
   function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {
     return IFrabricERC20(erc20).whitelisted(msg.sender);
   }
