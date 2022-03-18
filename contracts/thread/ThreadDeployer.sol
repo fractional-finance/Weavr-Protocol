@@ -20,9 +20,11 @@ import "../interfaces/thread/IThreadDeployer.sol";
 contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
   using SafeERC20 for IERC20;
 
-  address public crowdfundProxy;
-  address public erc20Beacon;
-  address public threadBeacon;
+  address public override crowdfundProxy;
+  address public override erc20Beacon;
+  address public override threadBeacon;
+
+  mapping(address => uint256) public override lockup;
 
   function initialize(
     address frabric,
@@ -33,8 +35,9 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     __Ownable_init();
     _transferOwnership(frabric);
 
-    // This could be a TUP chain yet is a BeaconProxy for consistency
-    // This beacon is a SingleBeacon with just the one address
+    // This is technically a beacon to keep things consistent
+    // That said, it can't actually upgrade itself and has no owner to upgrade it
+    // Because of that, it's called a proxy instead of a beacon
     crowdfundProxy = _crowdfundProxy;
     // Beacons which allow code to be changed by the contract itself or its owner
     // Allows Threads upgrading individually
@@ -46,7 +49,7 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     initialize(address(0), address(0), address(0), address(0));
   }
 
-  // Only owner to ensure all Thread events represent Frabric Threads
+  // onlyOwner to ensure all Thread events represent Frabric Threads
   function deploy(
     string memory name,
     string memory symbol,
@@ -87,15 +90,30 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     // Prevents anyone from editing the FrabricERC20 and this constructor without hitting errors during testing
     // Thoroughly documented in Crowdfund
     uint256 decimals = IERC20Metadata(erc20).decimals();
-    uint256 threadTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
+    uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
+    // Add 6% on top for the Thread
+    uint256 threadTokenSupply = threadBaseTokenSupply * 106 / 100;
     IFrabricERC20(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken);
     require(decimals == IERC20Metadata(erc20).decimals(), "ThreadDeployer: ERC20 changed decimals on initialization");
 
-    // Transfer the Thread token to the Crowdfund
-    IERC20(erc20).safeTransfer(crowdfund, threadTokenSupply);
     // Transfer token ownership to the Thread
     OwnableUpgradeable(erc20).transferOwnership(thread);
 
+    // Transfer the Thread token to the Crowdfund
+    IERC20(erc20).safeTransfer(crowdfund, threadBaseTokenSupply);
+
+    // Set a lockup for the Thread's token
+    lockup[erc20] = block.timestamp + (4 weeks);
+
     emit Thread(agent, tradeToken, erc20, thread, crowdfund);
+  }
+
+  // Claim locked tokens
+  function claim(address erc20) external {
+    // If this ERC20 never had a lockup, this will automatically clear
+    // This allows the Frabric to recover tokens sent to this address by mistake in theory, yet in reality should never matter
+    require(block.timestamp >= lockup[erc20], "ThreadDeployer: Lockup has yet to expire");
+    // Transfer the 6% to the Frabric
+    IERC20(erc20).safeTransfer(owner(), IERC20(erc20).balanceOf(address(this)));
   }
 }

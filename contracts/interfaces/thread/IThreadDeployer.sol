@@ -10,6 +10,12 @@ interface IThreadDeployer {
     address crowdfund
   );
 
+  function crowdfundProxy() external view returns (address);
+  function erc20Beacon() external view returns (address);
+  function threadBeacon() external view returns (address);
+
+  function lockup(address erc20) external view returns (uint256);
+
   function initialize(
     address frabric,
     address _crowdfundProxy,
