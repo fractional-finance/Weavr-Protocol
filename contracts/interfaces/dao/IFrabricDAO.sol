@@ -4,7 +4,7 @@ pragma solidity >=0.8.9;
 import "./IDAO.sol";
 
 interface IFrabricDAO is IDAO {
-  event UpgradeProposed(uint256 indexed id, address indexed instance, address indexed code);
+  event UpgradeProposed(uint256 indexed id, address indexed beacon, address indexed instance, address code);
   event TokenActionProposed(
     uint256 indexed id,
     address indexed token,
@@ -21,6 +21,7 @@ interface IFrabricDAO is IDAO {
   function proposePaper(string calldata info) external returns (uint256);
   function proposeUpgrade(
     string calldata info,
+    address beacon,
     address instance,
     address code
   ) external returns (uint256);

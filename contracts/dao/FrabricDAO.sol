@@ -4,8 +4,7 @@ pragma solidity ^0.8.9;
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
-import "../interfaces/proxy/IBeaconProxied.sol";
-import "../interfaces/proxy/IBeacon.sol";
+import "../interfaces/beacon/IBeacon.sol";
 
 import "./DAO.sol";
 
@@ -24,6 +23,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
   }
 
   struct Upgrade {
+    address beacon;
     address instance;
     address code;
   }
@@ -56,11 +56,17 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
   // Allows upgrading itself or any contract owned by itself
   function proposeUpgrade(
     string calldata info,
+    address beacon,
     address instance,
     address code
   ) external beforeProposal() returns (uint256) {
-    _upgrade[_nextProposalID] = Upgrade(instance, code);
-    emit UpgradeProposed(_nextProposalID, instance, code);
+    _upgrade[_nextProposalID] = Upgrade(beacon, instance, code);
+    // Doesn't index code as parsing the Beacon's logs for its indexed code argument
+    // will return every time a contract upgraded to it
+    // This combination of options should be competent for almost all use cases
+    // The only missing indexing case is when it's proposed to upgrade, yet that never passes/executes
+    // This should be minimally considerable and coverable by outside solutions if truly needed
+    emit UpgradeProposed(_nextProposalID, beacon, instance, code);
     return _createProposal(info, uint256(CommonProposalType.Upgrade) | commonProposalBit);
   }
 
@@ -102,7 +108,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
         // NOP as the DAO emits ProposalStateChanged
 
       } else if (proposalType == CommonProposalType.Upgrade) {
-        IBeacon(IBeaconProxied(_upgrade[id].instance).beacon()).upgrade(_upgrade[id].instance, _upgrade[id].code);
+        IBeacon(_upgrade[id].beacon).upgrade(_upgrade[id].instance, _upgrade[id].code);
         delete _upgrade[id];
 
       } else if (proposalType == CommonProposalType.TokenAction) {
