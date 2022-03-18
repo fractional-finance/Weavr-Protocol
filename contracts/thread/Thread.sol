@@ -96,6 +96,12 @@ contract Thread is IThread, Initializable, FrabricDAO {
       emit FrabricChanged(frabric, _frabrics[id]);
       frabric = _frabrics[id];
     } else if (proposalType == ThreadProposalType.Dissolution) {
+      // Prevent the Thread from being locked up in a Dissolution the agent won't honor for whatever reason
+      // This will issue payment and then the agent will be obligated to transfer property or have bond slashed
+      // Not calling complete on a passed Dissolution may also be grounds for a bond slash
+      // The intent is to allow the agent to not listen to impropriety with the Frabric as arbitrator
+      // See the Frabric's community policies for more information on process
+      require(msg.sender == agent, "Thread: Only the agent can complete a dissolution proposal");
       Dissolution memory dissolution = _dissolutions[id];
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.amount);
       IFrabricERC20(erc20).pause();
