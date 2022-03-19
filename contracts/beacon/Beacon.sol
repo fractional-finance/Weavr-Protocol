@@ -1,42 +1,41 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/beacon/IBeaconUpgradeable.sol";
-import {AddressUpgradeable as Address} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
-import "../interfaces/beacon/IBeacon.sol";
+import "../interfaces/beacon/IFrabricBeacon.sol";
 
-contract Beacon is OwnableUpgradeable, IBeaconUpgradeable, IBeacon {
-  uint256 public releaseChannels;
+contract Beacon is Ownable, IBeacon, IFrabricBeacon {
+  uint8 public immutable override releaseChannels;
+  mapping(address => address) public override implementations;
+  mapping(address => bool) public override beacon;
 
-  mapping(address => address) internal _implementation;
-
-  // This could not have an initializer and instead use a constructor
-  // This is a pretty low level building block, yet due to release channel functionality,
-  // there may be a reason to upgrade this eventually (user added release channels?)
-  // Because of that, Beacons should be deployed as `BeaconProxy`s with their own Beacon
-  // That Beacon should just not be a BeaconProxy and be the true low level building block
-  function initialize(uint256 _releaseChannels) public initializer {
-    __Ownable_init();
+  constructor(uint8 _releaseChannels) Ownable() {
     releaseChannels = _releaseChannels;
   }
 
-  constructor() {
-    initialize(0);
-  }
-
-  function implementation() external view override returns (address) {
-    address code = _implementation[msg.sender];
+  function implementation(address instance) public view override returns (address) {
+    address code = implementations[instance];
     // If this contract is tracking a release channel, follow it
     if (uint256(uint160(code)) <= releaseChannels) {
-      code = _implementation[code];
+      code = implementations[code];
+    }
+    // If this contract's code is actually another Beacon, hand off to it
+    if (beacon[code]) {
+      // Uses IFrabricBeacon instead of IBeacon to get the variant which takes an address
+      return IFrabricBeacon(code).implementation(instance);
     }
     return code;
   }
 
+  function implementation() external view override returns (address) {
+    return implementation(msg.sender);
+  }
+
   // virtual so SingleBeacon can lock it down
-  function upgrade(address instance, address code) public virtual {
+  function upgrade(address instance, address code) public override virtual {
     // Validate the code to be a release channel or contract
     // That contract could still be incredibly invalid yet this will catch basic critical errors
     require((uint256(uint160(code)) <= releaseChannels) || Address.isContract(code), "Beacon: Code isn't a release channel nor contract");
@@ -44,18 +43,23 @@ contract Beacon is OwnableUpgradeable, IBeaconUpgradeable, IBeacon {
     // Release channel
     if (uint256(uint160(instance)) <= releaseChannels) {
       require(msg.sender == owner(), "Beacon: Only owner can upgrade release channel");
-      _implementation[instance] = code;
+      implementations[instance] = code;
 
-    // Specific code
+    // Specific code/other beacon
     } else {
       // The code for a specific contract can only be upgraded by itself or its owner
       // Relies on short circuiting so even non-owned contracts can call this
       require(
-        (msg.sender == instance) || (msg.sender == OwnableUpgradeable(instance).owner()),
+        (msg.sender == instance) || (msg.sender == Ownable(instance).owner()),
         "Beacon: Instance's code is being upgraded by unauthorized contract"
       );
 
-      _implementation[instance] = code;
+      implementations[instance] = code;
     }
+  }
+
+  // EIP-165 could also be used for this purpose
+  function registerAsBeacon() external override {
+    beacon[msg.sender] = true;
   }
 }

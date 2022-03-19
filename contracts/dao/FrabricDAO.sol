@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
-import "../interfaces/beacon/IBeacon.sol";
+import "../interfaces/beacon/IFrabricBeacon.sol";
 
 import "./DAO.sol";
 
@@ -108,7 +108,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
         // NOP as the DAO emits ProposalStateChanged
 
       } else if (proposalType == CommonProposalType.Upgrade) {
-        IBeacon(_upgrade[id].beacon).upgrade(_upgrade[id].instance, _upgrade[id].code);
+        IFrabricBeacon(_upgrade[id].beacon).upgrade(_upgrade[id].instance, _upgrade[id].code);
         delete _upgrade[id];
 
       } else if (proposalType == CommonProposalType.TokenAction) {
