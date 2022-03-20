@@ -12,9 +12,16 @@ interface IFrabric is IFrabricDAO {
   event ThreadProposed(uint256 indexed id, address indexed agent, address indexed raiseToken, uint256 target);
   event ThreadProposalProposed(uint256 indexed id, address indexed thread, uint256 proposalType, string info);
 
+  enum GovernorStatus {
+    Null,
+    Unverified, // Proposed and elected, yet hasn't gone through KYC
+    Active,
+    Removed
+  }
+
   function kyc() external view returns (address);
   function threadDeployer() external view returns (address);
-  function guardian(address guardian) external view returns (uint256);
+  function governor(address governor) external view returns (GovernorStatus);
 
   function proposeParticipant(string calldata info, uint256 participantType, address participant) external returns (uint256);
   function proposeThread(

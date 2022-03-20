@@ -56,7 +56,7 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
     address _thread,
     address _token,
     uint256 _target
-  ) public initializer {
+  ) external initializer {
     __ERC20_init(string(abi.encodePacked("Crowdfund ", name)), string(abi.encodePacked("CF-", symbol)));
     whitelist = _whitelist;
     agent = _agent;

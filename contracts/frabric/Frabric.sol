@@ -24,12 +24,12 @@ contract Frabric is FrabricDAO, IFrabric {
 
   // Almost all of these are internal as their events are easily grabbed and contain the needed information
   // whitelisted/balanceOf exposes if someone is an active participant
-  // guardian is a getter to view their statuses more easily and let other contracts perform checks
+  // governor is a getter to view their statuses more easily and let other contracts perform checks
 
   enum ParticipantType {
     Null,
     KYC,
-    Guardian,
+    Governor,
     Individual,
     Corporation
   }
@@ -41,13 +41,7 @@ contract Frabric is FrabricDAO, IFrabric {
   }
   mapping(uint256 => Participant) internal _participants;
 
-  enum GuardianStatus {
-    Null,
-    Unverified, // Proposed and elected
-    Active,
-    Removed
-  }
-  mapping(address => GuardianStatus) internal _guardian;
+  mapping(address => GovernorStatus) public governor;
 
   struct ThreadProposal {
     string name;
@@ -66,12 +60,8 @@ contract Frabric is FrabricDAO, IFrabric {
   }
   mapping(uint256 => ThreadProposalProposal) internal _threadProposals;
 
-  function guardian(address __guardian) external view override returns (uint256) {
-    return uint256(_guardian[__guardian]);
-  }
-
   // The erc20 is expected to be fully initialized via JS during deployment
-  function initialize(address erc20) public initializer {
+  function initialize(address erc20) external initializer {
     __FrabricDAO_init(erc20, 2 weeks);
   }
 
@@ -82,7 +72,7 @@ contract Frabric is FrabricDAO, IFrabric {
     return IFrabricERC20(erc20).whitelisted(msg.sender);
   }
 
-  // Can set to Null to remove Guardians/Individuals/Corporations
+  // Can set to Null to remove Governors/Individuals/Corporations
   // KYC must be replaced
   function proposeParticipant(string calldata info, uint256 participantType, address participant) external override beforeProposal() returns (uint256) {
     _participants[_nextProposalID] = Participant(ParticipantType(participantType), participant, false);
@@ -100,7 +90,7 @@ contract Frabric is FrabricDAO, IFrabric {
   ) external override beforeProposal() returns (uint256) {
     require(bytes(name).length >= 3, "Frabric: Thread name has less than three characters");
     require(bytes(symbol).length >= 2, "Frabric: Thread symbol has less than two characters");
-    require(_guardian[agent] == GuardianStatus.Active, "Frabric: Guardian selected to be agent isn't active");
+    require(governor[agent] == GovernorStatus.Active, "Frabric: Governor selected to be agent isn't active");
     _threads[_nextProposalID] = ThreadProposal(name, symbol, agent, tradeToken, target);
     emit ThreadProposed(_nextProposalID, agent, tradeToken, target);
     return _createProposal(info, uint256(FrabricProposalType.Thread));
@@ -154,8 +144,8 @@ contract Frabric is FrabricDAO, IFrabric {
       } else {
         emit ParticipantUpdated(id, participant.participant, uint256(participant.participantType));
         if (participant.participantType == ParticipantType.Null) {
-          if (_guardian[participant.participant] != GuardianStatus.Null) {
-            _guardian[participant.participant] = GuardianStatus.Removed;
+          if (governor[participant.participant] != GovernorStatus.Null) {
+            governor[participant.participant] = GovernorStatus.Removed;
           }
 
           // Remove them from the whitelist
@@ -168,9 +158,9 @@ contract Frabric is FrabricDAO, IFrabric {
           return;
         }
 
-        if (participant.participantType == ParticipantType.Guardian) {
-          require(_guardian[participant.participant] == GuardianStatus.Null, "Frabric: Guardian already exists");
-          _guardian[participant.participant] = GuardianStatus.Unverified;
+        if (participant.participantType == ParticipantType.Governor) {
+          require(governor[participant.participant] == GovernorStatus.Null, "Frabric: Governor already exists");
+          governor[participant.participant] = GovernorStatus.Unverified;
         }
 
         // Set this proposal as having passed so the KYC company can whitelist

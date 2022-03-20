@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "../interfaces/erc20/IDividendERC20.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../dao/FrabricDAO.sol";
@@ -28,7 +29,7 @@ contract Thread is Initializable, FrabricDAO, IThread {
     address _erc20,
     address _agent,
     address _frabric
-  ) public initializer {
+  ) external initializer {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
@@ -98,7 +99,8 @@ contract Thread is Initializable, FrabricDAO, IThread {
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.amount);
       IFrabricERC20(erc20).pause();
       IERC20(dissolution.token).approve(erc20, dissolution.amount);
-      IFrabricERC20(erc20).distribute(dissolution.token, dissolution.amount);
+      // See IFrabricERC20 for why that doesn't include IDividendERC20 despite FrabricERC20 being a DividendERC20
+      IDividendERC20(erc20).distribute(dissolution.token, dissolution.amount);
       emit Dissolved(id);
     } else {
       require(false, "Thread: Trying to complete an unknown proposal type");
