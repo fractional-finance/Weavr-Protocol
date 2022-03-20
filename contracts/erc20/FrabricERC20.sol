@@ -29,8 +29,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     __Pausable_init();
     __FrabricWhitelist_init(parentWhitelist);
     __IntegratedLimitOrderDEX_init(dexToken);
-    // Shim to allow the default constructor to successfully execute
-    // Actual deployments should have the msg.sender in the parent whitelist
+    // Shim for FRBC and tests
     if (supply != 0) {
       _mint(msg.sender, supply);
     }
