@@ -22,6 +22,7 @@ module.exports = {
     return beacon;
   },
 
+  // Solely used for testing (as exported, used in this file for the intended to be used deployFRBC)
   deployFrabricERC20: async (beacon, name, symbol, supply, mintable, whitelist, dexToken) => {
     process.hhCompiled ? await hre.run("compile") : null;
     process.hhCompiled = true;
