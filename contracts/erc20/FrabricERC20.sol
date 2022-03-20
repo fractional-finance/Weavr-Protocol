@@ -3,8 +3,8 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
+import "./DividendERC20.sol";
 import "../lists/FrabricWhitelist.sol";
 import "./IntegratedLimitOrderDEX.sol";
 
@@ -13,18 +13,8 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 // FrabricERC20s are tokens with a built in limit order DEX, along with governance and dividend functionality
 // The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
-contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, ERC20VotesUpgradeable, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20 {
-  using SafeERC20 for IERC20;
-
+contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20 {
   bool public mintable;
-
-  struct Distribution {
-    IERC20 token;
-    uint256 amount;
-    uint256 block;
-  }
-  Distribution[] private _distributions;
-  mapping(address => mapping(uint256 => bool)) public override claimedDistribution;
 
   function initialize(
     string memory name,
@@ -33,12 +23,10 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, ERC20VotesUpgr
     bool _mintable,
     address parentWhitelist,
     address dexToken
-  ) public initializer {
+  ) external initializer {
+    __DividendERC20_init(name, symbol);
     __Ownable_init();
     __Pausable_init();
-    __ERC20_init(name, symbol);
-    __ERC20Permit_init(name);
-    __ERC20Votes_init();
     __FrabricWhitelist_init(parentWhitelist);
     __IntegratedLimitOrderDEX_init(dexToken);
     // Shim to allow the default constructor to successfully execute
@@ -52,6 +40,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, ERC20VotesUpgr
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() initializer {}
 
+  // Redefine ERC20 functions so the DEX can pick them up as overrides and call them
   function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {
     ERC20Upgradeable._transfer(from, to, amount);
   }
@@ -62,16 +51,6 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, ERC20VotesUpgr
   function mint(address to, uint256 amount) external override onlyOwner {
     require(mintable);
     _mint(to, amount);
-  }
-
-  // Disable delegation to enable dividends
-  // Removes the need to track both historical balances AND historical voting power
-  // Also resolves legal liability which is currently not fully explored and may be a concern
-  function delegate(address) public pure override {
-    require(false, "FrabricERC20: Delegation is not allowed");
-  }
-  function delegateBySig(address, uint256, uint256, uint8, bytes32, bytes32) public pure override {
-    require(false, "FrabricERC20: Delegation is not allowed");
   }
 
   // Whitelist functions
@@ -111,22 +90,5 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, ERC20VotesUpgr
     super._afterTokenTransfer(from, to, amount);
     // Require the balance of the sender be greater than the amount of tokens they have on the DEX
     require(balanceOf(from) >= locked[from], "FrabricERC20: DEX orders exceed balance");
-  }
-
-  // Dividend implementation
-  function distribute(address token, uint256 amount) external override {
-    IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-    _distributions.push(Distribution(IERC20(token), amount, block.number));
-    emit Distributed(token, amount);
-  }
-
-  function claim(address person, uint256 id) external override {
-    require(!claimedDistribution[person][id], "FrabricERC20: Distribution was already claimed");
-    claimedDistribution[person][id] = true;
-    uint256 blockNumber = _distributions[id].block;
-    uint256 amount = _distributions[id].amount * getPastVotes(person, blockNumber) / getPastTotalSupply(blockNumber);
-    require(amount != 0, "FrabricERC20: Distribution amount is 0");
-    _distributions[id].token.safeTransfer(person, amount);
-    emit Claimed(person, id, amount);
   }
 }
