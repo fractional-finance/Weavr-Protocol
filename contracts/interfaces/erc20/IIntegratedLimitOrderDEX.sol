@@ -10,8 +10,8 @@ interface IIntegratedLimitOrderDEX {
   function dexToken() external view returns (address);
   function locked(address person) external view returns (uint256);
 
-  function buy(uint256 price, uint256 amount) external;
-  function sell(uint256 price, uint256 amount) external;
+  function buy(address trader, uint256 price, uint256 amount) external returns (uint256, uint256);
+  function sell(uint256 price, uint256 amount) external returns (uint256, uint256);
   function cancelOrder(uint256 price, uint256 i) external;
 
   function getPointType(uint256 price) external view returns (uint256);

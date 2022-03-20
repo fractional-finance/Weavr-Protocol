@@ -44,7 +44,13 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   }
 
   // Fill an order
-  function fill(bool buying, uint256 amount, uint256 price, PricePoint storage point) private returns (uint256) {
+  function fill(
+    bool buying,
+    address trader,
+    uint256 amount,
+    uint256 price,
+    PricePoint storage point
+  ) private returns (uint256) {
     // Fill orders until there are either no orders or our order is filled
     uint256 filled = 0;
     uint256 h = 0;
@@ -56,21 +62,21 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
       point.orders[h].amount -= thisAmount;
       filled += thisAmount;
       amount -= thisAmount;
-      emit Filled(msg.sender, point.orders[h].holder, price, amount);
+      emit Filled(trader, point.orders[h].holder, price, amount);
 
       if (buying) {
         IERC20(dexToken).safeTransfer(point.orders[h].holder, price * thisAmount);
-        _transfer(point.orders[h].holder, msg.sender, thisAmount);
+        _transfer(point.orders[h].holder, trader, thisAmount);
         locked[point.orders[h].holder] -= thisAmount;
       } else {
-        _transfer(msg.sender, point.orders[h].holder, thisAmount);
-        locked[msg.sender] -= thisAmount;
+        _transfer(trader, point.orders[h].holder, thisAmount);
+        locked[trader] -= thisAmount;
       }
     }
 
     // Transfer the DEX token sum if selling
     if (!buying) {
-      IERC20(dexToken).safeTransfer(msg.sender, filled * price);
+      IERC20(dexToken).safeTransfer(trader, filled * price);
     }
 
     // h will always be after the last edited order
@@ -111,17 +117,25 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   }
 
   // nonReentrant to prevent the same order from being filled multiple times
-  function action(OrderType current, OrderType other, uint256 price, uint256 amount) private nonReentrant {
+  // Returns the amount of tokens filled and the position of the created order, if one exists
+  // If the amount filled is equivalent to the amount, the position will be 0
+  function action(
+    OrderType current,
+    OrderType other,
+    address trader,
+    uint256 price,
+    uint256 amount
+  ) private nonReentrant returns (uint256 filled, uint256) {
     require(price != 0, "IntegratedLimitOrderDEX: Price is 0");
     require(amount != 0, "IntegratedLimitOrderDEX: Amount is 0");
 
     PricePoint storage point = _points[price];
     // If there's counter orders at this price, fill them
     if (point.orderType == other) {
-      uint256 filled = fill(current == OrderType.Buy, price, amount, point);
+      filled = fill(current == OrderType.Buy, trader, price, amount, point);
       // Return if fully filled
       if (filled == amount) {
-        return;
+        return (filled, 0);
       }
       amount -= filled;
     }
@@ -138,12 +152,17 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
 
     // Add the new order
     // We could also merge orders here, if an existing order at this price point existed
-    point.orders.push(Order(msg.sender, amount));
-    emit OrderIncrease(msg.sender, price, amount);
+    point.orders.push(Order(trader, amount));
+    emit OrderIncrease(trader, price, amount);
+
+    return (filled, point.orders.length - 1);
   }
 
-  function buy(uint256 price, uint256 amount) external override {
-    require(whitelisted(msg.sender), "IntegratedLimitOrderDEX: Not whitelisted to hold this token");
+  // Lets a trader to be specified as the receiver of the tokens in question
+  // This functionality is required by the DEXRouter and this remains secure thanks to payment being from msg.sender
+  // Returns the same as action
+  function buy(address trader, uint256 price, uint256 amount) external override returns (uint256, uint256) {
+    require(whitelisted(trader), "IntegratedLimitOrderDEX: Not whitelisted to hold this token");
     // Support fee on transfer tokens
     // Safe against re-entrancy as action has nonReentrant
     // The Crowdfund contract actually verifies its token isn't fee on transfer
@@ -153,13 +172,13 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     // USDT notably has fee on transfer code, currently set to 0, that may someday activate
     uint256 balance = IERC20(dexToken).balanceOf(address(this));
     IERC20(dexToken).safeTransferFrom(msg.sender, address(this), price * amount);
-    action(OrderType.Buy, OrderType.Sell, price, IERC20(dexToken).balanceOf(address(this)) - balance);
+    return action(OrderType.Buy, OrderType.Sell, trader, price, IERC20(dexToken).balanceOf(address(this)) - balance);
   }
 
-  function sell(uint256 price, uint256 amount) external override {
+  function sell(uint256 price, uint256 amount) external override returns (uint256, uint256) {
     locked[msg.sender] += amount;
     require(balanceOf(msg.sender) > locked[msg.sender], "IntegratedLimitOrderDEX: Not enough balance");
-    action(OrderType.Sell, OrderType.Buy, price, amount);
+    return action(OrderType.Sell, OrderType.Buy, msg.sender, price, amount);
   }
 
   function cancelOrder(uint256 price, uint256 i) external override {
