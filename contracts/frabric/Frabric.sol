@@ -5,8 +5,9 @@ import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgra
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import "../interfaces/thread/IThread.sol";
+import "../interfaces/bond/IBond.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
+import "../interfaces/thread/IThread.sol";
 
 import "../dao/FrabricDAO.sol";
 
@@ -14,10 +15,12 @@ import "../interfaces/frabric/IFrabric.sol";
 
 contract Frabric is FrabricDAO, IFrabric {
   address public override kyc;
+  address public override bond;
   address public override threadDeployer;
 
   enum FrabricProposalType {
     Participant,
+    RemoveBond,
     Thread,
     ThreadProposal
   }
@@ -40,8 +43,14 @@ contract Frabric is FrabricDAO, IFrabric {
     bool passed;
   }
   mapping(uint256 => Participant) internal _participants;
-
   mapping(address => GovernorStatus) public governor;
+
+  struct RemoveBondProposal {
+    address governor;
+    bool slash;
+    uint256 amount;
+  }
+  mapping(uint256 => RemoveBondProposal) internal _removeBond;
 
   struct ThreadProposal {
     string name;
@@ -61,8 +70,11 @@ contract Frabric is FrabricDAO, IFrabric {
   mapping(uint256 => ThreadProposalProposal) internal _threadProposals;
 
   // The erc20 is expected to be fully initialized via JS during deployment
-  function initialize(address erc20) external initializer {
-    __FrabricDAO_init(erc20, 2 weeks);
+  function initialize(address _erc20, address _kyc, address _bond, address _threadDeployer) external initializer {
+    __FrabricDAO_init(_erc20, 2 weeks);
+    kyc = _kyc;
+    bond = _bond;
+    threadDeployer = _threadDeployer;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -78,6 +90,13 @@ contract Frabric is FrabricDAO, IFrabric {
     _participants[_nextProposalID] = Participant(ParticipantType(participantType), participant, false);
     emit ParticipantProposed(_nextProposalID, participant, participantType);
     return _createProposal(info, uint256(FrabricProposalType.Participant));
+  }
+
+  function proposeRemoveBond(string calldata info, address _governor, bool slash, uint256 amount) external override beforeProposal() returns (uint256) {
+    _removeBond[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
+    require(uint256(governor[_governor]) >= uint256(GovernorStatus.Active), "Frabric: Governor was never active");
+    emit RemoveBondProposed(_nextProposalID, _governor, slash, amount);
+    return _createProposal(info, uint256(FrabricProposalType.RemoveBond));
   }
 
   function proposeThread(
@@ -165,6 +184,13 @@ contract Frabric is FrabricDAO, IFrabric {
 
         // Set this proposal as having passed so the KYC company can whitelist
         participant.passed = true;
+      }
+
+    } else if  (proposalType == FrabricProposalType.RemoveBond) {
+      if (_removeBond[id].slash) {
+        IBond(bond).slash(_removeBond[id].governor, _removeBond[id].amount);
+      } else {
+        IBond(bond).unbond(_removeBond[id].governor, _removeBond[id].amount);
       }
 
     } else if (proposalType == FrabricProposalType.Thread) {

@@ -53,26 +53,30 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBond {
 
   function bond(uint256 amount) external override {
     require(IFrabric(owner()).governor(msg.sender) == IFrabric.GovernorStatus.Active, "Bond: Bonder isn't an active governor");
+    // Safe usage since Uniswap v2 tokens aren't fee on transfer
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     _mint(msg.sender, amount);
+    emit Bond(msg.sender, amount);
   }
 
-  function _burn(address bonder, uint256 amount) internal override onlyOwner {
+  function _burn(address governor, uint256 amount) internal override onlyOwner {
     _burning = true;
-    super._burn(bonder, amount);
+    super._burn(governor, amount);
     _burning = false;
   }
 
   // If the governor isn't active, this could simply allow a full unbond
-  // This creates social engineering attacks where it's proposed to remove a malicious bonder
+  // This creates social engineering attacks where it's proposed to remove a malicious governor
   // and the community, thinking that's beneficial, votes on it before slashing them
-  function unbond(address bonder, uint256 amount) external override onlyOwner {
-    _burn(bonder, amount);
-    IERC20(token).safeTransfer(bonder, amount);
+  function unbond(address governor, uint256 amount) external override onlyOwner {
+    _burn(governor, amount);
+    IERC20(token).safeTransfer(governor, amount);
+    emit Unbond(governor, amount);
   }
 
-  function slash(address bonder, uint256 amount) external override onlyOwner {
-    _burn(bonder, amount);
+  function slash(address governor, uint256 amount) external override onlyOwner {
+    _burn(governor, amount);
     IERC20(token).safeTransfer(owner(),  amount);
+    emit Slash(governor, amount);
   }
 }
