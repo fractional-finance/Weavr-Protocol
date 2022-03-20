@@ -56,10 +56,13 @@ contract Beacon is Ownable, IBeacon, IFrabricBeacon {
 
       implementations[instance] = code;
     }
+
+    emit Upgrade(instance, code);
   }
 
   // EIP-165 could also be used for this purpose
   function registerAsBeacon() external override {
     beacon[msg.sender] = true;
+    emit BeaconRegistered(msg.sender);
   }
 }

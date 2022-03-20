@@ -4,6 +4,9 @@ pragma solidity >=0.8.9;
 import "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 
 interface IFrabricBeacon is IBeacon {
+  event Upgrade(address indexed instance, address indexed code);
+  event BeaconRegistered(address indexed beacon);
+
   // Amount of release channels
   function releaseChannels() external view returns (uint8);
   // Raw address mapping
