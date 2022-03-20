@@ -25,9 +25,7 @@ contract Frabric is FrabricDAO, IFrabric {
     ThreadProposal
   }
 
-  // Almost all of these are internal as their events are easily grabbed and contain the needed information
-  // whitelisted/balanceOf exposes if someone is an active participant
-  // governor is a getter to view their statuses more easily and let other contracts perform checks
+  // The proposal structs are internal as their events are easily grabbed and contain the needed information
 
   struct Participants {
     ParticipantType participantType;

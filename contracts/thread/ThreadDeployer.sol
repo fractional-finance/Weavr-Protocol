@@ -27,13 +27,11 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
   mapping(address => uint256) public override lockup;
 
   function initialize(
-    address frabric,
     address _crowdfundProxy,
     address _erc20Beacon,
     address _threadBeacon
   ) public override initializer {
     __Ownable_init();
-    _transferOwnership(frabric);
 
     // This is technically a beacon to keep things consistent
     // That said, it can't actually upgrade itself and has no owner to upgrade it

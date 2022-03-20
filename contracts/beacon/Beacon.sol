@@ -19,7 +19,8 @@ contract Beacon is Ownable, IBeacon, IFrabricBeacon {
   function implementation(address instance) public view override returns (address) {
     address code = implementations[instance];
     // If this contract is tracking a release channel, follow it
-    if (uint256(uint160(code)) <= releaseChannels) {
+    // Allow a secondary release channel to follow the first (or any other)
+    while (uint256(uint160(code)) <= releaseChannels) {
       code = implementations[code];
     }
     // If this contract's code is actually another Beacon, hand off to it

@@ -17,7 +17,6 @@ interface IThreadDeployer {
   function lockup(address erc20) external view returns (uint256);
 
   function initialize(
-    address frabric,
     address _crowdfundProxy,
     address _erc20Beacon,
     address _threadBeacon
