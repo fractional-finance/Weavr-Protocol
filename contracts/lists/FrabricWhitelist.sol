@@ -19,7 +19,7 @@ abstract contract FrabricWhitelist is GlobalWhitelist, IFrabricWhitelist {
     _setParentWhitelist(parentWhitelistAddress);
   }
 
-  function whitelisted(address person) public view virtual override returns (bool) {
+  function whitelisted(address person) public view virtual override(IWhitelist, GlobalWhitelist) returns (bool) {
     return (
       // Check our own whitelist first
       GlobalWhitelist.whitelisted(person) ||

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { IERC20MetadataUpgradeable as IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -13,7 +13,7 @@ import "../interfaces/thread/ICrowdfund.sol";
 import "../interfaces/thread/IThread.sol";
 
 // TODO also resolve the fee on transfer/rebase commentary from the DEX here
-contract Crowdfund is ICrowdfund, ERC20Upgradeable {
+contract Crowdfund is ERC20Upgradeable, ICrowdfund {
   using SafeERC20 for IERC20;
 
   // Could be gas optimized using 1/2 instead of false/true
@@ -73,9 +73,8 @@ contract Crowdfund is ICrowdfund, ERC20Upgradeable {
     normalizeRaiseToThread(1);
   }
 
-  constructor() {
-    initialize("", "", address(0), address(0), address(0), address(0), 0);
-  }
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() initializer {}
 
   // Match the decimals of the underlying ERC20 which this ERC20 maps to
   // If no decimals are specified, assumes 18

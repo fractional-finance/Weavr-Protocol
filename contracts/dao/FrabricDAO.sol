@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.9;
 
-import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 import "../interfaces/beacon/IFrabricBeacon.sol";
@@ -37,6 +37,10 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     uint256 amount;
   }
   mapping(uint256 => TokenAction) internal _tokenAction;
+
+  function __FrabricDAO_init(address _erc20, uint256 _votingPeriod) internal onlyInitializing {
+    __DAO_init(_erc20, _votingPeriod);
+  }
 
   // Don't allow anyone to propose. This function should always be overriden
   function canPropose() public virtual view returns (bool) {

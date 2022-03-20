@@ -9,7 +9,7 @@ import "../interfaces/modifiers/IGloballyAccepted.sol";
 abstract contract GloballyAccepted is Initializable, IGloballyAccepted {
   bool public override global;
 
-  // Should be pointless as-is, yet it's minimally run
+  // Should be pointless as-is, yet it's minimally run so fine to leave
   function __GloballyAccepted_init() internal onlyInitializing {
     global = false;
   }

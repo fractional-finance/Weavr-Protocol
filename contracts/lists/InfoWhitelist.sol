@@ -11,6 +11,8 @@ abstract contract InfoWhitelist is IInfoWhitelist {
   // To use this as a boolean, simply use a data hash of 0x1
   mapping(address => bytes32) private _whitelist;
 
+  function __InfoWhitelist_init() internal {}
+
   // Set dataHash of 0x0 to remove from whitelist
   function _setWhitelisted(address person, bytes32 dataHash) internal {
     require(_whitelist[person] != dataHash);

@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import "../interfaces/lists/IGlobalWhitelist.sol";
-import "../interfaces/modifiers/IGloballyAccepted.sol";
 import "./InfoWhitelist.sol";
 import "../modifiers/GloballyAccepted.sol";
+import "../interfaces/lists/IGlobalWhitelist.sol";
 
 // Whitelist with the ability for everyone to eventually be considered whitelisted
-abstract contract GlobalWhitelist is GloballyAccepted, InfoWhitelist, IGlobalWhitelist {
+abstract contract GlobalWhitelist is InfoWhitelist, GloballyAccepted, IGlobalWhitelist {
   function __GlobalWhitelist_init() internal onlyInitializing {
+    __InfoWhitelist_init();
     __GloballyAccepted_init();
   }
 

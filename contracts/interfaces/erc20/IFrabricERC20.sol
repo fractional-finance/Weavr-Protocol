@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.9;
 
-import "../lists/IFrabricWhitelistExposed.sol";
+import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { IVotesUpgradeable as IVotes } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 
-interface IFrabricERC20 is IFrabricWhitelistExposed {
+import "../lists/IFrabricWhitelist.sol";
+import "./IIntegratedLimitOrderDEX.sol";
+
+// Doesn't include Ownable, IERC20, and IVotes due to linearization issues by solc
+interface IFrabricERC20 is IFrabricWhitelist, IIntegratedLimitOrderDEX {
   event Distributed(address indexed token, uint256 amount);
   event Claimed(address indexed person, uint256 indexed id, uint256 amount);
 

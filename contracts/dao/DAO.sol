@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.9;
 
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { IVotesUpgradeable as IVotes } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
-import "../interfaces/erc20/IVotes.sol";
 import "../interfaces/dao/IDAO.sol";
 
 // DAO around an ERC20 with getPastVotes (ERC20Votes)
-abstract contract DAO is IDAO, Initializable {
+abstract contract DAO is Initializable, IDAO {
   enum ProposalState {
     Active,
     Queued,

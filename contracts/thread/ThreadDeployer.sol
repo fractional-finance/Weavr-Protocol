@@ -3,9 +3,9 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { IERC20MetadataUpgradeable as IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
@@ -45,9 +45,8 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     threadBeacon = _threadBeacon;
   }
 
-  constructor() {
-    initialize(address(0), address(0), address(0), address(0));
-  }
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() initializer {}
 
   // onlyOwner to ensure all Thread events represent Frabric Threads
   function deploy(
@@ -87,7 +86,7 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
 
     // Initialize the ERC20 now that we can call the Crowdfund contract for decimals
     // Since it needs the decimals of both tokens, yet the ERC20 isn't initialized yet, ensure the decimals are static
-    // Prevents anyone from editing the FrabricERC20 and this constructor without hitting errors during testing
+    // Prevents anyone from editing the FrabricERC20 and this initialize call without hitting errors during testing
     // Thoroughly documented in Crowdfund
     uint256 decimals = IERC20Metadata(erc20).decimals();
     uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);

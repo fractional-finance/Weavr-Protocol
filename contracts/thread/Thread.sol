@@ -1,19 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IERC20MetadataUpgradeable as IERC20Metadata} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-
 import "../interfaces/erc20/IFrabricERC20.sol";
-import "../interfaces/thread/IThread.sol";
 
 import "../dao/FrabricDAO.sol";
 
-contract Thread is IThread, Initializable, FrabricDAO {
+import "../interfaces/thread/IThread.sol";
+
+contract Thread is Initializable, FrabricDAO, IThread {
   using SafeERC20 for IERC20;
 
   address public override agent;
@@ -38,17 +32,15 @@ contract Thread is IThread, Initializable, FrabricDAO {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
-    __DAO_init(_erc20, 1 weeks);
+    __FrabricDAO_init(_erc20, 1 weeks);
     agent = _agent;
     frabric = _frabric;
     emit AgentChanged(address(0), agent);
     emit FrabricChanged(address(0), frabric);
   }
 
-  // Initialize with null info to prevent anyone from accessing this contract
-  constructor() {
-    initialize(address(0), address(0), address(0));
-  }
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() initializer {}
 
   function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {
     return (

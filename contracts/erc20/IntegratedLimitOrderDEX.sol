@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.9;
 
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -12,7 +12,7 @@ import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 // Doesn't support fee on transfer/rebase yet various USD stablecoins do theoretically have fee on transfer
 // Either add an explicit require for non-fee on transfer or support fee on transfer?
 // TODO
-abstract contract IntegratedLimitOrderDEX is IIntegratedLimitOrderDEX, Initializable, ReentrancyGuardUpgradeable {
+abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgradeable, IIntegratedLimitOrderDEX {
   using SafeERC20 for IERC20;
 
   // Token to trade against, presumably a USD stablecoin or WETH

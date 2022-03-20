@@ -5,14 +5,15 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
-import "./IntegratedLimitOrderDEX.sol";
 import "../lists/FrabricWhitelist.sol";
+import "./IntegratedLimitOrderDEX.sol";
+
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 // FrabricERC20s are tokens with a built in limit order DEX, along with governance and dividend functionality
 // The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
-contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable, IntegratedLimitOrderDEX, ERC20VotesUpgradeable, FrabricWhitelist {
+contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, ERC20VotesUpgradeable, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20 {
   using SafeERC20 for IERC20;
 
   bool public mintable;
@@ -33,11 +34,11 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     address parentWhitelist,
     address dexToken
   ) public initializer {
+    __Ownable_init();
+    __Pausable_init();
     __ERC20_init(name, symbol);
     __ERC20Permit_init(name);
     __ERC20Votes_init();
-    __Ownable_init();
-    __Pausable_init();
     __FrabricWhitelist_init(parentWhitelist);
     __IntegratedLimitOrderDEX_init(dexToken);
     // Shim to allow the default constructor to successfully execute
@@ -48,9 +49,8 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
     mintable = _mintable;
   }
 
-  constructor() {
-    initialize("", "", 0, false, address(0), address(0));
-  }
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() initializer {}
 
   function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {
     ERC20Upgradeable._transfer(from, to, amount);
@@ -66,6 +66,7 @@ contract FrabricERC20 is IFrabricERC20, OwnableUpgradeable, PausableUpgradeable,
 
   // Disable delegation to enable dividends
   // Removes the need to track both historical balances AND historical voting power
+  // Also resolves legal liability which is currently not fully explored and may be a concern
   function delegate(address) public pure override {
     require(false, "FrabricERC20: Delegation is not allowed");
   }
