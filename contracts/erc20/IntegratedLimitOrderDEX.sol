@@ -162,6 +162,18 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   // This functionality is required by the DEXRouter and this remains secure thanks to payment being from msg.sender
   // Returns the same as action
   function buy(address trader, uint256 price, uint256 amount) external override returns (uint256, uint256) {
+    // Require this be called by a contract
+    // Prevents anyone from building a UX which doesn't utilize DEXRouter
+    // While someone could write a different contract, anyone doing that is trusted to know what they're doing
+    // See DEXRouter for why this is so important
+    // This is moving JS responsibilities into Solidity, which isn't optimal due to gas costs,
+    // yet this is a potentially critical bug which someone may fall past if trying to move quickly
+    require(AddressUpgradeable.isContract(msg.sender), "IntegratedLimitOrderDEX: Only a contract can place buy orders");
+
+    // Make sure they're whitelisted so trade execution won't fail
+    // This would be a DoS if it was allowed to place a standing order at this price point
+    // It would be allowed to as long as it didn't error before hand by filling an order
+    // No orders, no filling, no error
     require(whitelisted(trader), "IntegratedLimitOrderDEX: Not whitelisted to hold this token");
     // Support fee on transfer tokens
     // Safe against re-entrancy as action has nonReentrant
