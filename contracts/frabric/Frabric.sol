@@ -19,7 +19,7 @@ contract Frabric is FrabricDAO, IFrabric {
   address public override threadDeployer;
 
   enum FrabricProposalType {
-    Participant,
+    Participants,
     RemoveBond,
     Thread,
     ThreadProposal
@@ -29,20 +29,13 @@ contract Frabric is FrabricDAO, IFrabric {
   // whitelisted/balanceOf exposes if someone is an active participant
   // governor is a getter to view their statuses more easily and let other contracts perform checks
 
-  enum ParticipantType {
-    Null,
-    KYC,
-    Governor,
-    Individual,
-    Corporation
-  }
-
-  struct Participant {
+  struct Participants {
     ParticipantType participantType;
-    address participant;
-    bool passed;
+    address[] participants;
+    uint256 passed;
   }
-  mapping(uint256 => Participant) internal _participants;
+  mapping(uint256 => Participants) internal _participants;
+  mapping(address => ParticipantType) public participant;
   mapping(address => GovernorStatus) public governor;
 
   struct RemoveBondProposal {
@@ -86,10 +79,17 @@ contract Frabric is FrabricDAO, IFrabric {
 
   // Can set to Null to remove Governors/Individuals/Corporations
   // KYC must be replaced
-  function proposeParticipant(string calldata info, uint256 participantType, address participant) external override beforeProposal() returns (uint256) {
-    _participants[_nextProposalID] = Participant(ParticipantType(participantType), participant, false);
-    emit ParticipantProposed(_nextProposalID, participant, participantType);
-    return _createProposal(info, uint256(FrabricProposalType.Participant));
+  function proposeParticipants(string calldata info, ParticipantType participantType, address[] memory participants) external override beforeProposal() returns (uint256) {
+    if (participants.length != 1) {
+      require(participants.length != 0, "Frabric: Proposing zero participants");
+      require(
+        (participantType == ParticipantType.Individual) || (participantType == ParticipantType.Corporation),
+        "Frabric: Batch proposing privileged roles"
+      );
+    }
+    _participants[_nextProposalID] = Participants(participantType, participants, 0);
+    emit ParticipantsProposed(_nextProposalID, participantType, participants);
+    return _createProposal(info, uint256(FrabricProposalType.Participants));
   }
 
   function proposeRemoveBond(string calldata info, address _governor, bool slash, uint256 amount) external override beforeProposal() returns (uint256) {
@@ -153,37 +153,34 @@ contract Frabric is FrabricDAO, IFrabric {
 
   function _completeSpecificProposal(uint256 id, uint256 _proposalType) internal override {
     FrabricProposalType proposalType = FrabricProposalType(_proposalType);
-    if (proposalType == FrabricProposalType.Participant) {
-      Participant storage participant = _participants[id];
-      if (participant.participantType == ParticipantType.KYC) {
-        emit KYCChanged(kyc, participant.participant);
-        kyc = participant.participant;
+    if (proposalType == FrabricProposalType.Participants) {
+      Participants storage participants = _participants[id];
+      if (participants.participantType == ParticipantType.KYC) {
+        emit KYCChanged(kyc, participants.participants[0]);
+        kyc = participants.participants[0];
         // Delete for the gas savings
         delete _participants[id];
       } else {
-        emit ParticipantUpdated(id, participant.participant, uint256(participant.participantType));
-        if (participant.participantType == ParticipantType.Null) {
-          if (governor[participant.participant] != GovernorStatus.Null) {
-            governor[participant.participant] = GovernorStatus.Removed;
+        if (participants.participantType == ParticipantType.Null) {
+          if (governor[participants.participants[0]] != GovernorStatus.Null) {
+            governor[participants.participants[0]] = GovernorStatus.Removed;
           }
 
           // Remove them from the whitelist
-          IFrabricERC20(erc20).setWhitelisted(participant.participant, bytes32(0));
+          IFrabricERC20(erc20).setWhitelisted(participants.participants[0], bytes32(0));
           // Not only saves gas yet also fixes a security issue
           // Without this, the KYC company could use this removing proposal to whitelist them
           // The early return after this avoids the issue as well, yet security in depth is great
           delete _participants[id];
 
           return;
-        }
-
-        if (participant.participantType == ParticipantType.Governor) {
-          require(governor[participant.participant] == GovernorStatus.Null, "Frabric: Governor already exists");
-          governor[participant.participant] = GovernorStatus.Unverified;
+        } else if (participants.participantType == ParticipantType.Governor) {
+          require(governor[participants.participants[0]] == GovernorStatus.Null, "Frabric: Governor already exists");
+          governor[participants.participants[0]] = GovernorStatus.Unverified;
         }
 
         // Set this proposal as having passed so the KYC company can whitelist
-        participant.passed = true;
+        participants.passed = 1;
       }
 
     } else if  (proposalType == FrabricProposalType.RemoveBond) {
@@ -213,10 +210,21 @@ contract Frabric is FrabricDAO, IFrabric {
     }
   }
 
-  function approve(uint256 id, bytes32 kycHash) external override {
+  function approve(uint256 id, uint256 position, bytes32 kycHash) external override {
     require(msg.sender == kyc, "Frabric: Only the KYC can approve users");
-    require(_participants[id].passed, "Frabric: Proposal didn't pass");
-    IFrabricERC20(erc20).setWhitelisted(_participants[id].participant, kycHash);
-    delete _participants[id];
+    require(_participants[id].passed != 0, "Frabric: Proposal didn't pass");
+
+    address approving = _participants[id].participants[position];
+    require(approving != address(0), "Frabric: Participant already approved");
+    require(participant[approving] == ParticipantType.Null, "Frabric: Participant already a participant");
+    _participants[id].participants[position] = address(0);
+
+    IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
+    participant[approving] = _participants[id].participantType;
+
+    _participants[id].passed++;
+    if ((_participants[id].passed - 1) == _participants[id].participants.length) {
+      delete _participants[id];
+    }
   }
 }
