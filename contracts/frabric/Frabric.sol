@@ -48,7 +48,6 @@ contract Frabric is FrabricDAO, IFrabric {
   struct ThreadProposalProposal {
     address thread;
     bytes4 selector;
-    string info;
     bytes data;
   }
   mapping(uint256 => ThreadProposalProposal) internal _threadProposals;
@@ -91,9 +90,9 @@ contract Frabric is FrabricDAO, IFrabric {
   // Can set to Null to remove Governors/Individuals/Corporations
   // KYC must be replaced
   function proposeParticipants(
-    string calldata info,
     ParticipantType participantType,
-    address[] memory participants
+    address[] memory participants,
+    string calldata info
   ) external override beforeProposal() returns (uint256) {
     require(participantType != ParticipantType.Genesis, "Frabric: Cannot propose genesis participants after genesis");
     if (participants.length != 1) {
@@ -109,10 +108,10 @@ contract Frabric is FrabricDAO, IFrabric {
   }
 
   function proposeRemoveBond(
-    string calldata info,
     address _governor,
     bool slash,
-    uint256 amount
+    uint256 amount,
+    string calldata info
   ) external override beforeProposal() returns (uint256) {
     _removeBond[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
     require(uint256(governor[_governor]) >= uint256(GovernorStatus.Active), "Frabric: Governor was never active");
@@ -121,12 +120,12 @@ contract Frabric is FrabricDAO, IFrabric {
   }
 
   function proposeThread(
-    string calldata info,
     string memory name,
     string memory symbol,
     address agent,
     address tradeToken,
-    uint256 target
+    uint256 target,
+    string calldata info
   ) external override beforeProposal() returns (uint256) {
     require(bytes(name).length >= 3, "Frabric: Thread name has less than three characters");
     require(bytes(symbol).length >= 2, "Frabric: Thread symbol has less than two characters");
@@ -140,13 +139,13 @@ contract Frabric is FrabricDAO, IFrabric {
   // They can individually change their Frabric, invalidating this entirely, or upgrade their code, potentially breaking specific parts
   // These are both valid behaviors intended to be accessible by Threads
   function proposeThreadProposal(
-    string calldata info,
     address thread,
     uint256 _proposalType,
-    bytes calldata data
+    bytes calldata data,
+    string calldata info
   ) external beforeProposal() returns (uint256) {
     // Lock down the selector to prevent arbitrary calls
-    // While data is still arbitrary, it has reduced scope thanks to this, and can be decoded in expected ways
+    // While data is still arbitrary, it has reduced scope thanks to this, and can only be decoded in expected ways
     bytes4 selector;
     if ((_proposalType & commonProposalBit) == commonProposalBit) {
       CommonProposalType pType = CommonProposalType(_proposalType ^ commonProposalBit);
@@ -172,7 +171,7 @@ contract Frabric is FrabricDAO, IFrabric {
       }
     }
 
-    _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, info, data);
+    _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, data);
     emit ThreadProposalProposed(_nextProposalID, thread, _proposalType, info);
     return _createProposal(info, uint256(FrabricProposalType.ThreadProposal));
   }
@@ -227,10 +226,7 @@ contract Frabric is FrabricDAO, IFrabric {
 
     } else if (pType == FrabricProposalType.ThreadProposal) {
       (bool success, ) = _threadProposals[id].thread.call(
-        abi.encodeWithSelector(
-          _threadProposals[id].selector,
-          abi.encodePacked(abi.encode(_threadProposals[id].info), _threadProposals[id].data)
-        )
+        abi.encodeWithSelector(_threadProposals[id].selector, _threadProposals[id].data)
       );
       require(success, "Frabric: Creating the Thread Proposal failed");
       delete _threadProposals[id];

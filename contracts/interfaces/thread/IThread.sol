@@ -28,16 +28,16 @@ interface IThread is IFrabricDAO {
   ) external;
 
   function proposeAgentChange(
-    string calldata info,
-    address _agent
+    address _agent,
+    string calldata info
   ) external returns (uint256 id);
   function proposeFrabricChange(
-    string calldata info,
-    address _frabric
+    address _frabric,
+    string calldata info
   ) external returns (uint256 id);
   function proposeDissolution(
-    string calldata info,
     address token,
-    uint256 purchaseAmount
+    uint256 purchaseAmount,
+    string calldata info
   ) external returns (uint256 id);
 }

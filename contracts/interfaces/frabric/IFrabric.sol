@@ -49,29 +49,29 @@ interface IFrabric is IFrabricDAO {
   ) external;
 
   function proposeParticipants(
-    string calldata info,
     ParticipantType participantType,
-    address[] memory participants
+    address[] memory participants,
+    string calldata info
   ) external returns (uint256);
   function proposeRemoveBond(
-    string calldata info,
     address governor,
     bool slash,
-    uint256 amount
+    uint256 amount,
+    string calldata info
   ) external returns (uint256);
   function proposeThread(
-    string calldata info,
     string memory name,
     string memory symbol,
     address agent,
     address raiseToken,
-    uint256 target
+    uint256 target,
+    string calldata info
   ) external returns (uint256);
   function proposeThreadProposal(
-    string calldata info,
     address thread,
     uint256 proposalType,
-    bytes calldata data
+    bytes calldata data,
+    string calldata info
   ) external returns (uint256);
 
   function approve(uint256 id, uint256 position, bytes32 kycHash) external;

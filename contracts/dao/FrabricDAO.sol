@@ -53,10 +53,10 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
 
   // Allows upgrading itself or any contract owned by itself
   function proposeUpgrade(
-    string calldata info,
     address beacon,
     address instance,
-    address code
+    address code,
+    string calldata info
   ) external beforeProposal() returns (uint256) {
     _upgrade[_nextProposalID] = Upgrade(beacon, instance, code);
     // Doesn't index code as parsing the Beacon's logs for its indexed code argument
@@ -69,13 +69,13 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
   }
 
   function proposeTokenAction(
-    string calldata info,
     address token,
     address target,
     // Redundant field for Threads which don't (at least currently) have minting
     bool mint,
     uint256 price,
-    uint256 amount
+    uint256 amount,
+    string calldata info
   ) external beforeProposal() returns (uint256) {
     if (mint) {
       require(token == erc20, "FrabricDAO: Proposing minting a different token");

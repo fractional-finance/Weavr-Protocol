@@ -52,8 +52,8 @@ contract Thread is Initializable, FrabricDAO, IThread {
   }
 
   function proposeAgentChange(
-    string calldata info,
-    address _agent
+    address _agent,
+    string calldata info
   ) external beforeProposal() override returns (uint256 id) {
     _agents[_nextProposalID] = _agent;
     emit AgentChangeProposed(_nextProposalID, _agent);
@@ -61,8 +61,8 @@ contract Thread is Initializable, FrabricDAO, IThread {
   }
 
   function proposeFrabricChange(
-    string calldata info,
-    address _frabric
+    address _frabric,
+    string calldata info
   ) external beforeProposal() override returns (uint256 id) {
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
@@ -70,9 +70,9 @@ contract Thread is Initializable, FrabricDAO, IThread {
   }
 
   function proposeDissolution(
-    string calldata info,
     address token,
-    uint256 amount
+    uint256 amount,
+    string calldata info
   ) external beforeProposal() override returns (uint256 id) {
     require(amount != 0, "Thread: Dissolution amount is 0");
     _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, amount);

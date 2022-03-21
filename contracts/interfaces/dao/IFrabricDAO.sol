@@ -26,17 +26,17 @@ interface IFrabricDAO is IDAO {
 
   function proposePaper(string calldata info) external returns (uint256);
   function proposeUpgrade(
-    string calldata info,
     address beacon,
     address instance,
-    address code
+    address code,
+    string calldata info
   ) external returns (uint256);
   function proposeTokenAction(
-    string calldata info,
     address token,
     address target,
     bool mint,
     uint256 price,
-    uint256 amount
+    uint256 amount,
+    string calldata info
   ) external returns (uint256);
 }
