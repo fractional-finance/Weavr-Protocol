@@ -6,6 +6,7 @@ import "../dao/IFrabricDAO.sol";
 interface IFrabric is IFrabricDAO {
   enum ParticipantType {
     Null,
+    Genesis,
     KYC,
     Governor,
     Individual,
@@ -32,7 +33,13 @@ interface IFrabric is IFrabricDAO {
   function participant(address participant) external view returns (ParticipantType);
   function governor(address governor) external view returns (GovernorStatus);
 
-  function initialize(address _erc20, address _kyc, address _bond, address _threadDeployer) external;
+  function initialize(
+    address _erc20,
+    address _bond,
+    address _threadDeployer,
+    address[] calldata genesis,
+    address _kyc
+  ) external;
 
   function proposeParticipants(string calldata info, ParticipantType participantType, address[] memory participants) external returns (uint256);
   function proposeRemoveBond(string calldata info, address governor, bool slash, uint256 amount) external returns (uint256);

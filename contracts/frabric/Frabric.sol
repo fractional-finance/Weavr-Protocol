@@ -61,8 +61,28 @@ contract Frabric is FrabricDAO, IFrabric {
   mapping(uint256 => ThreadProposalProposal) internal _threadProposals;
 
   // The erc20 is expected to be fully initialized via JS during deployment
-  function initialize(address _erc20, address _kyc, address _bond, address _threadDeployer) external initializer {
+  function initialize(
+    address _erc20,
+    address _bond,
+    address _threadDeployer,
+    address[] calldata genesis,
+    address _kyc
+  ) external initializer {
     __FrabricDAO_init(_erc20, 2 weeks);
+
+    // Simulate a full DAO proposal to add the genesis participants
+    emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesis);
+    emit NewProposal(_nextProposalID, uint256(FrabricProposalType.Participants), address(0), "Genesis Participants");
+    emit ProposalStateChanged(_nextProposalID, ProposalState.Active);
+    emit ProposalStateChanged(_nextProposalID, ProposalState.Queued);
+    emit ProposalStateChanged(_nextProposalID, ProposalState.Executed);
+    // Update the proposal ID to ensure a lack of collision with the first actual DAO proposal
+    _nextProposalID++;
+    // Actually add the genesis participants
+    for (uint256 i = 0; i < genesis.length; i++) {
+      participant[genesis[i]] = ParticipantType.Genesis;
+    }
+
     kyc = _kyc;
     bond = _bond;
     threadDeployer = _threadDeployer;

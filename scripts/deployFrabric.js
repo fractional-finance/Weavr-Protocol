@@ -9,7 +9,7 @@ const FrabricERC20 = require("./deployFrabricERC20.js");
 const deployBond = require("./deployBond.js");
 const deployThreadDeployer = require("./deployThreadDeployer.js");
 
-module.exports = async (usdc, uniswap, kyc) => {
+module.exports = async (usdc, uniswap, genesis, kyc) => {
   let signer = (await ethers.getSigners())[0];
 
   const { beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usdc);
@@ -28,6 +28,14 @@ module.exports = async (usdc, uniswap, kyc) => {
   });
   await frbc.setWhitelisted(uniswap.address, ethers.utils.id("Uniswap v2 Router"));
   await frbc.setWhitelisted(pair, ethers.utils.id("Uniswap v2 FRBC-USDC Pair"));
+
+  // Process the genesis
+  let genesisList = [];
+  for (let person in genesis) {
+    await frbc.setWhitelisted(person, ethers.utils.id(genesis[person].info));
+    await frbc.mint(person, genesis[person].amount);
+    genesisList.push(person);
+  }
 
   // Code to add liquidity to create the LP token used as bond
   // Also verifies the whitelist is correctly set up
@@ -58,11 +66,18 @@ module.exports = async (usdc, uniswap, kyc) => {
   */
 
   // Create the pair now so the Bond contract can validate its bond token
+  // If it wasn't for that validation, it'd be enough to just pass the address
+  // Then whoever adds the initial liquidity would cause this to be created
   await (new ethers.Contract(
     await uniswap.factory(),
     require("@uniswap/v2-core/build/UniswapV2Factory.json").abi,
     signer
   )).createPair(usdc, frbc.address);
+
+  // Remove self from the FRBC whitelist
+  // While we have no powers over the Frabric, we can hold tokens
+  // This is a mismatched state when we shouldn't have any powers except as needed to deploy
+  frbc.setWhitelisted(signer.address, "");
 
   const { proxy: bondProxy, bond } = await deployBond(usdc, pair);
   const {
@@ -82,7 +97,7 @@ module.exports = async (usdc, uniswap, kyc) => {
   const frabric = await upgrades.deployBeaconProxy(
     proxy,
     Frabric,
-    [frbc.address, kyc, bond.address, threadDeployer.address]
+    [frbc.address, bond.address, threadDeployer.address, genesisList, kyc]
   );
   await frabric.deployed();
   await frbc.setWhitelisted(frabric.address, ethers.utils.id("Frabric"));
@@ -140,7 +155,7 @@ if (require.main === module) {
       process.exit(1);
     }
 
-    const contracts = await module.exports(usdc, uniswap, kyc);
+    const contracts = await module.exports(usdc, uniswap, {}, kyc);
     console.log("FRBC:              " + contracts.frbc.address);
     console.log("Pair (Bond Token): " + contracts.pair);
     console.log("Bond:              " + contracts.bond.address);

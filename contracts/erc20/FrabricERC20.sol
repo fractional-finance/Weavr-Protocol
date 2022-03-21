@@ -31,6 +31,9 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     __IntegratedLimitOrderDEX_init(dexToken);
 
     // Whitelist the initializer
+    // This is the Frabric's deployer/the ThreadDeployer
+    // If the former, they should remove their own whitelisting
+    // If the latter, this is intended behavior
     _setWhitelisted(msg.sender, keccak256("Initializer"));
     // Mint the supply
     _mint(msg.sender, supply);

@@ -27,8 +27,10 @@ module.exports = {
       [
         "Frabric Token",
         "FRBC",
+        // Supply is 0 as all distribution is via mint
         0,
         true,
+        // Parent whitelist doesn't exist
         "0x0000000000000000000000000000000000000000",
         usdc
       ]
