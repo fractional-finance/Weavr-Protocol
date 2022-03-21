@@ -8,6 +8,7 @@ const deployBeacon = require("./deployBeacon.js");
 const FrabricERC20 = require("./deployFrabricERC20.js");
 const deployBond = require("./deployBond.js");
 const deployThreadDeployer = require("./deployThreadDeployer.js");
+const deployDEXRouter = require("./deployDEXRouter.js");
 
 module.exports = async (usdc, uniswap, genesis, kyc) => {
   let signer = (await ethers.getSigners())[0];
@@ -119,13 +120,16 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
   // Frabric proxy
   await proxy.transferOwnership(frabric.address);
 
+  // Deploy the DEX router
+  // Technically a periphery contract yet this script treats Frabric as the entire ecosystem, not just itself
+  const router = await deployDEXRouter();
+
   return {
     frbc,
     pair,
     bond,
-    threadDeployer,
-    proxy,
-    frabric
+    frabric,
+    router
   };
 };
 
@@ -159,9 +163,8 @@ if (require.main === module) {
     console.log("FRBC:              " + contracts.frbc.address);
     console.log("Pair (Bond Token): " + contracts.pair);
     console.log("Bond:              " + contracts.bond.address);
-    console.log("Thread Deployer:   " + contracts.threadDeployer.address);
-    console.log("Proxy:             " + contracts.proxy.address);
     console.log("Frabric:           " + contracts.frabric.address);
+    console.log("DEX Router:        " + contracts.router.address);
   })().catch(error => {
     console.error(error);
     process.exit(1);
