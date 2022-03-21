@@ -18,17 +18,10 @@ contract Frabric is FrabricDAO, IFrabric {
   address public override bond;
   address public override threadDeployer;
 
-  enum FrabricProposalType {
-    Participants,
-    RemoveBond,
-    Thread,
-    ThreadProposal
-  }
-
   // The proposal structs are internal as their events are easily grabbed and contain the needed information
 
   struct Participants {
-    ParticipantType participantType;
+    ParticipantType pType;
     address[] participants;
     uint256 passed;
   }
@@ -92,12 +85,17 @@ contract Frabric is FrabricDAO, IFrabric {
   constructor() initializer {}
 
   function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {
-    return IFrabricERC20(erc20).whitelisted(msg.sender);
+    return participant[msg.sender] != ParticipantType.Null;
   }
 
   // Can set to Null to remove Governors/Individuals/Corporations
   // KYC must be replaced
-  function proposeParticipants(string calldata info, ParticipantType participantType, address[] memory participants) external override beforeProposal() returns (uint256) {
+  function proposeParticipants(
+    string calldata info,
+    ParticipantType participantType,
+    address[] memory participants
+  ) external override beforeProposal() returns (uint256) {
+    require(participantType != ParticipantType.Genesis, "Frabric: Cannot propose genesis participants after genesis");
     if (participants.length != 1) {
       require(participants.length != 0, "Frabric: Proposing zero participants");
       require(
@@ -110,7 +108,12 @@ contract Frabric is FrabricDAO, IFrabric {
     return _createProposal(info, uint256(FrabricProposalType.Participants));
   }
 
-  function proposeRemoveBond(string calldata info, address _governor, bool slash, uint256 amount) external override beforeProposal() returns (uint256) {
+  function proposeRemoveBond(
+    string calldata info,
+    address _governor,
+    bool slash,
+    uint256 amount
+  ) external override beforeProposal() returns (uint256) {
     _removeBond[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
     require(uint256(governor[_governor]) >= uint256(GovernorStatus.Active), "Frabric: Governor was never active");
     emit RemoveBondProposed(_nextProposalID, _governor, slash, amount);
@@ -136,28 +139,33 @@ contract Frabric is FrabricDAO, IFrabric {
   // This does assume the Thread's API meets expectations compiled into the Frabric
   // They can individually change their Frabric, invalidating this entirely, or upgrade their code, potentially breaking specific parts
   // These are both valid behaviors intended to be accessible by Threads
-  function proposeThreadProposal(string calldata info, address thread, uint256 _proposalType, bytes calldata data) external beforeProposal() returns (uint256) {
+  function proposeThreadProposal(
+    string calldata info,
+    address thread,
+    uint256 _proposalType,
+    bytes calldata data
+  ) external beforeProposal() returns (uint256) {
     // Lock down the selector to prevent arbitrary calls
     // While data is still arbitrary, it has reduced scope thanks to this, and can be decoded in expected ways
     bytes4 selector;
     if ((_proposalType & commonProposalBit) == commonProposalBit) {
-      CommonProposalType proposalType = CommonProposalType(_proposalType ^ commonProposalBit);
-      if (proposalType == CommonProposalType.Paper) {
+      CommonProposalType pType = CommonProposalType(_proposalType ^ commonProposalBit);
+      if (pType == CommonProposalType.Paper) {
         selector = IFrabricDAO.proposePaper.selector;
-      } else if (proposalType == CommonProposalType.Upgrade) {
+      } else if (pType == CommonProposalType.Upgrade) {
         selector = IFrabricDAO.proposeUpgrade.selector;
-      } else if (proposalType == CommonProposalType.TokenAction) {
+      } else if (pType == CommonProposalType.TokenAction) {
         selector = IFrabricDAO.proposeTokenAction.selector;
       } else {
         require(false, "Frabric: Unhandled CommonProposalType in proposeThreadProposal");
       }
     } else {
-      IThread.ThreadProposalType proposalType = IThread.ThreadProposalType(_proposalType);
-      if (proposalType == IThread.ThreadProposalType.AgentChange) {
+      IThread.ThreadProposalType pType = IThread.ThreadProposalType(_proposalType);
+      if (pType == IThread.ThreadProposalType.AgentChange) {
         selector = IThread.proposeAgentChange.selector;
-      } else if (proposalType == IThread.ThreadProposalType.FrabricChange) {
+      } else if (pType == IThread.ThreadProposalType.FrabricChange) {
         require(false, "Frabric: Can't request a Thread to change its Frabric");
-      } else if (proposalType == IThread.ThreadProposalType.Dissolution) {
+      } else if (pType == IThread.ThreadProposalType.Dissolution) {
         selector = IThread.proposeDissolution.selector;
       } else {
         require(false, "Frabric: Unhandled ThreadProposalType in proposeThreadProposal");
@@ -169,30 +177,33 @@ contract Frabric is FrabricDAO, IFrabric {
     return _createProposal(info, uint256(FrabricProposalType.ThreadProposal));
   }
 
-  function _completeSpecificProposal(uint256 id, uint256 _proposalType) internal override {
-    FrabricProposalType proposalType = FrabricProposalType(_proposalType);
-    if (proposalType == FrabricProposalType.Participants) {
+  function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
+    FrabricProposalType pType = FrabricProposalType(_pType);
+    if (pType == FrabricProposalType.Participants) {
       Participants storage participants = _participants[id];
-      if (participants.participantType == ParticipantType.KYC) {
+      if (participants.pType == ParticipantType.KYC) {
         emit KYCChanged(kyc, participants.participants[0]);
         kyc = participants.participants[0];
         // Delete for the gas savings
         delete _participants[id];
       } else {
-        if (participants.participantType == ParticipantType.Null) {
+        if (participants.pType == ParticipantType.Null) {
           if (governor[participants.participants[0]] != GovernorStatus.Null) {
             governor[participants.participants[0]] = GovernorStatus.Removed;
           }
 
           // Remove them from the whitelist
           IFrabricERC20(erc20).setWhitelisted(participants.participants[0], bytes32(0));
+          // Clear their status
+          participant[participants.participants[0]] = ParticipantType.Null;
           // Not only saves gas yet also fixes a security issue
           // Without this, the KYC company could use this removing proposal to whitelist them
-          // The early return after this avoids the issue as well, yet security in depth is great
+          // The early return after this avoids the issue as well (as it's before passed is set),
+          // yet security in depth is great
           delete _participants[id];
 
           return;
-        } else if (participants.participantType == ParticipantType.Governor) {
+        } else if (participants.pType == ParticipantType.Governor) {
           require(governor[participants.participants[0]] == GovernorStatus.Null, "Frabric: Governor already exists");
           governor[participants.participants[0]] = GovernorStatus.Unverified;
         }
@@ -201,20 +212,20 @@ contract Frabric is FrabricDAO, IFrabric {
         participants.passed = 1;
       }
 
-    } else if  (proposalType == FrabricProposalType.RemoveBond) {
+    } else if (pType == FrabricProposalType.RemoveBond) {
       if (_removeBond[id].slash) {
         IBond(bond).slash(_removeBond[id].governor, _removeBond[id].amount);
       } else {
         IBond(bond).unbond(_removeBond[id].governor, _removeBond[id].amount);
       }
 
-    } else if (proposalType == FrabricProposalType.Thread) {
+    } else if (pType == FrabricProposalType.Thread) {
       ThreadProposal memory proposal = _threads[id];
       // erc20 here is used as the parent whitelist as it's built into the Frabric ERC20
       IThreadDeployer(threadDeployer).deploy(proposal.name, proposal.symbol, erc20, proposal.agent, proposal.tradeToken, proposal.target);
       delete _threads[id];
 
-    } else if (proposalType == FrabricProposalType.ThreadProposal) {
+    } else if (pType == FrabricProposalType.ThreadProposal) {
       (bool success, ) = _threadProposals[id].thread.call(
         abi.encodeWithSelector(
           _threadProposals[id].selector,
@@ -238,7 +249,7 @@ contract Frabric is FrabricDAO, IFrabric {
     _participants[id].participants[position] = address(0);
 
     IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
-    participant[approving] = _participants[id].participantType;
+    participant[approving] = _participants[id].pType;
 
     _participants[id].passed++;
     if ((_participants[id].passed - 1) == _participants[id].participants.length) {

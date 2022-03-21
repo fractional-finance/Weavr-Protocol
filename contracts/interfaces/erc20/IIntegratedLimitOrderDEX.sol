@@ -2,9 +2,10 @@
 pragma solidity >=0.8.9;
 
 interface IIntegratedLimitOrderDEX {
+  enum OrderType { Null, Buy, Sell }
+
   event Filled(address indexed sender, address indexed recipient, uint256 indexed price, uint256 amount);
-  event NewBuyOrder(uint256 indexed price);
-  event NewSellOrder(uint256 indexed price);
+  event NewOrder(OrderType indexed orderType, uint256 indexed price);
   event OrderIncrease(address indexed sender, uint256 indexed price, uint256 amount);
 
   function dexToken() external view returns (address);

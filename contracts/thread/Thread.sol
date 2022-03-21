@@ -81,14 +81,14 @@ contract Thread is Initializable, FrabricDAO, IThread {
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _proposalType) internal override {
-    ThreadProposalType proposalType = ThreadProposalType(_proposalType);
-    if (proposalType == ThreadProposalType.AgentChange) {
+    ThreadProposalType pType = ThreadProposalType(_proposalType);
+    if (pType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);
       agent = _agents[id];
-    } else if (proposalType == ThreadProposalType.FrabricChange) {
+    } else if (pType == ThreadProposalType.FrabricChange) {
       emit FrabricChanged(frabric, _frabrics[id]);
       frabric = _frabrics[id];
-    } else if (proposalType == ThreadProposalType.Dissolution) {
+    } else if (pType == ThreadProposalType.Dissolution) {
       // Prevent the Thread from being locked up in a Dissolution the agent won't honor for whatever reason
       // This will issue payment and then the agent will be obligated to transfer property or have bond slashed
       // Not calling complete on a passed Dissolution may also be grounds for a bond slash

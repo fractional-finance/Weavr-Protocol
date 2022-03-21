@@ -4,6 +4,12 @@ pragma solidity >=0.8.9;
 import "./IDAO.sol";
 
 interface IFrabricDAO is IDAO {
+  enum CommonProposalType {
+    Paper,
+    Upgrade,
+    TokenAction
+  }
+
   event UpgradeProposed(uint256 indexed id, address indexed beacon, address indexed instance, address code);
   event TokenActionProposed(
     uint256 indexed id,

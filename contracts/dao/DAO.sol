@@ -11,19 +11,6 @@ import "../interfaces/dao/IDAO.sol";
 
 // DAO around an ERC20 with getPastVotes (ERC20Votes)
 abstract contract DAO is Initializable, IDAO {
-  enum ProposalState {
-    Active,
-    Queued,
-    Executed,
-    Cancelled
-  }
-
-  enum VoteDirection {
-    None,
-    No,
-    Yes
-  }
-
   struct Action {
     address target;
     bytes data;
@@ -44,7 +31,7 @@ abstract contract DAO is Initializable, IDAO {
     uint256 totalVotes;
 
     // Used by inheriting contracts
-    uint256 proposalType;
+    uint256 pType;
   }
 
   address public erc20;
@@ -61,8 +48,8 @@ abstract contract DAO is Initializable, IDAO {
   function proposalVoteBlock(uint256 id) external view override returns (uint256) {
     return _proposals[id].voteBlock;
   }
-  function proposalVoteDirection(uint256 id, address voter) external view override returns (uint256) {
-    return uint256(_proposals[id].voters[voter]);
+  function proposalVoteDirection(uint256 id, address voter) external view override returns (VoteDirection) {
+    return _proposals[id].voters[voter];
   }
   function proposalVotes(uint256 id) external view override returns (int256) {
     return _proposals[id].votes;
@@ -81,7 +68,7 @@ abstract contract DAO is Initializable, IDAO {
   }
 
   // Not exposed as despite working with arbitrary calldata, this calldata is currently contract crafted for specific purposes
-  function _createProposal(string calldata info, uint256 proposalType) internal returns (uint256 id) {
+  function _createProposal(string calldata info, uint256 pType) internal returns (uint256 id) {
     id = _nextProposalID;
     _nextProposalID++;
 
@@ -93,20 +80,20 @@ abstract contract DAO is Initializable, IDAO {
     // While the creator could have sold in this block, they can also sell over the next few weeks
     // This is why cancelProposal exists
     proposal.voteBlock = block.number - 1;
-    proposal.proposalType = proposalType;
+    proposal.pType = pType;
 
     // Separate event to allow indexing by type/creator while maintaining state machine consistency
     // Also exposes info
-    emit NewProposal(id, proposalType, proposal.creator, info);
-    emit ProposalStateChanged(id, uint256(_proposals[id].state));
+    emit NewProposal(id, pType, proposal.creator, info);
+    emit ProposalStateChanged(id, _proposals[id].state);
 
     // Automatically vote Yes for the creator
     if (IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock) != 0) {
-      vote(id, uint256(VoteDirection.Yes));
+      vote(id, VoteDirection.Yes);
     }
   }
 
-  function vote(uint256 id, uint256 direction) public override {
+  function vote(uint256 id, VoteDirection direction) public override {
     require(_proposals[id].voters[msg.sender] != VoteDirection(direction), "DAO: Already voted this way");
 
     int256 votes = int256(IVotes(erc20).getPastVotes(msg.sender, _proposals[id].voteBlock));
@@ -132,7 +119,7 @@ abstract contract DAO is Initializable, IDAO {
       _proposals[id].totalVotes -= uint256(votes);
     }
 
-    emit Vote(id, uint256(direction), msg.sender, uint256(votes));
+    emit Vote(id, direction, msg.sender, uint256(votes));
   }
 
   function queueProposal(uint256 id) external activeProposal(id) {
@@ -142,7 +129,7 @@ abstract contract DAO is Initializable, IDAO {
     require(proposal.totalVotes > (IERC20(erc20).totalSupply() / 10), "DAO: Proposal didn't have 10% participation");
     proposal.state = ProposalState.Queued;
     proposal.stateStartTime = block.timestamp;
-    emit ProposalStateChanged(id, uint256(_proposals[id].state));
+    emit ProposalStateChanged(id, _proposals[id].state);
   }
 
   function cancelProposal(uint256 id, address[] calldata voters) external {
@@ -163,7 +150,7 @@ abstract contract DAO is Initializable, IDAO {
 
     _proposals[id].state = ProposalState.Cancelled;
     _proposals[id].stateStartTime = block.timestamp;
-    emit ProposalStateChanged(id, uint256(_proposals[id].state));
+    emit ProposalStateChanged(id, _proposals[id].state);
   }
 
   function _completeProposal(uint256 id, uint256 proposalType) internal virtual;
@@ -180,10 +167,10 @@ abstract contract DAO is Initializable, IDAO {
     require((proposal.stateStartTime + (12 hours)) < block.timestamp, "DAO: Proposal was queued less than 12 hours ago");
     proposal.state = ProposalState.Executed;
     proposal.stateStartTime = block.timestamp;
-    emit ProposalStateChanged(id, uint256(proposal.state));
+    emit ProposalStateChanged(id, proposal.state);
 
     // Re-entrancy here would do nothing as the proposal has had its state updated
-    _completeProposal(id, proposal.proposalType);
+    _completeProposal(id, proposal.pType);
   }
 
   // Enables withdrawing a proposal
@@ -193,6 +180,6 @@ abstract contract DAO is Initializable, IDAO {
     require(_proposals[id].creator == msg.sender, "DAO: Only the proposal creator may withdraw it");
     _proposals[id].state = ProposalState.Cancelled;
     _proposals[id].stateStartTime = block.timestamp;
-    emit ProposalStateChanged(id, uint256(_proposals[id].state));
+    emit ProposalStateChanged(id, _proposals[id].state);
   }
 }

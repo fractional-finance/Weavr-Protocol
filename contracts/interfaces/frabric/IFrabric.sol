@@ -4,6 +4,13 @@ pragma solidity >=0.8.9;
 import "../dao/IFrabricDAO.sol";
 
 interface IFrabric is IFrabricDAO {
+  enum FrabricProposalType {
+    Participants,
+    RemoveBond,
+    Thread,
+    ThreadProposal
+  }
+
   enum ParticipantType {
     Null,
     Genesis,
@@ -41,8 +48,17 @@ interface IFrabric is IFrabricDAO {
     address _kyc
   ) external;
 
-  function proposeParticipants(string calldata info, ParticipantType participantType, address[] memory participants) external returns (uint256);
-  function proposeRemoveBond(string calldata info, address governor, bool slash, uint256 amount) external returns (uint256);
+  function proposeParticipants(
+    string calldata info,
+    ParticipantType participantType,
+    address[] memory participants
+  ) external returns (uint256);
+  function proposeRemoveBond(
+    string calldata info,
+    address governor,
+    bool slash,
+    uint256 amount
+  ) external returns (uint256);
   function proposeThread(
     string calldata info,
     string memory name,
@@ -51,7 +67,12 @@ interface IFrabric is IFrabricDAO {
     address raiseToken,
     uint256 target
   ) external returns (uint256);
-  function proposeThreadProposal(string calldata info, address thread, uint256 proposalType, bytes calldata data) external returns (uint256);
+  function proposeThreadProposal(
+    string calldata info,
+    address thread,
+    uint256 proposalType,
+    bytes calldata data
+  ) external returns (uint256);
 
   function approve(uint256 id, uint256 position, bytes32 kycHash) external;
 }

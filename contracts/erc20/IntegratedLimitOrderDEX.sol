@@ -21,11 +21,11 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   // Locked funds of the token this is integrated into
   mapping(address => uint256) public locked;
 
-  enum OrderType { Null, Buy, Sell }
   struct Order {
     address holder;
     uint256 amount;
   }
+
   struct PricePoint {
     OrderType orderType;
     Order[] orders;
@@ -143,11 +143,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     // If there's nothing at this price point, naturally or due to filling orders, set it
     if (point.orderType == OrderType.Null) {
       point.orderType = current;
-      if (current == OrderType.Buy) {
-        emit NewBuyOrder(price);
-      } else {
-        emit NewSellOrder(price);
-      }
+      emit NewOrder(current, price);
     }
 
     // Add the new order

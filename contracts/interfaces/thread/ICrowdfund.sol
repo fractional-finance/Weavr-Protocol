@@ -2,8 +2,16 @@
 pragma solidity >=0.8.9;
 
 interface ICrowdfund {
+  enum State {
+    Active,
+    Cancelled,
+    Executing,
+    Refunding,
+    Finished
+  }
+
   event CrowdfundStarted(address indexed agent, address indexed thread, address indexed token, uint256 target);
-  event StateChange(uint256 indexed state, bytes data);
+  event StateChange(State indexed state, bytes data);
   event Deposit(address indexed depositor, uint256 amount);
   event Withdraw(address indexed depositor, uint256 amount);
   event Refund(address indexed depositor, uint256 refundAmount);
@@ -17,7 +25,7 @@ interface ICrowdfund {
   function target() external view returns (uint256);
   function deposited() external view returns (uint256);
 
-  function state() external view returns (uint256);
+  function state() external view returns (State);
   function refunded() external view returns (uint256);
 
   function initialize(

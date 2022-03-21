@@ -16,12 +16,6 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
 
   uint256 constant public commonProposalBit = 1 << 255;
 
-  enum CommonProposalType {
-    Paper,
-    Upgrade,
-    TokenAction
-  }
-
   struct Upgrade {
     address beacon;
     address instance;
@@ -105,17 +99,17 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
 
   // Re-entrancy isn't a concern due to completeProposal being safe from re-entrancy
   // That's the only thing which should call this
-  function _completeProposal(uint256 id, uint256 _proposalType) internal override {
-    if ((_proposalType & commonProposalBit) == commonProposalBit) {
-      CommonProposalType proposalType = CommonProposalType(_proposalType ^ commonProposalBit);
-      if (proposalType == CommonProposalType.Paper) {
+  function _completeProposal(uint256 id, uint256 _pType) internal override {
+    if ((_pType & commonProposalBit) == commonProposalBit) {
+      CommonProposalType pType = CommonProposalType(_pType ^ commonProposalBit);
+      if (pType == CommonProposalType.Paper) {
         // NOP as the DAO emits ProposalStateChanged
 
-      } else if (proposalType == CommonProposalType.Upgrade) {
+      } else if (pType == CommonProposalType.Upgrade) {
         IFrabricBeacon(_upgrade[id].beacon).upgrade(_upgrade[id].instance, _upgrade[id].code);
         delete _upgrade[id];
 
-      } else if (proposalType == CommonProposalType.TokenAction) {
+      } else if (pType == CommonProposalType.TokenAction) {
         if (_tokenAction[id].mint) {
           IFrabricERC20(erc20).mint(_tokenAction[id].target, _tokenAction[id].amount);
         // The ILO DEX doesn't require transfer or even approve
@@ -133,7 +127,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
         require(false, "FrabricDAO: Completing unknown proposal type");
       }
     } else {
-      _completeSpecificProposal(id, _proposalType);
+      _completeSpecificProposal(id, _pType);
     }
   }
 }
