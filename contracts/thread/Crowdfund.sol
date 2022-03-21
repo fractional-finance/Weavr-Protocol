@@ -45,7 +45,7 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
     address _token,
     uint256 _target
   ) external initializer {
-    __ERC20_init(string(abi.encodePacked("Crowdfund ", name)), string(abi.encodePacked("CF-", symbol)));
+    __ERC20_init(string.concat("Crowdfund ", name), string.concat("CF-", symbol));
     whitelist = _whitelist;
     agent = _agent;
     thread = _thread;
@@ -149,7 +149,8 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
     require(msg.sender == agent, "Crowdfund: Only the agent can cancel");
     require(state == State.Active, "Crowdfund: Crowdfund isn't active");
     state = State.Cancelled;
-    emit StateChange(state, abi.encodePacked(deposited()));
+    // Could use encodePacked as it's a single field yet this will be easier to work with
+    emit StateChange(state, abi.encode(deposited()));
   }
 
   // Transfer the funds from a Crowdfund to the agent for execution
@@ -167,7 +168,7 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
     require(msg.sender == agent, "Crowdfund: Only the agent can trigger a refund");
     require(state == State.Executing, "Crowdfund: Crowdfund isn't executing");
     state = State.Refunding;
-    emit StateChange(state, abi.encodePacked(refunded));
+    emit StateChange(state, abi.encode(refunded));
 
     refunded = amount;
     if (amount != 0) {

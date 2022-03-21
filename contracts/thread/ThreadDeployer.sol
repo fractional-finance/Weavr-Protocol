@@ -60,25 +60,29 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
 
     address thread = address(new BeaconProxy(
       threadBeacon,
-      abi.encodeWithSelector(
-        IThread.initialize.selector,
-        erc20,
-        agent,
-        msg.sender
+      abi.encodeCall(
+        IThread.initialize,
+        (
+          erc20,
+          agent,
+          msg.sender
+        )
       )
     ));
 
     address crowdfund = address(new BeaconProxy(
       crowdfundProxy,
-      abi.encodeWithSelector(
-        ICrowdfund.initialize.selector,
-        name,
-        symbol,
-        parentWhitelist,
-        agent,
-        thread,
-        tradeToken,
-        target
+      abi.encodeCall(
+        ICrowdfund.initialize,
+        (
+          name,
+          symbol,
+          parentWhitelist,
+          agent,
+          thread,
+          tradeToken,
+          target
+        )
       )
     ));
 
