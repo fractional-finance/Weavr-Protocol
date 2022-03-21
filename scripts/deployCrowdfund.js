@@ -13,12 +13,12 @@ module.exports = {
   },
 
   // Solely used for testing
-  deployCrowdfund: async (beacon, args) => {
+  deployCrowdfund: async (proxy, args) => {
     process.hhCompiled ? null : await hre.run("compile");
     process.hhCompiled = true;
 
     const Crowdfund = await ethers.getContractFactory("Crowdfund");
-    const crowdfund = await upgrades.deployBeaconProxy(beacon, Crowdfund, args);
+    const crowdfund = await upgrades.deployBeaconProxy(proxy, Crowdfund, args);
     await crowdfund.deployed();
     return crowdfund;
   }
@@ -26,8 +26,8 @@ module.exports = {
 
 if (require.main === module) {
   module.exports.deployCrowdfundBeacon()
-    .then(beacon => {
-      console.log("Crowdfund Beacon: " + beacon.address);
+    .then(proxy => {
+      console.log("Crowdfund Proxy: " + proxy.address);
     })
     .catch(error => {
       console.error(error);

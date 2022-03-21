@@ -37,15 +37,14 @@ module.exports = {
   }
 };
 
+// These solely exist to test deployment scripts don't error when running,
+// except for deployFrabric which actually will deploy the Frabric
 if (require.main === module) {
-  if (!process.env.USDC) {
-    process.env.USDC = "0x0000000000000000000000000000000000000000";
-  }
-
-  module.exports.deployFRBC(process.env.USDC)
+  // Will disable the DEX functionality yet will deploy, which is all this block wants
+  module.exports.deployFRBC("0x0000000000000000000000000000000000000000")
     .then(contracts => {
       console.log("FrabricERC20 Beacon: " + contracts.beacon.address);
-      console.log("FRBC: " + contracts.frbc.address);
+      console.log("FRBC:                " + contracts.frbc.address);
     })
     .catch(error => {
       console.error(error);

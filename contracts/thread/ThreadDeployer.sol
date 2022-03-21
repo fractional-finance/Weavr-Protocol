@@ -93,6 +93,9 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     IFrabricERC20(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken);
     require(decimals == IERC20Metadata(erc20).decimals(), "ThreadDeployer: ERC20 changed decimals on initialization");
 
+    // Whitelist the Crowdfund to hold the Thread tokens
+    IFrabricERC20(erc20).setWhitelisted(crowdfund, keccak256("Crowdfund"));
+
     // Transfer token ownership to the Thread
     OwnableUpgradeable(erc20).transferOwnership(thread);
 
