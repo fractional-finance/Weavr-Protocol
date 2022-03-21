@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity >=0.8.9;
+pragma solidity >=0.8.13;
 
 interface IDividendERC20 {
   event Distributed(address indexed token, uint256 amount);
