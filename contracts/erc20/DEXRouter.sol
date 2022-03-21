@@ -29,11 +29,11 @@ contract DEXRouter is IDEXRouter {
 
   mapping(address => bool) internal _approved;
 
-  function buy(address token, uint256 price, uint256 amount) external {
+  function buy(address token, uint256 payment, uint256 price, uint256 minimumAmount) external {
     IERC20 dexToken = IERC20(IIntegratedLimitOrderDEX(token).dexToken());
 
     // Transfer only the needed amount of capital
-    dexToken.safeTransferFrom(msg.sender, address(this), price * amount);
+    dexToken.safeTransferFrom(msg.sender, address(this), payment);
 
     // Gas optimization by not constantly calling approve if we already did
     if (!_approved[token]) {
@@ -41,8 +41,8 @@ contract DEXRouter is IDEXRouter {
       _approved[token] = true;
     }
 
-    // Place an order for this exact amount, leaving this contract with 0 funds
-    IIntegratedLimitOrderDEX(token).buy(msg.sender, price, amount);
+    // Place an order with the exact amount received, leaving this contract with 0 funds
+    IIntegratedLimitOrderDEX(token).buy(msg.sender, dexToken.balanceOf(address(this)), price, minimumAmount);
   }
 
   // Technically, the uint256 max may be completely moved through here in volume
@@ -60,7 +60,7 @@ contract DEXRouter is IDEXRouter {
 
   // Doesn't have a fund recover function as anyone can claim a Thread 'exists' to drain this contract of funds in it
   // This contract should never hold funds yet we can't stop people from accidentally sending here
-  // A recover function would be nice, yet one already does
+  // A recover function would be nice accordingly, yet one already does exist thanks to the above
   // To make it secure would require knowing legitimate vs illegitimate Threads,
   // which would lock this router to a specific Frabric, stopping offshoots
   // That is not acceptable behavior

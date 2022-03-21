@@ -12,7 +12,6 @@ import "../interfaces/lists/IWhitelist.sol";
 import "../interfaces/thread/ICrowdfund.sol";
 import "../interfaces/thread/IThread.sol";
 
-// TODO also resolve the fee on transfer/rebase commentary from the DEX here
 contract Crowdfund is ERC20Upgradeable, ICrowdfund {
   using SafeERC20 for IERC20;
 
@@ -124,6 +123,10 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
     // Any transfer == 0 will error due to a check above, and wouldn't have any effect anyways
     // If a fee on transfer is toggled mid raise, withdraw will work without issue,
     // unless the target is actually reached, in which case we continue
+    // If the governor can't complete the acquisition given the transfer fee, they can refund what's available
+    // Rebase tokens also exist, and will also screw this over, yet there's only so much we can do
+    // This contract can also be blacklisted and have all its funds frozen
+    // Such cases are deemed as incredibly out of scope for discussion here (and elsewhere)
     uint256 balance = IERC20(token).balanceOf(address(this));
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     if ((IERC20(token).balanceOf(address(this)) - balance) != amount) {

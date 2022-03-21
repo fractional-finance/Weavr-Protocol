@@ -9,9 +9,15 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
-// Doesn't support fee on transfer/rebase yet various USD stablecoins do theoretically have fee on transfer
-// Either add an explicit require for non-fee on transfer or support fee on transfer?
-// TODO
+error ZeroPrice();
+error ZeroAmount();
+error EOABuyer(address buyer);
+error NotWhitelistedBuyer(address buyer);
+error LessThanMinimumAmount(uint256 amount, uint256 minimumAmount);
+error NotEnoughFunds(uint256 required, uint256 balance);
+error NullOrder();
+error NotOrderTrader(address caller, address trader);
+
 abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgradeable, IIntegratedLimitOrderDEX {
   using SafeERC20 for IERC20;
 
@@ -22,7 +28,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   mapping(address => uint256) public locked;
 
   struct Order {
-    address holder;
+    address trader;
     uint256 amount;
   }
 
@@ -62,14 +68,14 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
       point.orders[h].amount -= thisAmount;
       filled += thisAmount;
       amount -= thisAmount;
-      emit Filled(trader, point.orders[h].holder, price, amount);
+      emit Filled(trader, point.orders[h].trader, price, amount);
 
       if (buying) {
-        IERC20(dexToken).safeTransfer(point.orders[h].holder, price * thisAmount);
-        _transfer(point.orders[h].holder, trader, thisAmount);
-        locked[point.orders[h].holder] -= thisAmount;
+        IERC20(dexToken).safeTransfer(point.orders[h].trader, price * thisAmount);
+        _transfer(point.orders[h].trader, trader, thisAmount);
+        locked[point.orders[h].trader] -= thisAmount;
       } else {
-        _transfer(trader, point.orders[h].holder, thisAmount);
+        _transfer(trader, point.orders[h].trader, thisAmount);
         locked[trader] -= thisAmount;
       }
     }
@@ -96,13 +102,13 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     // If we filled every order, set the order type to null
     if (h == (point.orders.length - 1)) {
       point.orderType = OrderType.Null;
-      // Clear the holders array
+      // Clear the orders array
       // For now, this also offers a gas refund, yet future EIPs will likely remove this
       while (point.orders.length != 0) {
         point.orders.pop();
       }
     } else {
-      // Do a O(1) deletion from the holders array for each filled order
+      // Do a O(1) deletion from the orders array for each filled order
       // A shift would be very expensive and the 18 decimal accuracy of Ethereum means preserving the order of orders wouldn't be helpful
       // 1 wei is microscopic, so placing a 1 wei different order...
       for (uint256 i = 0; i <= h; i++) {
@@ -126,8 +132,12 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     uint256 price,
     uint256 amount
   ) private nonReentrant returns (uint256 filled, uint256) {
-    require(price != 0, "IntegratedLimitOrderDEX: Price is 0");
-    require(amount != 0, "IntegratedLimitOrderDEX: Amount is 0");
+    if (price == 0) {
+      revert ZeroPrice();
+    }
+    if (amount == 0) {
+      revert ZeroAmount();
+    }
 
     PricePoint storage point = _points[price];
     // If there's counter orders at this price, fill them
@@ -157,42 +167,81 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   // Lets a trader to be specified as the receiver of the tokens in question
   // This functionality is required by the DEXRouter and this remains secure thanks to payment being from msg.sender
   // Returns the same as action
-  function buy(address trader, uint256 price, uint256 amount) external override returns (uint256, uint256) {
+  function buy(
+    address trader,
+    uint256 payment,
+    uint256 price,
+    uint256 minimumAmount
+  ) external override returns (uint256, uint256) {
     // Require this be called by a contract
     // Prevents anyone from building a UX which doesn't utilize DEXRouter
     // While someone could write a different contract, anyone doing that is trusted to know what they're doing
     // See DEXRouter for why this is so important
     // This is moving JS responsibilities into Solidity, which isn't optimal due to gas costs,
     // yet this is a potentially critical bug which someone may fall past if trying to move quickly
-    require(AddressUpgradeable.isContract(msg.sender), "IntegratedLimitOrderDEX: Only a contract can place buy orders");
+    if (!AddressUpgradeable.isContract(msg.sender)) {
+      // This should be incredibly obvious
+      revert EOABuyer(msg.sender);
+    }
 
     // Make sure they're whitelisted so trade execution won't fail
     // This would be a DoS if it was allowed to place a standing order at this price point
     // It would be allowed to as long as it didn't error before hand by filling an order
     // No orders, no filling, no error
-    require(whitelisted(trader), "IntegratedLimitOrderDEX: Not whitelisted to hold this token");
+    if (!whitelisted(trader)) {
+      revert NotWhitelistedBuyer(trader);
+    }
     // Support fee on transfer tokens
     // Safe against re-entrancy as action has nonReentrant
+    // cancelOrder could also be called which could lower the balance considered received
+    // That isn't exploitable thanks to Solidity 0.8 making all math underflow checked
+    // (without utilizing unchecked, which isn't present here)
     // The Crowdfund contract actually verifies its token isn't fee on transfer
     // The Thread initializer uses the same token for both that and this
     // That said, any token which can have its fee set may be set to 0 during Crowdfund,
     // allowing it to pass, yet set to non-0 later in its life, causing this to fail
     // USDT notably has fee on transfer code, currently set to 0, that may someday activate
     uint256 balance = IERC20(dexToken).balanceOf(address(this));
-    IERC20(dexToken).safeTransferFrom(msg.sender, address(this), price * amount);
-    return action(OrderType.Buy, OrderType.Sell, trader, price, IERC20(dexToken).balanceOf(address(this)) - balance);
+    IERC20(dexToken).safeTransferFrom(msg.sender, address(this), payment);
+    uint256 received = IERC20(dexToken).balanceOf(address(this)) - balance;
+    uint256 amount = received / price;
+    if (amount < minimumAmount) {
+      revert LessThanMinimumAmount(amount, minimumAmount);
+    }
+
+    // Dust may exist in the form of received - (price * amount) thanks to rounding errors
+    // While this likely isn't worth the gas it would cost to transfer it, do so to ensure correctness
+    uint256 dust = received - (price * amount);
+    if (received != 0) {
+      // Transfer to the trader as msg.sender is presumably a router contract which shouldn't hold funds
+      // If a non-router contract trades on this DEX, it should specify itself as the trader, making this still valid
+      // If this was directly chained into Uniswap though to execute a trade there, then this dust would effectively be burnt
+      // It's insignificant enough to not bother adding an extra argument for that niche use case
+      IERC20(dexToken).safeTransfer(trader, dust);
+    }
+
+    return action(OrderType.Buy, OrderType.Sell, trader, price, amount);
   }
 
   function sell(uint256 price, uint256 amount) external override returns (uint256, uint256) {
     locked[msg.sender] += amount;
-    require(balanceOf(msg.sender) > locked[msg.sender], "IntegratedLimitOrderDEX: Not enough balance");
+    if (balanceOf(msg.sender) < locked[msg.sender]) {
+      revert NotEnoughFunds(locked[msg.sender], balanceOf(msg.sender));
+    }
     return action(OrderType.Sell, OrderType.Buy, msg.sender, price, amount);
   }
 
   function cancelOrder(uint256 price, uint256 i) external override {
     PricePoint storage point = _points[price];
-    require(point.orderType != OrderType.Null, "IntegratedLimitOrderDEX: Trying to cancel a null order");
-    require(point.orders[i].holder == msg.sender, "IntegratedLimitOrderDEX: Trying to cancel an point which isn't yours");
+    // This latter case is handled by Solidity's native bounds checks
+    // Technically, since a Null OrderType means orders.length is 0, this entire if check is meaningless
+    // Kept for robustness
+    if ((point.orderType == OrderType.Null) || (point.orders.length <= i)) {
+      revert NullOrder();
+    }
+    if (point.orders[i].trader != msg.sender) {
+      revert NotOrderTrader(msg.sender, point.orders[i].trader);
+    }
 
     uint256 amount = point.orders[i].amount;
     // If this is not the last order, shift the last order down
@@ -217,8 +266,8 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     return _points[price].orders.length;
   }
 
-  function getOrderHolder(uint256 price, uint256 i) external view override returns (address) {
-    return _points[price].orders[i].holder;
+  function getOrderTrader(uint256 price, uint256 i) external view override returns (address) {
+    return _points[price].orders[i].trader;
   }
 
   function getOrderAmount(uint256 price, uint256 i) external view override returns (uint256) {
