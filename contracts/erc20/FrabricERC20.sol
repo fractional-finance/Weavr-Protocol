@@ -51,6 +51,9 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   function balanceOf(address account) public view override(ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint256) {
     return ERC20Upgradeable.balanceOf(account);
   }
+  function decimals() public view override(ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint8) {
+    return ERC20Upgradeable.decimals();
+  }
 
   function mint(address to, uint256 amount) external override onlyOwner {
     require(mintable);

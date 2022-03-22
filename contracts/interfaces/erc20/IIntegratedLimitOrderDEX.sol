@@ -25,3 +25,12 @@ interface IIntegratedLimitOrderDEX {
   function getOrderTrader(uint256 price, uint256 i) external view returns (address);
   function getOrderAmount(uint256 price, uint256 i) external view returns (uint256);
 }
+
+error ZeroPrice();
+error ZeroAmount();
+error EOABuyer(address buyer);
+error NotWhitelistedBuyer(address buyer);
+error LessThanMinimumAmount(uint256 amount, uint256 minimumAmount);
+error NotEnoughFunds(uint256 required, uint256 balance);
+error NullOrder();
+error NotOrderTrader(address caller, address trader);

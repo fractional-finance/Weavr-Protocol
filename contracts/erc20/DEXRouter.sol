@@ -42,6 +42,11 @@ contract DEXRouter is IDEXRouter {
     }
 
     // Place an order with the exact amount received, leaving this contract with 0 funds
+    // While this does support fee on transfer tokens, it'll unfortunately fare the fee twice
+    // These contracts should not be used with fee on transfer in general
+    // The support for them is more due to USDT being able to enable fee on transfer
+    // at any given moment, or in case someone insists on using a fee on transfer token,
+    // rather than any endorsement
     IIntegratedLimitOrderDEX(token).buy(msg.sender, dexToken.balanceOf(address(this)), price, minimumAmount);
   }
 

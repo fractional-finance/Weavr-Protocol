@@ -9,15 +9,6 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
-error ZeroPrice();
-error ZeroAmount();
-error EOABuyer(address buyer);
-error NotWhitelistedBuyer(address buyer);
-error LessThanMinimumAmount(uint256 amount, uint256 minimumAmount);
-error NotEnoughFunds(uint256 required, uint256 balance);
-error NullOrder();
-error NotOrderTrader(address caller, address trader);
-
 abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgradeable, IIntegratedLimitOrderDEX {
   using SafeERC20 for IERC20;
 
@@ -43,18 +34,24 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   function whitelisted(address person) public view virtual returns (bool);
   function _transfer(address from, address to, uint256 amount) internal virtual;
   function balanceOf(address account) public virtual returns (uint256);
+  function decimals() public virtual returns (uint8);
 
   function __IntegratedLimitOrderDEX_init(address _dexToken) internal onlyInitializing {
     __ReentrancyGuard_init();
     dexToken = _dexToken;
   }
 
-  // Fill an order
+  // Convert a token quantity to atomic units
+  function atomic(uint256 amount) private returns (uint256) {
+    return amount * (10 ** decimals());
+  }
+
+  // Fill orders
   function fill(
     bool buying,
     address trader,
-    uint256 amount,
     uint256 price,
+    uint256 amount,
     PricePoint storage point
   ) private returns (uint256) {
     // Fill orders until there are either no orders or our order is filled
@@ -70,13 +67,14 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
       amount -= thisAmount;
       emit Filled(trader, point.orders[h].trader, price, amount);
 
+      uint256 atomicAmount = atomic(thisAmount);
       if (buying) {
         IERC20(dexToken).safeTransfer(point.orders[h].trader, price * thisAmount);
-        _transfer(point.orders[h].trader, trader, thisAmount);
-        locked[point.orders[h].trader] -= thisAmount;
+        _transfer(point.orders[h].trader, trader, atomicAmount);
+        locked[point.orders[h].trader] -= atomicAmount;
       } else {
-        _transfer(trader, point.orders[h].trader, thisAmount);
-        locked[trader] -= thisAmount;
+        _transfer(trader, point.orders[h].trader, atomicAmount);
+        locked[trader] -= atomicAmount;
       }
     }
 
@@ -167,6 +165,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   // Lets a trader to be specified as the receiver of the tokens in question
   // This functionality is required by the DEXRouter and this remains secure thanks to payment being from msg.sender
   // Returns the same as action
+  // minimumAmount is in whole tokens (1e18)
   function buy(
     address trader,
     uint256 payment,
@@ -223,8 +222,9 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     return action(OrderType.Buy, OrderType.Sell, trader, price, amount);
   }
 
+  // amount is in 'whole' tokens (1e18)
   function sell(uint256 price, uint256 amount) external override returns (uint256, uint256) {
-    locked[msg.sender] += amount;
+    locked[msg.sender] += atomic(amount);
     if (balanceOf(msg.sender) < locked[msg.sender]) {
       revert NotEnoughFunds(locked[msg.sender], balanceOf(msg.sender));
     }
@@ -254,7 +254,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     if (point.orderType == OrderType.Buy) {
       IERC20(dexToken).safeTransfer(msg.sender, amount * price);
     } else if (point.orderType == OrderType.Sell) {
-      locked[msg.sender] -= amount;
+      locked[msg.sender] -= atomic(amount);
     }
   }
 
