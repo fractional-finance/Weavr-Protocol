@@ -43,11 +43,11 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
   mapping(uint256 => RemoveBondProposal) internal _removeBond;
 
   struct ThreadProposal {
+    uint256 variant;
+    address agent;
     string name;
     string symbol;
-    address agent;
-    address tradeToken;
-    uint256 target;
+    bytes data;
   }
   mapping(uint256 => ThreadProposal) internal _threads;
 
@@ -143,22 +143,24 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
   }
 
   function proposeThread(
-    string memory name,
-    string memory symbol,
+    uint256 variant,
     address agent,
-    address tradeToken,
-    uint256 target,
+    string calldata name,
+    string calldata symbol,
+    bytes calldata data,
     string calldata info
   ) external override returns (uint256) {
-    // Doesn't check for being alphanumeric due to iteration costs
-    if ((bytes(name).length < 3) || (bytes(name).length > 30) || (bytes(symbol).length < 2) || (bytes(symbol).length > 5)) {
-      revert InvalidName(name, symbol);
-    }
     if (governor[agent] != GovernorStatus.Active) {
       revert NotActiveGovernor(agent, governor[agent]);
     }
-    _threads[_nextProposalID] = ThreadProposal(name, symbol, agent, tradeToken, target);
-    emit ThreadProposed(_nextProposalID, agent, tradeToken, target);
+    // Doesn't check for being alphanumeric due to iteration costs
+    if ((bytes(name).length < 3) || (bytes(name).length > 50) || (bytes(symbol).length < 2) || (bytes(symbol).length > 5)) {
+      revert InvalidName(name, symbol);
+    }
+    // Validate the data now before creating the proposal
+    IThreadDeployer(threadDeployer).validate(variant, data);
+    _threads[_nextProposalID] = ThreadProposal(variant, agent, name, symbol, data);
+    emit ThreadProposed(_nextProposalID, variant, agent, name, symbol, data);
     return _createProposal(uint256(FrabricProposalType.Thread), info);
   }
 
@@ -182,6 +184,9 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
         selector = IFrabricDAO.proposeUpgrade.selector;
       } else if (pType == CommonProposalType.TokenAction) {
         selector = IFrabricDAO.proposeTokenAction.selector;
+      } else if (pType == CommonProposalType.ParticipantRemoval) {
+        // If a participant should be removed, remove them from the Frabric, not the Thread
+        revert ProposingParticipantRemovalOnThread();
       } else {
         revert UnhandledEnumCase("Frabric proposeThreadProposal CommonProposal", _proposalType);
       }
@@ -193,7 +198,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
         // Doesn't use UnhandledEnumCase as that suggests a development-level failure to handle cases
         // While that already isn't guaranteed in this function, as _proposalType is user input,
         // it requires invalid input. Technically, FrabricChange is a legitimate enum value
-        revert ProposingFrabricChange(thread);
+        revert ProposingFrabricChange();
       } else if (pType == IThread.ThreadProposalType.Dissolution) {
         selector = IThread.proposeDissolution.selector;
       } else {
@@ -251,22 +256,18 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
 
     } else if (pType == FrabricProposalType.Thread) {
       ThreadProposal memory proposal = _threads[id];
-      // erc20 here is used as the parent whitelist as it's built into the Frabric ERC20
       IThreadDeployer(threadDeployer).deploy(
-        proposal.name,
-        proposal.symbol,
-        proposal.agent,
-        proposal.tradeToken,
-        proposal.target
+        proposal.variant, proposal.agent, proposal.name, proposal.symbol, proposal.data
       );
       delete _threads[id];
 
     } else if (pType == FrabricProposalType.ThreadProposal) {
-      (bool success, bytes memory data) = _threadProposals[id].thread.call(
-        abi.encodeWithSelector(_threadProposals[id].selector, _threadProposals[id].data)
+      ThreadProposalProposal memory proposal = _threadProposals[id];
+      (bool success, bytes memory data) = proposal.thread.call(
+        abi.encodeWithSelector(proposal.selector, proposal.data)
       );
       if (!success) {
-        revert ThreadProposalFailed(data);
+        revert ExternalCallFailed(proposal.thread, proposal.selector, data);
       }
       delete _threadProposals[id];
     } else {

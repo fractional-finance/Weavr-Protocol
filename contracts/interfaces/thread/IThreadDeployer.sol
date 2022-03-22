@@ -24,14 +24,17 @@ interface IThreadDeployer {
     address auction
   ) external;
 
+  function validate(uint256 varaint, bytes calldata data) external pure;
+
   function deploy(
+    uint256 varaint,
+    address agent,
     string memory name,
     string memory symbol,
-    address agent,
-    address raiseToken,
-    uint256 target
+    bytes calldata data
   ) external;
 }
 
+error UnknownVariant(uint256 id);
 error NonStaticDecimals(uint8 beforeDecimals, uint8 afterDecimals);
 error TimelockNotExpired(address token, uint256 time, uint256 lockedUntil);

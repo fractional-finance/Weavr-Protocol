@@ -33,10 +33,31 @@ interface IFrabric is IFrabricDAO {
 
   event KYCChanged(address indexed oldKYC, address indexed newKYC);
 
-  event ParticipantsProposed(uint256 indexed id, ParticipantType indexed participantType, address[] participants);
-  event RemoveBondProposed(uint256 indexed id, address indexed participant, bool indexed slash, uint256 amount);
-  event ThreadProposed(uint256 indexed id, address indexed agent, address indexed raiseToken, uint256 target);
-  event ThreadProposalProposed(uint256 indexed id, address indexed thread, uint256 indexed proposalType, string info);
+  event ParticipantsProposed(
+    uint256 indexed id,
+    ParticipantType indexed participantType,
+    address[] participants
+  );
+  event RemoveBondProposed(
+    uint256 indexed id,
+    address indexed participant,
+    bool indexed slash,
+    uint256 amount
+  );
+  event ThreadProposed(
+    uint256 indexed id,
+    uint256 indexed variant,
+    address indexed agent,
+    string name,
+    string symbol,
+    bytes data
+  );
+  event ThreadProposalProposed(
+    uint256 indexed id,
+    address indexed thread,
+    uint256 indexed proposalType,
+    string info
+  );
 
   function kyc() external view returns (address);
   function bond() external view returns (address);
@@ -64,11 +85,11 @@ interface IFrabric is IFrabricDAO {
     string calldata info
   ) external returns (uint256);
   function proposeThread(
-    string memory name,
-    string memory symbol,
+    uint256 variant,
     address agent,
-    address raiseToken,
-    uint256 target,
+    string calldata name,
+    string calldata symbol,
+    bytes calldata data,
     string calldata info
   ) external returns (uint256);
   function proposeThreadProposal(
@@ -87,8 +108,9 @@ error ZeroParticipants();
 error BatchParticipantsForNonBatchType(uint256 proposed, IFrabric.ParticipantType participantType);
 error ExistingGovernor(address governor, IFrabric.GovernorStatus status);
 error InvalidName(string name, string symbol);
-error ProposingFrabricChange(address thread);
-error ThreadProposalFailed(bytes error);
+error ProposingParticipantRemovalOnThread();
+error ProposingFrabricChange();
+error ExternalCallFailed(address called, bytes4 selector, bytes error);
 error ParticipantProposalNotPassed(uint256 id);
 error ParticipantAlreadyApproved();
 error InvalidKYCSignature(address signer, address kyc);

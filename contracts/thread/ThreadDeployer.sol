@@ -52,14 +52,31 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() initializer {}
 
+  // Validates a variant and byte data
+  function validate(uint256 variant, bytes calldata data) external pure {
+    if (variant == 0) {
+      abi.decode(data, (address, uint256));
+    } else {
+      revert UnknownVariant(variant);
+    }
+  }
+
   // onlyOwner to ensure all Thread events represent Frabric Threads
+  // Takes in a variant in order to support multiple variations easily in the future
+  // This could be anything from different Thread architectures to different lockup schemes
   function deploy(
+    uint256 variant,
+    address agent,
     string memory name,
     string memory symbol,
-    address agent,
-    address tradeToken,
-    uint256 target
+    bytes calldata data
   ) external override onlyOwner {
+    if (variant != 0) {
+      revert UnknownVariant(variant);
+    }
+
+    (address tradeToken, uint256 target) = abi.decode(data, (address, uint256));
+
     // Don't initialize the ERC20 yet
     address erc20 = address(new BeaconProxy(erc20Beacon, bytes("")));
 
