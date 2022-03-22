@@ -8,7 +8,7 @@ import "../dao/FrabricDAO.sol";
 
 import "../interfaces/thread/IThread.sol";
 
-contract Thread is Initializable, FrabricDAO, IThread {
+contract Thread is FrabricDAO, IThread {
   using SafeERC20 for IERC20;
 
   address public override agent;
@@ -96,9 +96,13 @@ contract Thread is Initializable, FrabricDAO, IThread {
     if (pType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);
       agent = _agents[id];
+      delete _agents[id];
+
     } else if (pType == ThreadProposalType.FrabricChange) {
       emit FrabricChanged(frabric, _frabrics[id]);
       frabric = _frabrics[id];
+      delete _frabrics[id];
+
     } else if (pType == ThreadProposalType.Dissolution) {
       // Prevent the Thread from being locked up in a Dissolution the agent won't honor for whatever reason
       // This will issue payment and then the agent will be obligated to transfer property or have bond slashed
@@ -108,13 +112,15 @@ contract Thread is Initializable, FrabricDAO, IThread {
       if (msg.sender != agent) {
         revert NotAgent(msg.sender, agent);
       }
-      Dissolution memory dissolution = _dissolutions[id];
+      Dissolution storage dissolution = _dissolutions[id];
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.price);
       IFrabricERC20(erc20).pause();
       IERC20(dissolution.token).approve(erc20, dissolution.price);
       // See IFrabricERC20 for why that doesn't include IDividendERC20 despite FrabricERC20 being a DividendERC20
       IDividendERC20(erc20).distribute(dissolution.token, dissolution.price);
       emit Dissolved(id);
+      delete _dissolutions[id];
+
     } else {
       revert UnhandledEnumCase("Thread _completeSpecificProposal", _pType);
     }

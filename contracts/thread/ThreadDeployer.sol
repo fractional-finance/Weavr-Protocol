@@ -19,7 +19,7 @@ import "../interfaces/frabric/IFrabric.sol";
 
 import "../interfaces/thread/IThreadDeployer.sol";
 
-contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
+contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
   using SafeERC20 for IERC20;
 
   address public override crowdfundProxy;

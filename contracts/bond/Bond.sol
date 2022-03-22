@@ -25,7 +25,7 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBond {
   address public override usd;
   address public override token;
 
-  bool internal _burning;
+  bool private _burning;
 
   function initialize(address _usd, address _token) external initializer {
     __Ownable_init();

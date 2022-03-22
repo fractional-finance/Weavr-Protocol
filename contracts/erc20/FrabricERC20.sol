@@ -78,13 +78,14 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     }
   }
 
-  function remove(address person) public override {
+  function remove(address person) public override nonReentrant {
     // If removal is true, this is this contract removing them, so ignore whitelist status
     // Else, check if they actually were removed from the whitelist
     if ((!_removal) && (whitelisted(person))) {
       revert Whitelisted(person);
     }
     // Set _removal to false to ensure it's not a concern
+    // If it was accidentally left set, anyone could be removed
     // This could be done by splitting the above if and adding an else yet this
     // write should be cheap enough
     _removal = false;
@@ -103,25 +104,22 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
         rounds = 1;
       }
 
+      // Set _removal = true for the entire body as multiple transfers will occur
+      // While this would be a risk if re-entrancy was possible, or if it was left set,
+      // this function is nonReentrant and it is set to false after the loop
+      _removal = true;
       for (uint256 i = 0; i < rounds; i++) {
         // If this is the final round, compensate for any rounding errors
         if (i == (rounds - 1)) {
           amount = balance - ((balance / rounds) * i);
         }
 
-        _removal = true;
-        // If transfer had re-entrancy (ERC777 which this should truly not be),
-        // this could be abused to remove whitelisted accounts. Right now,
-        // _transfer does make external calls in the form of whitelist() which is only view
-        // Therefore, this is safe
         _transfer(person, auction, amount);
-        _removal = false;
 
         // List the transferred tokens
-        // Doesn't use some approval system as then anyone who approves the contract
-        // could have arbitrary listings created for them
         IAuction(auction).listTransferred(address(this), dexToken, person, block.timestamp + (i * (1 weeks)));
       }
+      _removal = false;
     }
   }
 
@@ -132,6 +130,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   function setParentWhitelist(address whitelist) external override onlyOwner {
     _setParentWhitelist(whitelist);
   }
+
   function setWhitelisted(address person, bytes32 dataHash) external override onlyOwner {
     _setWhitelisted(person, dataHash);
 
@@ -147,6 +146,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
       remove(person);
     }
   }
+
   function globallyAccept() external override onlyOwner {
     _globallyAccept();
   }

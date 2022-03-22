@@ -21,7 +21,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     address instance;
     address code;
   }
-  mapping(uint256 => Upgrade) internal _upgrade;
+  mapping(uint256 => Upgrade) internal _upgrades;
 
   struct TokenAction {
     address token;
@@ -30,12 +30,16 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     uint256 price;
     uint256 amount;
   }
-  mapping(uint256 => TokenAction) internal _tokenAction;
+  mapping(uint256 => TokenAction) internal _tokenActions;
 
   mapping(uint256 => address) internal _removals;
 
   function __FrabricDAO_init(address _erc20, uint256 _votingPeriod) internal onlyInitializing {
     __DAO_init(_erc20, _votingPeriod);
+  }
+
+  function whitelisted(address person) internal view override(DAO) returns (bool) {
+    return IFrabricERC20(erc20).whitelisted(person);
   }
 
   function proposePaper(string calldata info) external returns (uint256) {
@@ -50,7 +54,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     address code,
     string calldata info
   ) external returns (uint256) {
-    _upgrade[_nextProposalID] = Upgrade(beacon, instance, code);
+    _upgrades[_nextProposalID] = Upgrade(beacon, instance, code);
     // Doesn't index code as parsing the Beacon's logs for its indexed code argument
     // will return every time a contract upgraded to it
     // This combination of options should be competent for almost all use cases
@@ -86,7 +90,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
       }
     }
 
-    _tokenAction[_nextProposalID] = TokenAction(token, target, mint, price, amount);
+    _tokenActions[_nextProposalID] = TokenAction(token, target, mint, price, amount);
     emit TokenActionProposed(_nextProposalID, token, target, mint, price, amount);
     return _createProposal(uint256(CommonProposalType.TokenAction) | commonProposalBit, info);
   }
@@ -111,25 +115,27 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     if ((_pType & commonProposalBit) == commonProposalBit) {
       CommonProposalType pType = CommonProposalType(_pType ^ commonProposalBit);
       if (pType == CommonProposalType.Paper) {
-        // NOP as the DAO emits ProposalStateChanged
+        // NOP as the DAO emits ProposalStateChanged which is all that's needed for this
 
       } else if (pType == CommonProposalType.Upgrade) {
-        IFrabricBeacon(_upgrade[id].beacon).upgrade(_upgrade[id].instance, _upgrade[id].code);
-        delete _upgrade[id];
+        Upgrade storage upgrade = _upgrades[id];
+        IFrabricBeacon(upgrade.beacon).upgrade(upgrade.instance, upgrade.code);
+        delete _upgrades[id];
 
       } else if (pType == CommonProposalType.TokenAction) {
-        if (_tokenAction[id].mint) {
-          IFrabricERC20(erc20).mint(_tokenAction[id].target, _tokenAction[id].amount);
+        TokenAction storage action = _tokenActions[id];
+        if (action.mint) {
+          IFrabricERC20(erc20).mint(action.target, action.amount);
         // The ILO DEX doesn't require transfer or even approve
-        } else if (_tokenAction[id].price == 0) {
-          IERC20(_tokenAction[id].token).safeTransfer(_tokenAction[id].target, _tokenAction[id].amount);
+        } else if (action.price == 0) {
+          IERC20(action.token).safeTransfer(action.target, action.amount);
         }
 
         // Not else to allow direct mint + sell
-        if (_tokenAction[id].price != 0) {
-          IIntegratedLimitOrderDEX(_tokenAction[id].token).sell(_tokenAction[id].price, _tokenAction[id].amount);
+        if (action.price != 0) {
+          IIntegratedLimitOrderDEX(action.token).sell(action.price, action.amount);
         }
-        delete _tokenAction[id];
+        delete _tokenActions[id];
 
       } else if (pType == CommonProposalType.ParticipantRemoval) {
         address removed = _removals[id];
@@ -140,6 +146,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
       } else {
         revert UnhandledEnumCase("FrabricDAO _completeProposal CommonProposal", _pType);
       }
+
     } else {
       _completeSpecificProposal(id, _pType);
     }

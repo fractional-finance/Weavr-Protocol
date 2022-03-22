@@ -26,7 +26,7 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
     uint256 start;
     uint256 end;
   }
-  mapping(uint256 => AuctionStruct) internal _auctions;
+  mapping(uint256 => AuctionStruct) private _auctions;
 
   // Unlike the DEXRouter which is meant to be static to ensure safety of approvals,
   // this Auction contract is ingrained into the Frabric and Threads. While this
@@ -38,7 +38,7 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
 
   // Not vulnerable to re-entrancy, despite being a balance based amount calculation,
   // as it's not before-after. It's stored-current
-  function getTransferred(address token) internal returns (uint256 transferred) {
+  function getTransferred(address token) private returns (uint256 transferred) {
     uint256 balance = IERC20(token).balanceOf(address(this));
     transferred = balance - balances[token];
     balances[token] = balance;

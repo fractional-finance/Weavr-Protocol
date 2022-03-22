@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.13;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import "./GlobalWhitelist.sol";
 
 import "../interfaces/lists/IFrabricWhitelist.sol";
 
-abstract contract FrabricWhitelist is GlobalWhitelist, IFrabricWhitelist {
+abstract contract FrabricWhitelist is Initializable, GlobalWhitelist, IFrabricWhitelist {
   // Whitelist used for the entire Frabric platform
   address public parentWhitelist;
 
@@ -15,7 +17,6 @@ abstract contract FrabricWhitelist is GlobalWhitelist, IFrabricWhitelist {
   }
 
   function __FrabricWhitelist_init(address parentWhitelistAddress) internal onlyInitializing {
-    __GlobalWhitelist_init();
     _setParentWhitelist(parentWhitelistAddress);
   }
 

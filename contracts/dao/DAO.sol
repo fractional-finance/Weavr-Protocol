@@ -45,6 +45,7 @@ abstract contract DAO is Initializable, IDAO {
     votingPeriod = _votingPeriod;
   }
 
+  function whitelisted(address person) internal view virtual returns (bool);
   function canPropose() public virtual view returns (bool);
   modifier beforeProposal() {
     if (!canPropose()) {
@@ -54,7 +55,7 @@ abstract contract DAO is Initializable, IDAO {
   }
 
   // Uses storage as all proposals checked for activity are storage
-  function proposalActive(Proposal storage proposal) internal view returns (bool) {
+  function proposalActive(Proposal storage proposal) private view returns (bool) {
     return (
       (proposal.state == ProposalState.Active) &&
       (block.timestamp < (proposal.stateStartTime + votingPeriod))
@@ -69,9 +70,9 @@ abstract contract DAO is Initializable, IDAO {
   }
 
   // Used to be a modifier yet that caused the modifier to perform a map read,
-  // just for the function to do the same. By making this an internal function
+  // just for the function to do the same. By making this an private function
   // returning the storage reference, it maintains performance and functions the same
-  function activeProposal(uint256 id) internal view returns (Proposal storage proposal) {
+  function activeProposal(uint256 id) private view returns (Proposal storage proposal) {
     proposal = _proposals[id];
     if (!proposalActive(proposal)) {
       // Doesn't include the inactivity reason as proposalActive doesn't return it
@@ -104,10 +105,19 @@ abstract contract DAO is Initializable, IDAO {
     }
   }
 
-  // Reuse canPropose to determine if the person is included on the whitelist
-  function vote(uint256 id, VoteDirection direction) public override beforeProposal() {
+  function vote(uint256 id, VoteDirection direction) public override {
+    // Requires the caller to also be whitelisted. While the below NoVotes error
+    // should prevent this from happening, when the Frabric removes someone,
+    // Threads keep token balances until someone calls remove on them
+    // This check prevents them from voting in the meantime, even though it could
+    // eventually be handled by calling remove and cancelProposal when the time comes
+    if (!whitelisted(msg.sender)) {
+      revert NotWhitelisted(msg.sender);
+    }
+
     Proposal storage proposal = activeProposal(id);
-    if (proposal.voters[msg.sender] == direction) {
+    VoteDirection voted = proposal.voters[msg.sender];
+    if (voted == direction) {
       revert AlreadyVotedInDirection(id, msg.sender, direction);
     }
 
@@ -116,9 +126,9 @@ abstract contract DAO is Initializable, IDAO {
       revert NoVotes(msg.sender);
     }
     // Remove old votes
-    if (proposal.voters[msg.sender] == VoteDirection.Yes) {
+    if (voted == VoteDirection.Yes) {
       proposal.votes -= votes;
-    } else if (proposal.voters[msg.sender] == VoteDirection.No) {
+    } else if (voted == VoteDirection.No) {
       proposal.votes += votes;
     } else {
       // If they had previously abstained, increase the amount of total votes
@@ -126,13 +136,15 @@ abstract contract DAO is Initializable, IDAO {
     }
 
     // Set new votes
-    proposal.voters[msg.sender] = VoteDirection(direction);
-    if (VoteDirection(direction) == VoteDirection.Yes) {
+    proposal.voters[msg.sender] = direction;
+    if (direction == VoteDirection.Yes) {
       proposal.votes += votes;
-    } else if (VoteDirection(direction) == VoteDirection.No) {
+    } else if (direction == VoteDirection.No) {
       proposal.votes -= votes;
     } else {
       // If they're now abstaining, decrease the amount of total votes
+      // While abstaining could be considered valid as participation,
+      // it'd require an extra variable to track and requiring opinionation is fine
       proposal.totalVotes -= uint256(votes);
     }
 
@@ -193,8 +205,8 @@ abstract contract DAO is Initializable, IDAO {
     }
 
     // Safe against re-entrancy (regarding multiple execution of the same proposal)
-    // as long as this block is untouched as internal. While multiple proposals
-    // can be executed simultaneously, that should never be an issue
+    // as long as this block is untouched. While multiple proposals can be executed
+    // simultaneously, that should not be an issue
     Proposal storage proposal = _proposals[id];
     // Cheaper than copying the entire thing into memory
     uint256 pType = proposal.pType;

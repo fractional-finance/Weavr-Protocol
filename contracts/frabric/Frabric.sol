@@ -24,14 +24,14 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
   address public override bond;
   address public override threadDeployer;
 
-  // The proposal structs are internal as their events are easily grabbed and contain the needed information
+  // The proposal structs are private as their events are easily grabbed and contain the needed information
 
   struct Participants {
     ParticipantType pType;
     address[] participants;
     uint256 passed;
   }
-  mapping(uint256 => Participants) internal _participants;
+  mapping(uint256 => Participants) private _participants;
   mapping(address => ParticipantType) public participant;
   mapping(address => GovernorStatus) public governor;
 
@@ -40,7 +40,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     bool slash;
     uint256 amount;
   }
-  mapping(uint256 => RemoveBondProposal) internal _removeBond;
+  mapping(uint256 => RemoveBondProposal) private _removeBonds;
 
   struct ThreadProposal {
     uint256 variant;
@@ -49,14 +49,14 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     string symbol;
     bytes data;
   }
-  mapping(uint256 => ThreadProposal) internal _threads;
+  mapping(uint256 => ThreadProposal) private _threads;
 
   struct ThreadProposalProposal {
     address thread;
     bytes4 selector;
     bytes data;
   }
-  mapping(uint256 => ThreadProposalProposal) internal _threadProposals;
+  mapping(uint256 => ThreadProposalProposal) private _threadProposals;
 
   // The erc20 is expected to be fully initialized via JS during deployment
   function initialize(
@@ -102,8 +102,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     if (participantType == ParticipantType.Null) {
       // CommonProposalType.ParticipantRemoval should be used
       revert ProposingNullParticipants();
-    }
-    if (participantType == ParticipantType.Genesis) {
+    } else if (participantType == ParticipantType.Genesis) {
       revert ProposingGenesisParticipants();
     }
 
@@ -131,8 +130,8 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     uint256 amount,
     string calldata info
   ) external override returns (uint256) {
-    _removeBond[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
-    if (uint256(governor[_governor]) < uint256(GovernorStatus.Active)) {
+    _removeBonds[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
+    if (governor[_governor] < GovernorStatus.Active) {
       // Arguably a misuse as this actually checks they were never an active governor
       // Not that they aren't currently an active governor, which the error name suggests
       // This should be better to handle from an integration perspective however
@@ -248,21 +247,23 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
       }
 
     } else if (pType == FrabricProposalType.RemoveBond) {
-      if (_removeBond[id].slash) {
-        IBond(bond).slash(_removeBond[id].governor, _removeBond[id].amount);
+      RemoveBondProposal storage remove = _removeBonds[id];
+      if (remove.slash) {
+        IBond(bond).slash(remove.governor, remove.amount);
       } else {
-        IBond(bond).unbond(_removeBond[id].governor, _removeBond[id].amount);
+        IBond(bond).unbond(remove.governor, remove.amount);
       }
+      delete _removeBonds[id];
 
     } else if (pType == FrabricProposalType.Thread) {
-      ThreadProposal memory proposal = _threads[id];
+      ThreadProposal storage proposal = _threads[id];
       IThreadDeployer(threadDeployer).deploy(
         proposal.variant, proposal.agent, proposal.name, proposal.symbol, proposal.data
       );
       delete _threads[id];
 
     } else if (pType == FrabricProposalType.ThreadProposal) {
-      ThreadProposalProposal memory proposal = _threadProposals[id];
+      ThreadProposalProposal storage proposal = _threadProposals[id];
       (bool success, bytes memory data) = proposal.thread.call(
         abi.encodeWithSelector(proposal.selector, proposal.data)
       );
@@ -276,11 +277,12 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
   }
 
   function approve(uint256 id, uint256 position, bytes32 kycHash, bytes calldata signature) external override {
-    if (_participants[id].passed == 0) {
+    Participants storage participants = _participants[id];
+    if (participants.passed == 0) {
       revert ParticipantProposalNotPassed(id);
     }
 
-    address approving = _participants[id].participants[position];
+    address approving = participants.participants[position];
     // Technically, the original proposal may have the 0 address in it
     // That would prevent this proposal from ever fully passing and being deleted
     // That doesn't help anyone and is solely an annoyance to the Ethereum blockchain used (not even the Frabric)
@@ -288,7 +290,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
       // Doesn't include the address as it... can't. It's been deleted
       revert ParticipantAlreadyApproved();
     }
-    _participants[id].participants[position] = address(0);
+    participants.participants[position] = address(0);
 
     // Places signer in a variable to make the information available for the error
     // While generally, the errors include an abundance of information with the expectation they'll be caught in a call,
@@ -329,7 +331,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     // It would cache a DAO approval for arbitrarily long
     if (participant[approving] == ParticipantType.Null) {
       IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
-      participant[approving] = _participants[id].pType;
+      participant[approving] = participants.pType;
     }
 
     // If all participants have been handled, delete the proposal to claim the gas refund
@@ -337,10 +339,11 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     // While we could increment passed first, and then check if .passed - 1 ==,
     // which would be easier to read/understand, this is a valid transformation
     // which saves on gas
-    if (_participants[id].passed == _participants[id].participants.length) {
+    if (participants.passed == participants.participants.length) {
       delete _participants[id];
+      return;
     }
     // Increment the amount of participants from this proposal which were handled
-    _participants[id].passed++;
+    participants.passed++;
   }
 }
