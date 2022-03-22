@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 // Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
 // EIP712 was created over 4 years ago and has undegone multiple versions since
 // Metamask supports multiple various versions of EIP712 and is committed to maintaing "v3" and "v4" support
@@ -95,13 +94,15 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);
   }
 
-  // Can set to Null to remove Governors/Individuals/Corporations
-  // KYC must be replaced
   function proposeParticipants(
     ParticipantType participantType,
     address[] memory participants,
     string calldata info
   ) external override beforeProposal() returns (uint256) {
+    if (participantType == ParticipantType.Null) {
+      // CommonProposalType.ParticipantRemoval should be used
+      revert ProposingNullParticipants();
+    }
     if (participantType == ParticipantType.Genesis) {
       revert ProposingGenesisParticipants();
     }
@@ -121,7 +122,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
 
     _participants[_nextProposalID] = Participants(participantType, participants, 0);
     emit ParticipantsProposed(_nextProposalID, participantType, participants);
-    return _createProposal(info, uint256(FrabricProposalType.Participants));
+    return _createProposal(uint256(FrabricProposalType.Participants), info);
   }
 
   function proposeRemoveBond(
@@ -138,7 +139,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
     emit RemoveBondProposed(_nextProposalID, _governor, slash, amount);
-    return _createProposal(info, uint256(FrabricProposalType.RemoveBond));
+    return _createProposal(uint256(FrabricProposalType.RemoveBond), info);
   }
 
   function proposeThread(
@@ -158,7 +159,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     }
     _threads[_nextProposalID] = ThreadProposal(name, symbol, agent, tradeToken, target);
     emit ThreadProposed(_nextProposalID, agent, tradeToken, target);
-    return _createProposal(info, uint256(FrabricProposalType.Thread));
+    return _createProposal(uint256(FrabricProposalType.Thread), info);
   }
 
   // This does assume the Thread's API meets expectations compiled into the Frabric
@@ -202,7 +203,14 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
 
     _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, data);
     emit ThreadProposalProposed(_nextProposalID, thread, _proposalType, info);
-    return _createProposal(info, uint256(FrabricProposalType.ThreadProposal));
+    return _createProposal(uint256(FrabricProposalType.ThreadProposal), info);
+  }
+
+  function _participantRemoval(address _participant) internal override {
+    if (governor[_participant] != GovernorStatus.Null) {
+      governor[_participant] = GovernorStatus.Removed;
+    }
+    participant[_participant] = ParticipantType.Removed;
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
@@ -217,33 +225,17 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
         // Delete for the gas savings
         delete _participants[id];
       } else {
-        if (participants.pType == ParticipantType.Null) {
-          if (governor[participants.participants[0]] != GovernorStatus.Null) {
-            governor[participants.participants[0]] = GovernorStatus.Removed;
-          }
-
-          // Remove them from the whitelist
-          IFrabricERC20(erc20).setWhitelisted(participants.participants[0], bytes32(0));
-          // Set them as Removed
-          participant[participants.participants[0]] = ParticipantType.Removed;
-          // Not only saves gas yet also fixes a security issue
-          // Without this, the KYC company could use this removing proposal to whitelist them
-          // The early return after this avoids the issue as well (as it's before passed is set),
-          // yet security in depth is great
-          delete _participants[id];
-
-          return;
-        } else if (participants.pType == ParticipantType.Governor) {
+        if (participants.pType == ParticipantType.Governor) {
           // A similar check exists in proposeParticipants yet that doesn't
-          // prevent the same proposal from existing multiple times. It's not worth it
-          // to track such a weird case, which shouldn't happen, when we can just have
-          // this check here to be sure. The only concern would be if this proposal could
-          // be used far into the future to restore their status after being removed, yet
-          // governor removal sets them to removed, not to Null
+          // prevent the same proposal from existing multiple times. This is
+          // an edge case which should never happen, yet handling it means
+          // checking here to ensure if they already exist, they're not reset
+          // to Unverified. While we could error here, we may as well delete
+          // the invalid proposal and move on.
           if (governor[participants.participants[0]] != GovernorStatus.Null) {
-            revert ExistingGovernor(participants.participants[0], governor[participants.participants[0]]);
+            delete _participants[id];
+            return;
           }
-          governor[participants.participants[0]] = GovernorStatus.Unverified;
         }
 
         // Set this proposal as having passed so the KYC company can whitelist
@@ -260,7 +252,13 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     } else if (pType == FrabricProposalType.Thread) {
       ThreadProposal memory proposal = _threads[id];
       // erc20 here is used as the parent whitelist as it's built into the Frabric ERC20
-      IThreadDeployer(threadDeployer).deploy(proposal.name, proposal.symbol, erc20, proposal.agent, proposal.tradeToken, proposal.target);
+      IThreadDeployer(threadDeployer).deploy(
+        proposal.name,
+        proposal.symbol,
+        proposal.agent,
+        proposal.tradeToken,
+        proposal.target
+      );
       delete _threads[id];
 
     } else if (pType == FrabricProposalType.ThreadProposal) {

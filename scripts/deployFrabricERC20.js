@@ -20,7 +20,7 @@ module.exports = {
     return frbc;
   },
 
-  deployFRBC: async (usdc) => {
+  deployFRBC: async (usdc, auction) => {
     let result = { beacon: await module.exports.deployFrabricERC20Beacon() };
     result.frbc = await module.exports.deployFrabricERC20(
       result.beacon,
@@ -32,7 +32,8 @@ module.exports = {
         true,
         // Parent whitelist doesn't exist
         "0x0000000000000000000000000000000000000000",
-        usdc
+        usdc,
+        auction
       ]
     );
     return result;
@@ -43,7 +44,7 @@ module.exports = {
 // except for deployFrabric which actually will deploy the Frabric
 if (require.main === module) {
   // Will disable the DEX functionality yet will deploy, which is all this block wants
-  module.exports.deployFRBC("0x0000000000000000000000000000000000000000")
+  module.exports.deployFRBC("0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000")
     .then(contracts => {
       console.log("FrabricERC20 Beacon: " + contracts.beacon.address);
       console.log("FRBC:                " + contracts.frbc.address);

@@ -81,6 +81,7 @@ interface IFrabric is IFrabricDAO {
   function approve(uint256 id, uint256 position, bytes32 kycHash, bytes calldata signature) external;
 }
 
+error ProposingNullParticipants();
 error ProposingGenesisParticipants();
 error ZeroParticipants();
 error BatchParticipantsForNonBatchType(uint256 proposed, IFrabric.ParticipantType participantType);

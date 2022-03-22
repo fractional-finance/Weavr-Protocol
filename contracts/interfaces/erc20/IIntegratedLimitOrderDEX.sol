@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.13;
 
+import "../errors/Common.sol";
+
 interface IIntegratedLimitOrderDEX {
   enum OrderType { Null, Buy, Sell }
 
   event Filled(address indexed sender, address indexed recipient, uint256 indexed price, uint256 amount);
   event NewOrder(OrderType indexed orderType, uint256 indexed price);
   event OrderIncrease(address indexed sender, uint256 indexed price, uint256 amount);
+
+  function atomic(uint256 amount) external returns (uint256);
 
   function dexToken() external view returns (address);
   function locked(address person) external view returns (uint256);
@@ -26,10 +30,7 @@ interface IIntegratedLimitOrderDEX {
   function getOrderAmount(uint256 price, uint256 i) external view returns (uint256);
 }
 
-error ZeroPrice();
-error ZeroAmount();
 error EOABuyer(address buyer);
-error NotWhitelisted(address recipient, address whitelist);
 error LessThanMinimumAmount(uint256 amount, uint256 minimumAmount);
 error NotEnoughFunds(uint256 required, uint256 balance);
 error NullOrder();

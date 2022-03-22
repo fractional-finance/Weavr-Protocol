@@ -5,7 +5,6 @@ import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable
 import { IERC20MetadataUpgradeable as IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "../interfaces/lists/IWhitelist.sol";
@@ -119,7 +118,7 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
     }
 
     if (!IWhitelist(whitelist).whitelisted(msg.sender)) {
-      revert NotWhitelisted(msg.sender, whitelist);
+      revert NotWhitelisted(msg.sender);
     }
 
     // Mint before transferring to prevent re-entrancy causing the Crowdfund to exceed its target

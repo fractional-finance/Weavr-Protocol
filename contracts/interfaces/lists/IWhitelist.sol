@@ -6,3 +6,5 @@ interface IWhitelist {
 
   function whitelisted(address person) external view returns (bool);
 }
+
+error NotWhitelisted(address person);

@@ -5,6 +5,7 @@ const u2SDK = require("@uniswap/v2-sdk");
 const uSDK = require("@uniswap/sdk-core");
 
 const deployBeacon = require("./deployBeacon.js");
+const deployAuction = require("./deployAuction.js");
 const FrabricERC20 = require("./deployFrabricERC20.js");
 const deployBond = require("./deployBond.js");
 const deployThreadDeployer = require("./deployThreadDeployer.js");
@@ -13,7 +14,10 @@ const deployDEXRouter = require("./deployDEXRouter.js");
 module.exports = async (usdc, uniswap, genesis, kyc) => {
   let signer = (await ethers.getSigners())[0];
 
-  const { beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usdc);
+  const { proxy: auctionProxy, auction } = await deployAuction();
+
+  const { beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usdc, auction.address);
+  await frbc.setWhitelisted(auction.address, ethers.utils.id("Auction"));
 
   // Deploy the Uniswap pair to get the bond token
   uniswap = new ethers.Contract(
@@ -90,7 +94,7 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
     crowdfundProxy,
     threadBeacon,
     threadDeployer
-  } = await deployThreadDeployer(erc20Beacon.address);
+  } = await deployThreadDeployer(erc20Beacon.address, auction.address);
 
   const proxy = await deployBeacon(
     [],
@@ -129,6 +133,7 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
   const router = await deployDEXRouter();
 
   return {
+    auction,
     frbc,
     pair,
     bond,
@@ -164,6 +169,7 @@ if (require.main === module) {
     }
 
     const contracts = await module.exports(usdc, uniswap, {}, kyc);
+    console.log("Auction:           " + contracts.auction.address);
     console.log("FRBC:              " + contracts.frbc.address);
     console.log("Pair (Bond Token): " + contracts.pair);
     console.log("Bond:              " + contracts.bond.address);

@@ -9,12 +9,14 @@ import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgra
 
 import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/thread/IThread.sol";
 import "../interfaces/thread/ICrowdfund.sol";
+
+import "../interfaces/frabric/IFrabric.sol";
+
 import "../interfaces/thread/IThreadDeployer.sol";
 
 contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
@@ -23,13 +25,15 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
   address public override crowdfundProxy;
   address public override erc20Beacon;
   address public override threadBeacon;
+  address public override auction;
 
   mapping(address => uint256) public override lockup;
 
   function initialize(
     address _crowdfundProxy,
     address _erc20Beacon,
-    address _threadBeacon
+    address _threadBeacon,
+    address _auction
   ) public override initializer {
     __Ownable_init();
 
@@ -41,6 +45,8 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     // Allows Threads upgrading individually
     erc20Beacon = _erc20Beacon;
     threadBeacon = _threadBeacon;
+
+    auction = _auction;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -50,7 +56,6 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
   function deploy(
     string memory name,
     string memory symbol,
-    address parentWhitelist,
     address agent,
     address tradeToken,
     uint256 target
@@ -69,6 +74,8 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
         )
       )
     ));
+
+    address parentWhitelist = IFrabric(owner()).erc20();
 
     address crowdfund = address(new BeaconProxy(
       crowdfundProxy,
@@ -94,7 +101,7 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
     // Add 6% on top for the Thread
     uint256 threadTokenSupply = threadBaseTokenSupply * 106 / 100;
-    IFrabricERC20(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken);
+    IFrabricERC20(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken, auction);
     if (decimals != IERC20Metadata(erc20).decimals()) {
       revert NonStaticDecimals(decimals, IERC20Metadata(erc20).decimals());
     }

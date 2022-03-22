@@ -8,13 +8,17 @@ import "./DividendERC20.sol";
 import "../lists/FrabricWhitelist.sol";
 import "./IntegratedLimitOrderDEX.sol";
 
+import "../interfaces/auction/IAuction.sol";
+
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 // FrabricERC20s are tokens with a built in limit order DEX, along with governance and dividend functionality
 // The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
 contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20 {
-  bool public mintable;
+  bool public override mintable;
+  address public override auction;
+  bool internal _removal;
 
   function initialize(
     string memory name,
@@ -22,7 +26,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     uint256 supply,
     bool _mintable,
     address parentWhitelist,
-    address dexToken
+    address dexToken,
+    address _auction
   ) external initializer {
     __DividendERC20_init(name, symbol);
     __Ownable_init();
@@ -43,8 +48,10 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
 
     // Mint the supply
     _mint(msg.sender, supply);
-
     mintable = _mintable;
+
+    auction = _auction;
+    _removal = false;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -71,6 +78,37 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     }
   }
 
+  function remove(address person) public override {
+    // If removal is true, this is this contract removing them, so ignore whitelist status
+    // Else, check if they actually were removed from the whitelist
+    if ((!_removal) && (whitelisted(person))) {
+      revert Whitelisted(person);
+    }
+    // Set _removal to false to ensure it's not a concern
+    // This could be done by splitting the above if and adding an else yet this
+    // write should be cheap enough
+    _removal = false;
+
+    // Clear the amount they have locked
+    locked[person] = 0;
+
+    uint256 balance = balanceOf(person);
+    if (balance != 0) {
+      _removal = true;
+      // If transfer had re-entrancy (ERC777 which this should truly not be),
+      // this could be abused to remove whitelisted accounts. Right now,
+      // _transfer does make external calls in the form of whitelist() which is only view
+      // Therefore, this is safe
+      _transfer(person, auction, balance);
+      _removal = false;
+
+      // List the transferred tokens
+      // Doesn't use some approval system as then anyone who approves the contract
+      // could have arbitrary listings created for them
+      IAuction(auction).listTransferred(address(this), dexToken, person);
+    }
+  }
+
   // Whitelist functions
   function whitelisted(address person) public view override(IntegratedLimitOrderDEX, IWhitelist, FrabricWhitelist) returns (bool) {
     return FrabricWhitelist.whitelisted(person);
@@ -80,6 +118,18 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   }
   function setWhitelisted(address person, bytes32 dataHash) external override onlyOwner {
     _setWhitelisted(person, dataHash);
+
+    // Remove them now
+    // This will only apply to the Frabric/Thread in question
+    // For a Frabric removal, this will remove them from the global whitelist,
+    // and enable calling remove on any Thread. For a Thread, this won't change
+    // the whitelist at all, as it'll still be whitelisted on the Frabric
+    if (dataHash == bytes32(0)) {
+      // Set _removal to true so remove doesn't check the whitelist
+      // We could also use an external call and a msg.sender check
+      _removal = true;
+      remove(person);
+    }
   }
   function globallyAccept() external override onlyOwner {
     _globallyAccept();
@@ -99,14 +149,25 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   // Transfer requirements
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     super._beforeTokenTransfer(from, to, amount);
-    // Whitelisted from or minting
-    // A non-whitelisted actor may have tokens if they were removed from the whitelist
-    if ((!whitelisted(from)) && (from != address(0))) {
-      revert NotWhitelistedSender(from);
+
+    if (!_removal) {
+      // Whitelisted from or minting
+      // A non-whitelisted actor may have tokens if they were removed from the whitelist
+      // In that case, remove should be called
+      // whitelisted is an interaction, extensively discussed in IntegratedLimitOrderDEX
+      // As stated there, it's trusted to not be idiotic AND it's view, limiting potential
+      if ((!whitelisted(from)) && (from != address(0))) {
+        revert NotWhitelisted(from);
+      }
+
+      // Placed here as a gas optimization
+      // The Auction contract transferred to during removals is whitelisted so it's
+      // not removable, and so it can then make its own transfer as needed to complete the auction
+      if (!whitelisted(to)) {
+        revert NotWhitelisted(to);
+      }
     }
-    if (!whitelisted(to)) {
-      revert NotWhitelistedRecipient(to);
-    }
+
     if (paused()) {
       revert CurrentlyPaused();
     }

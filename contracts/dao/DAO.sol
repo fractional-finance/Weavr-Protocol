@@ -85,7 +85,7 @@ abstract contract DAO is Initializable, IDAO {
   }
 
   // Not exposed as despite working with arbitrary calldata, this calldata is currently contract crafted for specific purposes
-  function _createProposal(string calldata info, uint256 pType) internal returns (uint256 id) {
+  function _createProposal(uint256 proposalType, string calldata info) internal returns (uint256 id) {
     id = _nextProposalID;
     _nextProposalID++;
 
@@ -97,11 +97,11 @@ abstract contract DAO is Initializable, IDAO {
     // While the creator could have sold in this block, they can also sell over the next few weeks
     // This is why cancelProposal exists
     proposal.voteBlock = block.number - 1;
-    proposal.pType = pType;
+    proposal.pType = proposalType;
 
     // Separate event to allow indexing by type/creator while maintaining state machine consistency
     // Also exposes info
-    emit NewProposal(id, pType, proposal.creator, info);
+    emit NewProposal(id, proposalType, proposal.creator, info);
     emit ProposalStateChanged(id, proposal.state);
 
     // Automatically vote Yes for the creator
@@ -197,22 +197,23 @@ abstract contract DAO is Initializable, IDAO {
       revert CurrentlyPaused();
     }
 
-    // Safe against re-entrancy as long as this block is untouched as internal
-    // While paused can re-enter (theoretically, it never should), it hasn't verified the proposal state yet
-    // Said state will be cleared by the first instance to run
+    // Safe against re-entrancy (regarding multiple execution of the same proposal)
+    // as long as this block is untouched as internal. While multiple proposals
+    // can be executed simultaneously, that should never be an issue
     Proposal storage proposal = _proposals[id];
+    // Cheaper than copying the entire thing into memory
+    uint256 pType = proposal.pType;
     if (proposal.state != ProposalState.Queued) {
       revert NotQueued(id, proposal.state);
     }
     if (block.timestamp < (proposal.stateStartTime + (12 hours))) {
       revert StillQueued(id, block.timestamp, proposal.stateStartTime + (12 hours));
     }
-    proposal.state = ProposalState.Executed;
-    proposal.stateStartTime = block.timestamp;
-    emit ProposalStateChanged(id, proposal.state);
+    delete _proposals[id];
+    emit ProposalStateChanged(id, ProposalState.Executed);
 
     // Re-entrancy here would do nothing as the proposal has had its state updated
-    _completeProposal(id, proposal.pType);
+    _completeProposal(id, pType);
   }
 
   // Enables withdrawing a proposal

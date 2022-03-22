@@ -45,8 +45,17 @@ contract Thread is Initializable, FrabricDAO, IThread {
 
   function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {
     return (
-      (IERC20(erc20).balanceOf(msg.sender) != 0) ||
+      // Whitelisted token holder
+      (
+        IFrabricERC20(erc20).whitelisted(msg.sender) &&
+        (IERC20(erc20).balanceOf(msg.sender) != 0)
+      ) ||
+      // Both of these should also be whitelisted. It's not technically a requirement however
+      // The Thread is allowed to specify whoever they want for either, and if they are splitting off,
+      // they should successfully manage their own whitelist, yet there's no reason to force it here
+      // Agent
       (msg.sender == address(agent)) ||
+      // Frabric
       (msg.sender == address(frabric))
     );
   }
@@ -57,7 +66,7 @@ contract Thread is Initializable, FrabricDAO, IThread {
   ) external beforeProposal() override returns (uint256 id) {
     _agents[_nextProposalID] = _agent;
     emit AgentChangeProposed(_nextProposalID, _agent);
-    return _createProposal(info, uint256(ThreadProposalType.AgentChange));
+    return _createProposal(uint256(ThreadProposalType.AgentChange), info);
   }
 
   function proposeFrabricChange(
@@ -66,7 +75,7 @@ contract Thread is Initializable, FrabricDAO, IThread {
   ) external beforeProposal() override returns (uint256 id) {
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
-    return _createProposal(info, uint256(ThreadProposalType.FrabricChange));
+    return _createProposal(uint256(ThreadProposalType.FrabricChange), info);
   }
 
   function proposeDissolution(
@@ -79,7 +88,7 @@ contract Thread is Initializable, FrabricDAO, IThread {
     }
     _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, price);
     emit DissolutionProposed(_nextProposalID, msg.sender, token, price);
-    return _createProposal(info, uint256(ThreadProposalType.Dissolution));
+    return _createProposal(uint256(ThreadProposalType.Dissolution), info);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {

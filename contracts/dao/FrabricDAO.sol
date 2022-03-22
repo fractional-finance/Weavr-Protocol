@@ -32,6 +32,8 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
   }
   mapping(uint256 => TokenAction) internal _tokenAction;
 
+  mapping(uint256 => address) internal _removals;
+
   function __FrabricDAO_init(address _erc20, uint256 _votingPeriod) internal onlyInitializing {
     __DAO_init(_erc20, _votingPeriod);
   }
@@ -50,7 +52,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
 
   function proposePaper(string calldata info) external beforeProposal() returns (uint256) {
     // No dedicated event as the DAO emits type and info
-    return _createProposal(info, uint256(CommonProposalType.Paper) | commonProposalBit);
+    return _createProposal(uint256(CommonProposalType.Paper) | commonProposalBit, info);
   }
 
   // Allows upgrading itself or any contract owned by itself
@@ -67,7 +69,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     // The only missing indexing case is when it's proposed to upgrade, yet that never passes/executes
     // This should be minimally considerable and coverable by outside solutions if truly needed
     emit UpgradeProposed(_nextProposalID, beacon, instance, code);
-    return _createProposal(info, uint256(CommonProposalType.Upgrade) | commonProposalBit);
+    return _createProposal(uint256(CommonProposalType.Upgrade) | commonProposalBit, info);
   }
 
   function proposeTokenAction(
@@ -98,9 +100,21 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
 
     _tokenAction[_nextProposalID] = TokenAction(token, target, mint, price, amount);
     emit TokenActionProposed(_nextProposalID, token, target, mint, price, amount);
-    return _createProposal(info, uint256(CommonProposalType.TokenAction) | commonProposalBit);
+    return _createProposal(uint256(CommonProposalType.TokenAction) | commonProposalBit, info);
   }
 
+  function proposeParticipantRemoval(
+    address participant,
+    string calldata info
+  ) external beforeProposal() returns (uint256) {
+    _removals[_nextProposalID] = participant;
+    emit RemovalProposed(_nextProposalID, participant);
+    return _createProposal(uint256(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
+  }
+
+  // Has an empty body as it doesn't have to be overriden
+  function _participantRemoval(address participant) internal virtual {}
+  // Has to be overriden
   function _completeSpecificProposal(uint256, uint256) internal virtual;
 
   // Re-entrancy isn't a concern due to completeProposal being safe from re-entrancy
@@ -128,6 +142,12 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
           IIntegratedLimitOrderDEX(_tokenAction[id].token).sell(_tokenAction[id].price, _tokenAction[id].amount);
         }
         delete _tokenAction[id];
+
+      } else if (pType == CommonProposalType.ParticipantRemoval) {
+        address removed = _removals[id];
+        IFrabricERC20(erc20).setWhitelisted(removed, bytes32(0));
+        _participantRemoval(removed);
+        delete _removals[id];
 
       } else {
         revert UnhandledEnumCase("FrabricDAO _completeProposal CommonProposal", _pType);

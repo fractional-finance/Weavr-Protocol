@@ -7,7 +7,8 @@ interface IFrabricDAO is IDAO {
   enum CommonProposalType {
     Paper,
     Upgrade,
-    TokenAction
+    TokenAction,
+    ParticipantRemoval
   }
 
   event UpgradeProposed(uint256 indexed id, address indexed beacon, address indexed instance, address code);
@@ -19,6 +20,7 @@ interface IFrabricDAO is IDAO {
     uint256 price,
     uint256 amount
   );
+  event RemovalProposed(uint256 indexed id, address participant);
 
   function commonProposalBit() external view returns (uint256);
 

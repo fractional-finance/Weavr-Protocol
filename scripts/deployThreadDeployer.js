@@ -5,7 +5,7 @@ const deployBeacon = require("./deployBeacon.js");
 const crowdfund = require("./deployCrowdfund.js");
 const thread = require("./deployThread.js");
 
-module.exports = async (erc20Beacon) => {
+module.exports = async (erc20Beacon, auction) => {
   const crowdfundProxy = await crowdfund.deployCrowdfundProxy();
   const threadBeacon = await thread.deployThreadBeacon();
 
@@ -19,7 +19,7 @@ module.exports = async (erc20Beacon) => {
   const threadDeployer = await upgrades.deployBeaconProxy(
     proxy,
     ThreadDeployer,
-    [crowdfundProxy.address, erc20Beacon, threadBeacon.address]
+    [crowdfundProxy.address, erc20Beacon, threadBeacon.address, auction]
   );
   await threadDeployer.deployed();
 
@@ -28,7 +28,7 @@ module.exports = async (erc20Beacon) => {
 
 if (require.main === module) {
   // See commentary in deployFrabricERC20 on this behavior
-  module.exports("0x0000000000000000000000000000000000000000")
+  module.exports("0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000")
     .then(contracts => {
       console.log("ThreadDeployer Proxy: " + contracts.proxy.address);
       console.log("Crowdfund Proxy:      " + contracts.crowdfundProxy.address);

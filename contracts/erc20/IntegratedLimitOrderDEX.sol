@@ -4,9 +4,9 @@ pragma solidity ^0.8.13;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
+import "../interfaces/lists/IWhitelist.sol";
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
 abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgradeable, IIntegratedLimitOrderDEX {
@@ -42,7 +42,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   }
 
   // Convert a token quantity to atomic units
-  function atomic(uint256 amount) private returns (uint256) {
+  function atomic(uint256 amount) public override returns (uint256) {
     return amount * (10 ** decimals());
   }
 
@@ -58,6 +58,19 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     uint256 filled = 0;
     uint256 h = 0;
     for (; (h < point.orders.length) && (amount != 0); h++) {
+      // Trader was removed. Delete their order and move on
+      // Technically this is an interaction, and check, in the middle of effects
+      // This function is view meaning its only risk is calling the DEX and viewing
+      // an invalid partial state to make its decision on if the trader is whitelisted
+      // This function is trusted code, and here it is trusted to not be idiotic
+      if (!whitelisted(point.orders[h].trader)) {
+        if (h != point.orders.length - 1) {
+          point.orders[h] = point.orders[point.orders.length - 1];
+          point.orders.pop();
+        }
+        continue;
+      }
+
       uint256 thisAmount = point.orders[h].amount;
       if (thisAmount > amount) {
         thisAmount = amount;
@@ -120,7 +133,6 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     return filled;
   }
 
-  // nonReentrant to prevent the same order from being filled multiple times
   // Returns the amount of tokens filled and the position of the created order, if one exists
   // If the amount filled is equivalent to the amount, the position will be 0
   function action(
@@ -129,7 +141,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     address trader,
     uint256 price,
     uint256 amount
-  ) private nonReentrant returns (uint256 filled, uint256) {
+  ) private returns (uint256 filled, uint256) {
     if (price == 0) {
       revert ZeroPrice();
     }
@@ -171,7 +183,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     uint256 payment,
     uint256 price,
     uint256 minimumAmount
-  ) external override returns (uint256, uint256) {
+  ) external override nonReentrant returns (uint256, uint256) {
     // Require this be called by a contract
     // Prevents anyone from building a UX which doesn't utilize DEXRouter
     // While someone could write a different contract, anyone doing that is trusted to know what they're doing
@@ -188,13 +200,10 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     // It would be allowed to as long as it didn't error before hand by filling an order
     // No orders, no filling, no error
     if (!whitelisted(trader)) {
-      revert NotWhitelisted(trader, address(this));
+      revert NotWhitelisted(trader);
     }
+
     // Support fee on transfer tokens
-    // Safe against re-entrancy as action has nonReentrant
-    // cancelOrder could also be called which could lower the balance considered received
-    // That isn't exploitable thanks to Solidity 0.8 making all math underflow checked
-    // (without utilizing unchecked, which isn't present here)
     // The Crowdfund contract actually verifies its token isn't fee on transfer
     // The Thread initializer uses the same token for both that and this
     // That said, any token which can have its fee set may be set to 0 during Crowdfund,
@@ -223,7 +232,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   }
 
   // amount is in 'whole' tokens (1e18)
-  function sell(uint256 price, uint256 amount) external override returns (uint256, uint256) {
+  function sell(uint256 price, uint256 amount) external override nonReentrant returns (uint256, uint256) {
     locked[msg.sender] += atomic(amount);
     if (balanceOf(msg.sender) < locked[msg.sender]) {
       revert NotEnoughFunds(locked[msg.sender], balanceOf(msg.sender));
@@ -231,7 +240,9 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     return action(OrderType.Sell, OrderType.Buy, msg.sender, price, amount);
   }
 
-  function cancelOrder(uint256 price, uint256 i) external override {
+  // Doesn't require nonReentrant as all interactions are after checks and effects
+  // Has nonReentrant to be safe
+  function cancelOrder(uint256 price, uint256 i) external override nonReentrant {
     PricePoint storage point = _points[price];
     // This latter case is handled by Solidity's native bounds checks
     // Technically, since a Null OrderType means orders.length is 0, this entire if check is meaningless
@@ -239,22 +250,46 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     if ((point.orderType == OrderType.Null) || (point.orders.length <= i)) {
       revert NullOrder();
     }
-    if (point.orders[i].trader != msg.sender) {
-      revert NotOrderTrader(msg.sender, point.orders[i].trader);
-    }
 
-    uint256 amount = point.orders[i].amount;
+    // Copy the order to memory
+    Order memory order = point.orders[i];
     // If this is not the last order, shift the last order down
     if (i != (point.orders.length - 1)) {
       point.orders[i] = point.orders[point.orders.length - 1];
     }
+    // Delete the order
     point.orders.pop();
 
-    // Safe to re-enter as the order has already been deleted
-    if (point.orderType == OrderType.Buy) {
-      IERC20(dexToken).safeTransfer(msg.sender, amount * price);
-    } else if (point.orderType == OrderType.Sell) {
-      locked[msg.sender] -= atomic(amount);
+    // If the trader isn't whitelisted, meaning they were removed, return the counter token
+    // This allows anyone to cancel orders of those who were banned from the protocol
+    // Technically an interaction, yet whitelisted is trusted
+    // It should be noted that the effect of the order in question already having been deleted has happened
+    if (!whitelisted(order.trader)) {
+      // Safe to re-enter as the order has already been deleted
+      if (point.orderType == OrderType.Buy) {
+        IERC20(dexToken).safeTransfer(order.trader, price * order.amount);
+      }
+      return;
+    }
+
+    // If the trader in question wasn't removed, ensure they were the actually
+    // the ones to cancel this order
+    // While generally these checks should be done before effects (deletion),
+    // the entire transaction will still revert without issue and this is the cleanest
+    // way to write the code given the requirement of anyone being able to cancel
+    // orders of those not whitelisted
+    // Also, no interactions have happened since the effects occurred
+    if (order.trader != msg.sender) {
+      revert NotOrderTrader(msg.sender, point.orders[i].trader);
+    }
+
+    if (point.orderType == OrderType.Sell) {
+      locked[order.trader] -= atomic(order.amount);
+    // Technically, this can re-enter (ignoring nonReentrant) and when doing so flip the OrderType to Sell
+    // That wouldn't be an issue since this is `if {} else if`, yet would be an issue if `if {} if`
+    // Still placing Buy second for peace of mind
+    } else if (point.orderType == OrderType.Buy) {
+      IERC20(dexToken).safeTransfer(order.trader, price * order.amount);
     }
   }
 
@@ -271,6 +306,10 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   }
 
   function getOrderAmount(uint256 price, uint256 i) external view override returns (uint256) {
-    return _points[price].orders[i].amount;
+    Order memory order = _points[price].orders[i];
+    if (!whitelisted(order.trader)) {
+      return 0;
+    }
+    return order.amount;
   }
 }
