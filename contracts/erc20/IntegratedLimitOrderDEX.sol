@@ -111,7 +111,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
 
       // If we filled this order, delete it
       if (point.orders[h].amount == 0) {
-        point.orders[h].pop();
+        point.orders.pop();
       }
 
       // Break before underflowing
@@ -126,7 +126,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     }
 
     // If we filled every order, set the order type to null
-    if (point.orders[h].length == 0) {
+    if (point.orders.length == 0) {
       point.orderType = OrderType.Null;
     }
 
