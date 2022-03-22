@@ -58,13 +58,30 @@ abstract contract DAO is Initializable, IDAO {
     return _proposals[id].totalVotes;
   }
 
-  function proposalActive(uint256 id) public view override returns (bool) {
-    return (_proposals[id].state == ProposalState.Active) && ((_proposals[id].stateStartTime + votingPeriod) > block.timestamp);
+  // Uses storage as all proposals checked for activity are storage
+  function proposalActive(Proposal storage proposal) internal view returns (bool) {
+    return (
+      (proposal.state == ProposalState.Active) &&
+      (block.timestamp < (proposal.stateStartTime + votingPeriod))
+    );
   }
 
-  modifier activeProposal(uint256 id) {
-    require(proposalActive(id), "DAO: Proposal isn't active");
-    _;
+  // proposal.state == ProposalState.Active isn't reliable as expired proposals which didn't pass
+  // will forever have their state set to ProposalState.Active
+  // This call will check the proposal's expiry status as well
+  function proposalActive(uint256 id) public view override returns (bool) {
+    return proposalActive(_proposals[id]);
+  }
+
+  // Used to be a modifier yet that caused the modifier to perform a map read,
+  // just for the function to do the same. By making this an internal function
+  // returning the storage reference, it maintains performance and functions the same
+  function activeProposal(uint256 id) internal view returns (Proposal storage proposal) {
+    proposal = _proposals[id];
+    if (!proposalActive(proposal)) {
+      // Doesn't include the inactivity reason as proposalActive doesn't return it
+      revert InactiveProposal(id);
+    }
   }
 
   // Not exposed as despite working with arbitrary calldata, this calldata is currently contract crafted for specific purposes
@@ -85,7 +102,7 @@ abstract contract DAO is Initializable, IDAO {
     // Separate event to allow indexing by type/creator while maintaining state machine consistency
     // Also exposes info
     emit NewProposal(id, pType, proposal.creator, info);
-    emit ProposalStateChanged(id, _proposals[id].state);
+    emit ProposalStateChanged(id, proposal.state);
 
     // Automatically vote Yes for the creator
     if (IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock) != 0) {
@@ -94,77 +111,102 @@ abstract contract DAO is Initializable, IDAO {
   }
 
   function vote(uint256 id, VoteDirection direction) public override {
-    require(_proposals[id].voters[msg.sender] != VoteDirection(direction), "DAO: Already voted this way");
+    Proposal storage proposal = activeProposal(id);
+    if (proposal.voters[msg.sender] == direction) {
+      revert AlreadyVotedInDirection(id, msg.sender, direction);
+    }
 
-    int256 votes = int256(IVotes(erc20).getPastVotes(msg.sender, _proposals[id].voteBlock));
-    require(votes != 0, "DAO: No votes");
+    int256 votes = int256(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock));
+    if (votes == 0) {
+      revert NoVotes(msg.sender);
+    }
     // Remove old votes
-    if (_proposals[id].voters[msg.sender] == VoteDirection.Yes) {
-      _proposals[id].votes -= votes;
-    } else if (_proposals[id].voters[msg.sender] == VoteDirection.No) {
-      _proposals[id].votes += votes;
+    if (proposal.voters[msg.sender] == VoteDirection.Yes) {
+      proposal.votes -= votes;
+    } else if (proposal.voters[msg.sender] == VoteDirection.No) {
+      proposal.votes += votes;
     } else {
       // If they had previously abstained, increase the amount of total votes
-      _proposals[id].totalVotes += uint256(votes);
+      proposal.totalVotes += uint256(votes);
     }
 
     // Set new votes
-    _proposals[id].voters[msg.sender] = VoteDirection(direction);
+    proposal.voters[msg.sender] = VoteDirection(direction);
     if (VoteDirection(direction) == VoteDirection.Yes) {
-      _proposals[id].votes += votes;
+      proposal.votes += votes;
     } else if (VoteDirection(direction) == VoteDirection.No) {
-      _proposals[id].votes -= votes;
+      proposal.votes -= votes;
     } else {
       // If they're now abstaining, decrease the amount of total votes
-      _proposals[id].totalVotes -= uint256(votes);
+      proposal.totalVotes -= uint256(votes);
     }
 
     emit Vote(id, direction, msg.sender, uint256(votes));
   }
 
-  function queueProposal(uint256 id) external activeProposal(id) {
-    Proposal storage proposal = _proposals[id];
-    require(proposal.votes > 0, "DAO: Queueing proposal which didn't pass");
+  function queueProposal(uint256 id) external {
+    Proposal storage proposal = activeProposal(id);
+    // In case of a tie, err on the side of caution and fail the proposal
+    if (proposal.votes <= 0) {
+      revert ProposalFailed(id, proposal.votes);
+    }
     // Uses the current total supply instead of the historical total supply to represent the current community
-    require(proposal.totalVotes > (IERC20(erc20).totalSupply() / 10), "DAO: Proposal didn't have 10% participation");
+    if (proposal.totalVotes < (IERC20(erc20).totalSupply() / 10)) {
+      revert NotEnoughParticipation(id, proposal.totalVotes, IERC20(erc20).totalSupply() / 10);
+    }
     proposal.state = ProposalState.Queued;
     proposal.stateStartTime = block.timestamp;
-    emit ProposalStateChanged(id, _proposals[id].state);
+    emit ProposalStateChanged(id, proposal.state);
   }
 
   function cancelProposal(uint256 id, address[] calldata voters) external {
     // Must be queued. Even if it's completable, if it has yet to be completed, allow this
-    require(_proposals[id].state == ProposalState.Queued, "DAO: Cancelling a proposal which wasn't queued");
+    Proposal storage proposal = _proposals[id];
+    if (proposal.state != ProposalState.Queued) {
+      revert NotQueued(id, proposal.state);
+    }
 
     for (uint i = 0; i < voters.length; i++) {
-      require(_proposals[id].voters[voters[i]] == VoteDirection.Yes, "DAO: Specified voter didn't vote yes");
-      uint256 oldVotes = IVotes(erc20).getPastVotes(voters[i], _proposals[id].voteBlock);
+      if (proposal.voters[voters[i]] != VoteDirection.Yes) {
+        revert NotYesVote(id, voters[i]);
+      }
+      uint256 oldVotes = IVotes(erc20).getPastVotes(voters[i], proposal.voteBlock);
       uint256 votes = IERC20(erc20).balanceOf(voters[i]);
       // This will error if their votes have actually increased since
       // That would enable front running cancellation TXs with bumps of a single account
       // This shouldn't be a feasible attack vector given retries though
       // Writes directly to the votes to update it to its (more) accurate value
-      _proposals[id].votes -= int256(oldVotes - votes);
+      proposal.votes -= int256(oldVotes - votes);
     }
-    require(_proposals[id].votes < 0, "DAO: Cancelling a proposal with more yes votes than no votes");
+    // If votes is 0, it would've failed queueProposal
+    // Fail it here as well
+    if (proposal.votes > 0) {
+      revert ProposalPassed(id, proposal.votes);
+    }
 
-    _proposals[id].state = ProposalState.Cancelled;
-    _proposals[id].stateStartTime = block.timestamp;
-    emit ProposalStateChanged(id, _proposals[id].state);
+    proposal.state = ProposalState.Cancelled;
+    proposal.stateStartTime = block.timestamp;
+    emit ProposalStateChanged(id, proposal.state);
   }
 
   function _completeProposal(uint256 id, uint256 proposalType) internal virtual;
 
   // Does not require canonically ordering when executing proposals in case a proposal has invalid actions, halting everything
   function completeProposal(uint256 id) external {
-    require(!IFrabricERC20(erc20).paused(), "DAO: ERC20 is paused");
+    if (IFrabricERC20(erc20).paused()) {
+      revert CurrentlyPaused();
+    }
 
     // Safe against re-entrancy as long as this block is untouched as internal
     // While paused can re-enter (theoretically, it never should), it hasn't verified the proposal state yet
     // Said state will be cleared by the first instance to run
     Proposal storage proposal = _proposals[id];
-    require(proposal.state == ProposalState.Queued, "DAO: Proposal wasn't queued");
-    require((proposal.stateStartTime + (12 hours)) < block.timestamp, "DAO: Proposal was queued less than 12 hours ago");
+    if (proposal.state != ProposalState.Queued) {
+      revert NotQueued(id, proposal.state);
+    }
+    if (block.timestamp < (proposal.stateStartTime + (12 hours))) {
+      revert StillQueued(id, block.timestamp, proposal.stateStartTime + (12 hours));
+    }
     proposal.state = ProposalState.Executed;
     proposal.stateStartTime = block.timestamp;
     emit ProposalStateChanged(id, proposal.state);
@@ -174,12 +216,19 @@ abstract contract DAO is Initializable, IDAO {
   }
 
   // Enables withdrawing a proposal
-  function withdrawProposal(uint256 id) activeProposal(id) external override {
+  function withdrawProposal(uint256 id) external override {
+    Proposal storage proposal = _proposals[id];
+    // A proposal which didn't pass will pass this check
+    // It's not worth checking the timestamp when marking the proposal as Cancelled is more accurate than Active anyways
+    if ((proposal.state != ProposalState.Active) && (proposal.state != ProposalState.Queued)) {
+      revert AlreadyFinished(id, proposal.state);
+    }
     // Only allow the proposer to withdraw a proposal.
-    require((_proposals[id].state == ProposalState.Active) || (_proposals[id].state == ProposalState.Queued), "DAO: Proposal was already executed or cancelled");
-    require(_proposals[id].creator == msg.sender, "DAO: Only the proposal creator may withdraw it");
-    _proposals[id].state = ProposalState.Cancelled;
-    _proposals[id].stateStartTime = block.timestamp;
-    emit ProposalStateChanged(id, _proposals[id].state);
+    if (proposal.creator != msg.sender) {
+      revert NotProposalCreator(id, proposal.creator, msg.sender);
+    }
+    proposal.state = ProposalState.Cancelled;
+    proposal.stateStartTime = block.timestamp;
+    emit ProposalStateChanged(id, proposal.state);
   }
 }

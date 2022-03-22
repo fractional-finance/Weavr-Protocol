@@ -13,6 +13,8 @@ interface IFrabric is IFrabricDAO {
 
   enum ParticipantType {
     Null,
+    // Removed is before any other type to allow using > Removed to check validity
+    Removed,
     Genesis,
     KYC,
     Governor,
@@ -24,6 +26,8 @@ interface IFrabric is IFrabricDAO {
     Null,
     Unverified, // Proposed and elected, yet hasn't gone through KYC
     Active,
+    // Removed is last as GovernorStatus is written as a linear series of transitions
+    // > Unverified will work to find any Governor which was ever active
     Removed
   }
 
@@ -76,3 +80,13 @@ interface IFrabric is IFrabricDAO {
 
   function approve(uint256 id, uint256 position, bytes32 kycHash) external;
 }
+
+error ProposingGenesisParticipants();
+error ZeroParticipants();
+error BatchParticipantsForNonBatchType(uint256 proposed, IFrabric.ParticipantType participantType);
+error ExistingGovernor(address governor, IFrabric.GovernorStatus status);
+error InvalidName(string name, string symbol);
+error ProposingFrabricChange(address thread);
+error ThreadProposalFailed(bytes error);
+error ParticipantProposalNotPassed(uint256 id);
+error ParticipantAlreadyApproved();

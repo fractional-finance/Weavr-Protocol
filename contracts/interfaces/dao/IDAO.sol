@@ -33,3 +33,16 @@ interface IDAO {
   function completeProposal(uint256 id) external;
   function withdrawProposal(uint256 id) external;
 }
+
+error InactiveProposal(uint256 id);
+error AlreadyVotedInDirection(uint256 id, address voter, IDAO.VoteDirection direction);
+error NoVotes(address voter);
+error ProposalFailed(uint256 id, int256 votes);
+error NotEnoughParticipation(uint256 id, uint256 totalVotes, uint256 required);
+error NotQueued(uint256 id, IDAO.ProposalState state);
+// Doesn't include what they did vote as it's irrelevant
+error NotYesVote(uint256 id, address voter);
+error ProposalPassed(uint256 id, int256 votes);
+error StillQueued(uint256 id, uint256 time, uint256 queuedUntil);
+error AlreadyFinished(uint256 id, IDAO.ProposalState state);
+error NotProposalCreator(uint256 id, address creator, address caller);

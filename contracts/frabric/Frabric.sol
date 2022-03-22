@@ -84,7 +84,7 @@ contract Frabric is FrabricDAO, IFrabric {
   constructor() initializer {}
 
   function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {
-    return participant[msg.sender] != ParticipantType.Null;
+    return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);
   }
 
   // Can set to Null to remove Governors/Individuals/Corporations
@@ -94,14 +94,23 @@ contract Frabric is FrabricDAO, IFrabric {
     address[] memory participants,
     string calldata info
   ) external override beforeProposal() returns (uint256) {
-    require(participantType != ParticipantType.Genesis, "Frabric: Cannot propose genesis participants after genesis");
-    if (participants.length != 1) {
-      require(participants.length != 0, "Frabric: Proposing zero participants");
-      require(
-        (participantType == ParticipantType.Individual) || (participantType == ParticipantType.Corporation),
-        "Frabric: Batch proposing privileged roles"
-      );
+    if (participantType == ParticipantType.Genesis) {
+      revert ProposingGenesisParticipants();
     }
+
+    if (participants.length != 1) {
+      if (participants.length == 0) {
+        revert ZeroParticipants();
+      }
+      if ((participantType != ParticipantType.Individual) && (participantType == ParticipantType.Corporation)) {
+        revert BatchParticipantsForNonBatchType(participants.length, participantType);
+      }
+    }
+
+    if ((participantType == ParticipantType.Governor) && (governor[participants[0]] != GovernorStatus.Null)) {
+      revert ExistingGovernor(participants[0], governor[participants[0]]);
+    }
+
     _participants[_nextProposalID] = Participants(participantType, participants, 0);
     emit ParticipantsProposed(_nextProposalID, participantType, participants);
     return _createProposal(info, uint256(FrabricProposalType.Participants));
@@ -114,7 +123,12 @@ contract Frabric is FrabricDAO, IFrabric {
     string calldata info
   ) external override beforeProposal() returns (uint256) {
     _removeBond[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
-    require(uint256(governor[_governor]) >= uint256(GovernorStatus.Active), "Frabric: Governor was never active");
+    if (uint256(governor[_governor]) < uint256(GovernorStatus.Active)) {
+      // Arguably a misuse as this actually checks they were never an active governor
+      // Not that they aren't currently an active governor, which the error name suggests
+      // This should be better to handle from an integration perspective however
+      revert NotActiveGovernor(_governor, governor[_governor]);
+    }
     emit RemoveBondProposed(_nextProposalID, _governor, slash, amount);
     return _createProposal(info, uint256(FrabricProposalType.RemoveBond));
   }
@@ -127,9 +141,13 @@ contract Frabric is FrabricDAO, IFrabric {
     uint256 target,
     string calldata info
   ) external override beforeProposal() returns (uint256) {
-    require(bytes(name).length >= 3, "Frabric: Thread name has less than three characters");
-    require(bytes(symbol).length >= 2, "Frabric: Thread symbol has less than two characters");
-    require(governor[agent] == GovernorStatus.Active, "Frabric: Governor selected to be agent isn't active");
+    // Doesn't check for being alphanumeric due to iteration costs
+    if ((bytes(name).length < 3) || (bytes(name).length > 30) || (bytes(symbol).length < 2) || (bytes(symbol).length > 5)) {
+      revert InvalidName(name, symbol);
+    }
+    if (governor[agent] != GovernorStatus.Active) {
+      revert NotActiveGovernor(agent, governor[agent]);
+    }
     _threads[_nextProposalID] = ThreadProposal(name, symbol, agent, tradeToken, target);
     emit ThreadProposed(_nextProposalID, agent, tradeToken, target);
     return _createProposal(info, uint256(FrabricProposalType.Thread));
@@ -156,18 +174,21 @@ contract Frabric is FrabricDAO, IFrabric {
       } else if (pType == CommonProposalType.TokenAction) {
         selector = IFrabricDAO.proposeTokenAction.selector;
       } else {
-        require(false, "Frabric: Unhandled CommonProposalType in proposeThreadProposal");
+        revert UnhandledEnumCase("Frabric proposeThreadProposal CommonProposal", _proposalType);
       }
     } else {
       IThread.ThreadProposalType pType = IThread.ThreadProposalType(_proposalType);
       if (pType == IThread.ThreadProposalType.AgentChange) {
         selector = IThread.proposeAgentChange.selector;
       } else if (pType == IThread.ThreadProposalType.FrabricChange) {
-        require(false, "Frabric: Can't request a Thread to change its Frabric");
+        // Doesn't use UnhandledEnumCase as that suggests a development-level failure to handle cases
+        // While that already isn't guaranteed in this function, as _proposalType is user input,
+        // it requires invalid input. Technically, FrabricChange is a legitimate enum value
+        revert ProposingFrabricChange(thread);
       } else if (pType == IThread.ThreadProposalType.Dissolution) {
         selector = IThread.proposeDissolution.selector;
       } else {
-        require(false, "Frabric: Unhandled ThreadProposalType in proposeThreadProposal");
+        revert UnhandledEnumCase("Frabric proposeThreadProposal ThreadProposal", _proposalType);
       }
     }
 
@@ -182,7 +203,9 @@ contract Frabric is FrabricDAO, IFrabric {
       Participants storage participants = _participants[id];
       if (participants.pType == ParticipantType.KYC) {
         emit KYCChanged(kyc, participants.participants[0]);
+        participant[kyc] = ParticipantType.Removed;
         kyc = participants.participants[0];
+        participant[participants.participants[0]] = ParticipantType.KYC;
         // Delete for the gas savings
         delete _participants[id];
       } else {
@@ -193,8 +216,8 @@ contract Frabric is FrabricDAO, IFrabric {
 
           // Remove them from the whitelist
           IFrabricERC20(erc20).setWhitelisted(participants.participants[0], bytes32(0));
-          // Clear their status
-          participant[participants.participants[0]] = ParticipantType.Null;
+          // Set them as Removed
+          participant[participants.participants[0]] = ParticipantType.Removed;
           // Not only saves gas yet also fixes a security issue
           // Without this, the KYC company could use this removing proposal to whitelist them
           // The early return after this avoids the issue as well (as it's before passed is set),
@@ -203,7 +226,15 @@ contract Frabric is FrabricDAO, IFrabric {
 
           return;
         } else if (participants.pType == ParticipantType.Governor) {
-          require(governor[participants.participants[0]] == GovernorStatus.Null, "Frabric: Governor already exists");
+          // A similar check exists in proposeParticipants yet that doesn't
+          // prevent the same proposal from existing multiple times. It's not worth it
+          // to track such a weird case, which shouldn't happen, when we can just have
+          // this check here to be sure. The only concern would be if this proposal could
+          // be used far into the future to restore their status after being removed, yet
+          // governor removal sets them to removed, not to Null
+          if (governor[participants.participants[0]] != GovernorStatus.Null) {
+            revert ExistingGovernor(participants.participants[0], governor[participants.participants[0]]);
+          }
           governor[participants.participants[0]] = GovernorStatus.Unverified;
         }
 
@@ -225,31 +256,66 @@ contract Frabric is FrabricDAO, IFrabric {
       delete _threads[id];
 
     } else if (pType == FrabricProposalType.ThreadProposal) {
-      (bool success, ) = _threadProposals[id].thread.call(
+      (bool success, bytes memory data) = _threadProposals[id].thread.call(
         abi.encodeWithSelector(_threadProposals[id].selector, _threadProposals[id].data)
       );
-      require(success, "Frabric: Creating the Thread Proposal failed");
+      if (!success) {
+        revert ThreadProposalFailed(data);
+      }
       delete _threadProposals[id];
     } else {
-      require(false, "Frabric: Trying to complete an unknown proposal type");
+      revert UnhandledEnumCase("Frabric _completeSpecificProposal", _pType);
     }
   }
 
   function approve(uint256 id, uint256 position, bytes32 kycHash) external override {
     require(msg.sender == kyc, "Frabric: Only the KYC can approve users");
-    require(_participants[id].passed != 0, "Frabric: Proposal didn't pass");
+    if (_participants[id].passed == 0) {
+      revert ParticipantProposalNotPassed(id);
+    }
 
     address approving = _participants[id].participants[position];
-    require(approving != address(0), "Frabric: Participant already approved");
-    require(participant[approving] == ParticipantType.Null, "Frabric: Participant already a participant");
+    // Technically, the original proposal may have the 0 address in it
+    // That would prevent this proposal from ever fully passing and being deleted
+    // That doesn't help anyone and is solely an annoyance to the Ethereum blockchain used (not even the Frabric)
+    if (approving == address(0)) {
+      // Doesn't include the address as it... can't. It's been deleted
+      revert ParticipantAlreadyApproved();
+    }
     _participants[id].participants[position] = address(0);
 
-    IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
-    participant[approving] = _participants[id].pType;
 
-    _participants[id].passed++;
-    if ((_participants[id].passed - 1) == _participants[id].participants.length) {
+    // There is a chance this participant was in another proposal or duplicated in this one
+    // In that case, they may already have a status in participant
+    // This isn't checked for during proposeParticipants due to gas costs
+    // Not only would it be a full iteration, yet it'd need to set an additional variable
+    // If the proposal doesn't pass, someone would have to step up and clear those variables,
+    // which isn't feasible
+
+    // We could error if they already exist in participant, yet that would prevent
+    // their entry in this proposal from being cleared, which would prevent this proposal
+    // from being deleted once all entires are cleared
+    // If someone went through all the effort to issue this transaction, let it finish
+    // It's an if check no matter what so it doesn't change the gas cost for the intended route
+
+    // If they aren't already present, add them
+    // If we blindly went ahead, they could be refiled (when they shouldn't be),
+    // or they can be added back from being removed, which is the real danger in duplicate proposal presence
+    // It would cache a DAO approval for arbitrarily long
+    if (participant[approving] == ParticipantType.Null) {
+      IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
+      participant[approving] = _participants[id].pType;
+    }
+
+    // If all participants have been handled, delete the proposal to claim the gas refund
+    // This works becaused passed is set to 1 when the proposal is passed
+    // While we could increment passed first, and then check if .passed - 1 ==,
+    // which would be easier to read/understand, this is a valid transformation
+    // which saves on gas
+    if (_participants[id].passed == _participants[id].participants.length) {
       delete _participants[id];
     }
+    // Increment the amount of participants from this proposal which were handled
+    _participants[id].passed++;
   }
 }

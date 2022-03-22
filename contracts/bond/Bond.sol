@@ -35,7 +35,9 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBond {
     token = _token;
 
     // Verify the specified bond token actually uses this USD token on one side
-    require((IUniswapV2Pair(token).token0() == usd) || (IUniswapV2Pair(token).token1() == usd), "Bond: Bond LP token wasn't composed with this USD token");
+    if ((IUniswapV2Pair(token).token0() != usd) && (IUniswapV2Pair(token).token1() != usd)) {
+      revert InvalidBondToken(usd, IUniswapV2Pair(token).token0(), IUniswapV2Pair(token).token1());
+    }
 
     _burning = false;
   }
@@ -48,11 +50,15 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBond {
     // _burning means it's being burnt
     // These are the only valid reasons this token should be transferred and these
     // conditions cannot be replicated outside of those cases
-    require((from == address(0)) || _burning, "Bond: Token cannot be transferred");
+    if ((from != address(0)) && (!_burning)) {
+      revert BondTransfer();
+    }
   }
 
   function bond(uint256 amount) external override {
-    require(IFrabric(owner()).governor(msg.sender) == IFrabric.GovernorStatus.Active, "Bond: Bonder isn't an active governor");
+    if (IFrabric(owner()).governor(msg.sender) != IFrabric.GovernorStatus.Active) {
+      revert NotActiveGovernor(msg.sender, IFrabric(owner()).governor(msg.sender));
+    }
     // Safe usage since Uniswap v2 tokens aren't fee on transfer
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     _mint(msg.sender, amount);

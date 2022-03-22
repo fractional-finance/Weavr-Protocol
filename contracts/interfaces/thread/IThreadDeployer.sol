@@ -31,3 +31,6 @@ interface IThreadDeployer {
     uint256 target
   ) external;
 }
+
+error NonStaticDecimals(uint8 beforeDecimals, uint8 afterDecimals);
+error TimelockNotExpired(address token, uint256 time, uint256 lockedUntil);

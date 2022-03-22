@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.13;
 
+// Imports the ILO DEX interface due to shared errors
+import "../erc20/IIntegratedLimitOrderDEX.sol";
+
 interface ICrowdfund {
   enum State {
     Active,
-    Cancelled,
     Executing,
     Refunding,
     Finished
@@ -49,3 +51,9 @@ interface ICrowdfund {
   function finish() external;
   function burn(address depositor) external;
 }
+
+error CrowdfundTransfer();
+error InvalidState(ICrowdfund.State current, ICrowdfund.State expected);
+error FeeOnTransfer(address token);
+error CrowdfundReached();
+error CrowdfundNotReached();

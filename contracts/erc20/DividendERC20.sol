@@ -29,26 +29,32 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, IDividendERC20 {
   // Removes the need to track both historical balances AND historical voting power
   // Also resolves legal liability which is currently not fully explored and may be a concern
   function delegate(address) public pure override {
-    require(false, "DividendERC20: Delegation is not allowed");
+    revert Delegation();
   }
   function delegateBySig(address, uint256, uint256, uint8, bytes32, bytes32) public pure override {
-    require(false, "DividendERC20: Delegation is not allowed");
+    revert Delegation();
   }
 
   // Dividend implementation
   function distribute(address token, uint256 amount) external override {
-    require(amount != 0, "Dividend: Amount can't be zero");
+    if (amount == 0) {
+      revert ZeroDistribution();
+    }
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     _distributions.push(Distribution(IERC20(token), amount, block.number));
     emit Distributed(token, amount);
   }
 
   function claim(address person, uint256 id) external override {
-    require(!claimedDistribution[person][id], "Dividend: Distribution was already claimed");
+    if (claimedDistribution[person][id]) {
+      revert AlreadyClaimed(id);
+    }
     claimedDistribution[person][id] = true;
     uint256 blockNumber = _distributions[id].block;
     uint256 amount = _distributions[id].amount * getPastVotes(person, blockNumber) / getPastTotalSupply(blockNumber);
-    require(amount != 0, "Dividend: Distribution amount is 0");
+    if (amount == 0) {
+      revert ZeroDistribution();
+    }
     _distributions[id].token.safeTransfer(person, amount);
     emit Claimed(person, id, amount);
   }

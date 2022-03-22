@@ -18,11 +18,4 @@ abstract contract GloballyAccepted is Initializable, IGloballyAccepted {
     global = true;
     emit GlobalAcceptance();
   }
-
-  // Likely won't be used due to the true/false usage in the whitelist
-  // That said, this is good to fill the contract out
-  modifier globallyAccepted() {
-    require(global, "GloballyAccepted: Global acceptance hasn't happened yet");
-    _;
-  }
 }

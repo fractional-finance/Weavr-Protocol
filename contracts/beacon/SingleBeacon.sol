@@ -10,7 +10,9 @@ contract SingleBeacon is Beacon {
   constructor() Beacon(1) {}
 
   function upgrade(address instance, address code) public override {
-    require(instance == address(0), "SingleBeacon: Can only upgrade the release channel");
+    if (instance != address(0)) {
+      revert UpgradingInstance(instance);
+    }
     Beacon.upgrade(instance, code);
   }
 }

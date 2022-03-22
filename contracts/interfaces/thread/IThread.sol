@@ -41,3 +41,5 @@ interface IThread is IFrabricDAO {
     string calldata info
   ) external returns (uint256 id);
 }
+
+error NotAgent(address caller, address agent);

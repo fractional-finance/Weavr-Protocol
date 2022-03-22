@@ -90,12 +90,14 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
     // Since it needs the decimals of both tokens, yet the ERC20 isn't initialized yet, ensure the decimals are static
     // Prevents anyone from editing the FrabricERC20 and this initialize call without hitting errors during testing
     // Thoroughly documented in Crowdfund
-    uint256 decimals = IERC20Metadata(erc20).decimals();
+    uint8 decimals = IERC20Metadata(erc20).decimals();
     uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
     // Add 6% on top for the Thread
     uint256 threadTokenSupply = threadBaseTokenSupply * 106 / 100;
     IFrabricERC20(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken);
-    require(decimals == IERC20Metadata(erc20).decimals(), "ThreadDeployer: ERC20 changed decimals on initialization");
+    if (decimals != IERC20Metadata(erc20).decimals()) {
+      revert NonStaticDecimals(decimals, IERC20Metadata(erc20).decimals());
+    }
 
     // Whitelist the Crowdfund to hold the Thread tokens
     IFrabricERC20(erc20).setWhitelisted(crowdfund, keccak256("Crowdfund"));
@@ -116,7 +118,9 @@ contract ThreadDeployer is Initializable, OwnableUpgradeable, IThreadDeployer {
   function claim(address erc20) external {
     // If this ERC20 never had a lockup, this will automatically clear
     // This allows the Frabric to recover tokens sent to this address by mistake in theory, yet in reality should never matter
-    require(block.timestamp >= lockup[erc20], "ThreadDeployer: Lockup has yet to expire");
+    if (block.timestamp < lockup[erc20]) {
+      revert TimelockNotExpired(erc20, block.timestamp, lockup[erc20]);
+    }
     // Transfer the 6% to the Frabric
     IERC20(erc20).safeTransfer(owner(), IERC20(erc20).balanceOf(address(this)));
   }

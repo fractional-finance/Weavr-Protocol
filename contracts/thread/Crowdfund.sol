@@ -49,7 +49,10 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
     agent = _agent;
     thread = _thread;
     token = _token;
-    require(_target != 0, "Crowdfund: Fundraising target is 0");
+    if (_target == 0) {
+      // Reuse ZeroPrice as the fundraising target is presumably the asset price
+      revert ZeroPrice();
+    }
     target = _target;
     state = State.Active;
     // This could be packed into the following, yet we'd lose indexing
@@ -93,7 +96,9 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
   // Internal variable to allow transfers which is only set when minting/burning
   // Could also override transfer/transferFrom with reverts
   function _beforeTokenTransfer(address, address, uint256) internal view override {
-    require(transferAllowed, "Crowdfund: Token transfers are not allowed");
+    if (!transferAllowed) {
+      revert CrowdfundTransfer();
+    }
   }
 
   function burnInternal(address depositor, uint256 amount) private {
@@ -103,13 +108,19 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
   }
 
   function deposit(uint256 amount) external {
-    require(state == State.Active, "Crowdfund: Crowdfund isn't active");
+    if (state != State.Active) {
+      revert InvalidState(state, State.Active);
+    }
     if (amount > (target - deposited())) {
       amount = target - deposited();
     }
-    require(amount != 0, "Crowdfund: Amount is 0");
+    if (amount == 0) {
+      revert ZeroAmount();
+    }
 
-    require(IWhitelist(whitelist).whitelisted(msg.sender));
+    if (!IWhitelist(whitelist).whitelisted(msg.sender)) {
+      revert NotWhitelisted(msg.sender, whitelist);
+    }
 
     // Mint before transferring to prevent re-entrancy causing the Crowdfund to exceed its target
     transferAllowed = true;
@@ -130,16 +141,23 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
     uint256 balance = IERC20(token).balanceOf(address(this));
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     if ((IERC20(token).balanceOf(address(this)) - balance) != amount) {
-      require(false, "Crowdfund: Fee on transfer tokens are not supported");
+      revert FeeOnTransfer(token);
     }
     emit Deposit(msg.sender, amount);
   }
 
   // Enable withdrawing funds before the target is reached
   function withdraw(uint256 amount) external {
-    require(state == State.Active, "Crowdfund: Crowdfund isn't active");
-    require(deposited() != target, "Crowdfund: Crowdfund reached target");
-    require(amount != 0, "Crowdfund: Amount is 0");
+    if (state != State.Active) {
+      revert InvalidState(state, State.Active);
+    }
+    if (deposited() == target) {
+      // Doesn't include target as it's not pertinent
+      revert CrowdfundReached();
+    }
+    if (amount == 0) {
+      revert ZeroAmount();
+    }
 
     burnInternal(msg.sender, amount);
 
@@ -149,17 +167,32 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
 
   // Cancel a Crowdfund before execution starts
   function cancel() external {
-    require(msg.sender == agent, "Crowdfund: Only the agent can cancel");
-    require(state == State.Active, "Crowdfund: Crowdfund isn't active");
-    state = State.Cancelled;
+    if (msg.sender != agent) {
+      revert NotAgent(msg.sender, agent);
+    }
+    if (state != State.Active) {
+      revert InvalidState(state, State.Active);
+    }
+
+    // Set the State to refunding
+    state = State.Refunding;
+    // The refund formula is refund * balance / target
+    // Setting refund to target causes them to cancel out
+    // This triggers a refund of balance, AKA what the user deposited, which is
+    // what they should get since the funds never left the contract and were never used
+    refunded = target;
     // Could use encodePacked as it's a single field yet this will be easier to work with
     emit StateChange(state, abi.encode(deposited()));
   }
 
   // Transfer the funds from a Crowdfund to the agent for execution
   function execute() external {
-    require(deposited() == target, "Crowdfund: Crowdfund didn't reach target");
-    require(state == State.Active, "Crowdfund: Crowdfund isn't active");
+    if (deposited() != target) {
+      revert CrowdfundNotReached();
+    }
+    if (state != State.Active) {
+      revert InvalidState(state, State.Active);
+    }
     state = State.Executing;
     emit StateChange(state, bytes(""));
 
@@ -168,11 +201,17 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
 
   // Take a executing Crowdfund which externally failed and return the leftover funds
   function refund(uint256 amount) external {
-    require(msg.sender == agent, "Crowdfund: Only the agent can trigger a refund");
-    require(state == State.Executing, "Crowdfund: Crowdfund isn't executing");
+    if (msg.sender != agent) {
+      revert NotAgent(msg.sender, agent);
+    }
+    if (state != State.Executing) {
+      revert InvalidState(state, State.Executing);
+    }
     state = State.Refunding;
     emit StateChange(state, abi.encode(refunded));
 
+    // Allows the agent to refund 0
+    // If this is improper, they should be bond slashed accordingly
     refunded = amount;
     if (amount != 0) {
       IERC20(token).safeTransferFrom(agent, address(this), refunded);
@@ -180,18 +219,18 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
   }
 
   function claimRefund(address depositor) external {
-    uint256 balance = balanceOf(depositor);
-    require(balance != 0, "Crowdfund: Balance is 0");
-    uint256 refundAmount;
+    if (state != State.Refunding) {
+      revert InvalidState(state, State.Refunding);
+    }
 
-    if (state == State.Cancelled) {
-      refundAmount = balance;
-    } else if (state == State.Refunding) {
-      require(refunded != 0, "Crowdfund: No refund was issued");
-      refundAmount = refunded * balance / target;
-      require(refundAmount != 0, "Crowdfund: Refund amount is 0");
-    } else {
-      require(false, "Crowdfund: Not Cancelled nor Refunding");
+    uint256 balance = balanceOf(depositor);
+    if (balance == 0) {
+      revert ZeroAmount();
+    }
+
+    uint256 refundAmount = (refunded * balance) / target;
+    if (refundAmount == 0) {
+      revert ZeroAmount();
     }
 
     // If for some reason, we move to an ERC777, re-entrancy may be possible here
@@ -203,8 +242,12 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
   }
 
   function finish() external {
-    require(msg.sender == agent, "Crowdfund: Only the agent can finish");
-    require(state == State.Executing, "Crowdfund: Crowdfund isn't executing");
+    if (msg.sender != agent) {
+      revert NotAgent(msg.sender, agent);
+    }
+    if (state != State.Executing) {
+      revert InvalidState(state, State.Executing);
+    }
     state = State.Finished;
     emit StateChange(state, bytes(""));
   }
@@ -212,9 +255,13 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
   // Allow users to burn Crowdfund tokens to receive Thread tokens
   // This is shared with Thread
   function burn(address depositor) external override {
-    require(state == State.Finished, "Crowdfund: Crowdfund isn't finished");
+    if (state != State.Finished) {
+      revert InvalidState(state, State.Finished);
+    }
     uint256 balance = balanceOf(depositor);
-    require(balance != 0, "Crowdfund: Balance is 0");
+    if (balance == 0) {
+      revert ZeroAmount();
+    }
     burnInternal(depositor, balance);
     IERC20(IThread(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
   }

@@ -35,6 +35,12 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     // If the former, they should remove their own whitelisting
     // If the latter, this is intended behavior
     _setWhitelisted(msg.sender, keccak256("Initializer"));
+
+    // Make sure the supply is in the bounds needed for DAO operations
+    if (supply > uint256(type(int256).max)) {
+      revert SupplyExceedsInt256(supply);
+    }
+
     // Mint the supply
     _mint(msg.sender, supply);
 
@@ -56,8 +62,13 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   }
 
   function mint(address to, uint256 amount) external override onlyOwner {
-    require(mintable);
+    if (!mintable) {
+      revert NotMintable();
+    }
     _mint(to, amount);
+    if (totalSupply() > uint256(type(int256).max)) {
+      revert SupplyExceedsInt256(totalSupply());
+    }
   }
 
   // Whitelist functions
@@ -88,14 +99,24 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   // Transfer requirements
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     super._beforeTokenTransfer(from, to, amount);
-    require(whitelisted(from) || (from == address(0)), "FrabricERC20: Token sender isn't whitelisted");
-    require(whitelisted(to) || (to == address(0)), "FrabricERC20: Token recipient isn't whitelisted");
-    require(!paused(), "FrabricERC20: Transfers are paused");
+    // Whitelisted from or minting
+    // A non-whitelisted actor may have tokens if they were removed from the whitelist
+    if ((!whitelisted(from)) && (from != address(0))) {
+      revert NotWhitelistedSender(from);
+    }
+    if (!whitelisted(to)) {
+      revert NotWhitelistedRecipient(to);
+    }
+    if (paused()) {
+      revert CurrentlyPaused();
+    }
   }
 
   function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     super._afterTokenTransfer(from, to, amount);
     // Require the balance of the sender be greater than the amount of tokens they have on the DEX
-    require(balanceOf(from) >= locked[from], "FrabricERC20: DEX orders exceed balance");
+    if (balanceOf(from) < locked[from]) {
+      revert BalanceLocked(balanceOf(from), locked[from]);
+    }
   }
 }

@@ -10,3 +10,7 @@ interface IDividendERC20 {
   function distribute(address token, uint256 amount) external;
   function claim(address person, uint256 id) external;
 }
+
+error Delegation();
+error ZeroDistribution();
+error AlreadyClaimed(uint256 id);

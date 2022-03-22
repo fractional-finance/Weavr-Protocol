@@ -21,3 +21,14 @@ interface IFrabricBeacon is IBeacon {
   // Register a beacon
   function registerAsBeacon() external;
 }
+
+// Errors used by Beacon
+error InvalidCode(address code);
+// Caller may be a bit extra, yet these only cost gas when executed
+// The fact wallets try execution before sending transactions should mean this is a non-issue
+error NotOwner(address caller, address owner);
+error NotUpgradeAuthority(address caller, address instance);
+
+// Errors used by SingleBeacon
+// SingleBeacons only allow its singular release channel to be upgraded
+error UpgradingInstance(address instance);

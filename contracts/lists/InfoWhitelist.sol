@@ -15,18 +15,18 @@ abstract contract InfoWhitelist is IInfoWhitelist {
 
   // Set dataHash of 0x0 to remove from whitelist
   function _setWhitelisted(address person, bytes32 dataHash) internal {
-    require(_whitelist[person] != dataHash);
+    // Only emit WhitelistChange if the Whitelist actually changes
+    // If only the Info changed, solely emit InfoChange
     if ((_whitelist[person] == bytes32(0)) != (dataHash == bytes32(0))) {
       emit WhitelistChange(person, dataHash != bytes32(0));
     }
+    emit InfoChange(person, _whitelist[person], dataHash);
     _whitelist[person] = dataHash;
-    emit InfoChange(person, dataHash);
   }
 
   function whitelisted(address person) public view virtual override returns (bool) {
     return _whitelist[person] != bytes32(0);
   }
-
 
   // public, not external, in case the stored info hash actually contains info
   // Bit flags in the first byte, with a 31-byte hash, would have numerous use cases

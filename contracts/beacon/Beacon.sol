@@ -20,7 +20,7 @@ contract Beacon is Ownable, IBeacon, IFrabricBeacon {
     address code = implementations[instance];
     // If this contract is tracking a release channel, follow it
     // Allow a secondary release channel to follow the first (or any other)
-    while (uint256(uint160(code)) <= releaseChannels) {
+    while (uint256(uint160(code)) < releaseChannels) {
       code = implementations[code];
     }
     // If this contract's code is actually another Beacon, hand off to it
@@ -39,21 +39,26 @@ contract Beacon is Ownable, IBeacon, IFrabricBeacon {
   function upgrade(address instance, address code) public override virtual {
     // Validate the code to be a release channel or contract
     // That contract could still be incredibly invalid yet this will catch basic critical errors
-    require((uint256(uint160(code)) <= releaseChannels) || Address.isContract(code), "Beacon: Code isn't a release channel nor contract");
+    if ((uint256(uint160(code)) >= releaseChannels) && (!Address.isContract(code))) {
+      revert InvalidCode(code);
+    }
 
     // Release channel
-    if (uint256(uint160(instance)) <= releaseChannels) {
-      require(msg.sender == owner(), "Beacon: Only owner can upgrade release channel");
+    if (uint256(uint160(instance)) < releaseChannels) {
+      if (msg.sender != owner()) {
+        revert NotOwner(msg.sender, owner());
+      }
       implementations[instance] = code;
 
     // Specific code/other beacon
     } else {
       // The code for a specific contract can only be upgraded by itself or its owner
       // Relies on short circuiting so even non-owned contracts can call this
-      require(
-        (msg.sender == instance) || (msg.sender == Ownable(instance).owner()),
-        "Beacon: Instance's code is being upgraded by unauthorized contract"
-      );
+      if ((msg.sender != instance) && (msg.sender != Ownable(instance).owner())) {
+        // Doesn't include the actual upgrade authority due to the ambiguity on who that is
+        // Not worth it to try catch on the owner call and actually determine it
+        revert NotUpgradeAuthority(msg.sender, instance);
+      }
 
       implementations[instance] = code;
     }

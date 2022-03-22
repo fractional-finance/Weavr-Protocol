@@ -165,7 +165,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   // Lets a trader to be specified as the receiver of the tokens in question
   // This functionality is required by the DEXRouter and this remains secure thanks to payment being from msg.sender
   // Returns the same as action
-  // minimumAmount is in whole tokens (1e18)
+  // minimumAmount is in whole tokens (presumably 1e18 atomic units)
   function buy(
     address trader,
     uint256 payment,
@@ -188,7 +188,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     // It would be allowed to as long as it didn't error before hand by filling an order
     // No orders, no filling, no error
     if (!whitelisted(trader)) {
-      revert NotWhitelistedBuyer(trader);
+      revert NotWhitelisted(trader, address(this));
     }
     // Support fee on transfer tokens
     // Safe against re-entrancy as action has nonReentrant

@@ -29,7 +29,7 @@ interface IIntegratedLimitOrderDEX {
 error ZeroPrice();
 error ZeroAmount();
 error EOABuyer(address buyer);
-error NotWhitelistedBuyer(address buyer);
+error NotWhitelisted(address recipient, address whitelist);
 error LessThanMinimumAmount(uint256 amount, uint256 minimumAmount);
 error NotEnoughFunds(uint256 required, uint256 balance);
 error NullOrder();

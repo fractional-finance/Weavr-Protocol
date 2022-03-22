@@ -42,7 +42,9 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
   }
 
   modifier beforeProposal() {
-    require(canPropose(), "FrabricDAO: Proposal requirements not met");
+    if (!canPropose()) {
+      revert NotAuthorizedToPropose(msg.sender);
+    }
     _;
   }
 
@@ -78,14 +80,20 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     string calldata info
   ) external beforeProposal() returns (uint256) {
     if (mint) {
-      require(token == erc20, "FrabricDAO: Proposing minting a different token");
-      require(IFrabricERC20(erc20).mintable(), "FrabricDAO: Token isn't mintable");
+      if (token != erc20) {
+        revert MintingDifferentToken(token, erc20);
+      }
+      if (!IFrabricERC20(erc20).mintable()) {
+        revert NotMintable();
+      }
     }
 
     if (price != 0) {
       // Target is ignored when selling tokens, yet not when minting them
       // This enables minting and directly selling tokens, and removes mutability reducing scope
-      require(target == address(this), "FrabricDAO: Token sales must set self as the target");
+      if (target != address(this)) {
+        revert SellingWithDifferentTarget(target, address(this));
+      }
     }
 
     _tokenAction[_nextProposalID] = TokenAction(token, target, mint, price, amount);
@@ -93,9 +101,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     return _createProposal(info, uint256(CommonProposalType.TokenAction) | commonProposalBit);
   }
 
-  function _completeSpecificProposal(uint256, uint256) internal virtual {
-    require(false, "FrabricDAO: _completeSpecificProposal wasn't implemented");
-  }
+  function _completeSpecificProposal(uint256, uint256) internal virtual;
 
   // Re-entrancy isn't a concern due to completeProposal being safe from re-entrancy
   // That's the only thing which should call this
@@ -124,7 +130,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
         delete _tokenAction[id];
 
       } else {
-        require(false, "FrabricDAO: Completing unknown proposal type");
+        revert UnhandledEnumCase("FrabricDAO _completeProposal CommonProposal", _pType);
       }
     } else {
       _completeSpecificProposal(id, _pType);

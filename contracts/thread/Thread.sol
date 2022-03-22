@@ -17,7 +17,7 @@ contract Thread is Initializable, FrabricDAO, IThread {
   struct Dissolution {
     address purchaser;
     address token;
-    uint256 amount;
+    uint256 price;
   }
 
   // Private as all this info is available via events
@@ -71,17 +71,19 @@ contract Thread is Initializable, FrabricDAO, IThread {
 
   function proposeDissolution(
     address token,
-    uint256 amount,
+    uint256 price,
     string calldata info
   ) external beforeProposal() override returns (uint256 id) {
-    require(amount != 0, "Thread: Dissolution amount is 0");
-    _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, amount);
-    emit DissolutionProposed(_nextProposalID, msg.sender, token, amount);
+    if (price == 0) {
+      revert ZeroPrice();
+    }
+    _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, price);
+    emit DissolutionProposed(_nextProposalID, msg.sender, token, price);
     return _createProposal(info, uint256(ThreadProposalType.Dissolution));
   }
 
-  function _completeSpecificProposal(uint256 id, uint256 _proposalType) internal override {
-    ThreadProposalType pType = ThreadProposalType(_proposalType);
+  function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
+    ThreadProposalType pType = ThreadProposalType(_pType);
     if (pType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);
       agent = _agents[id];
@@ -94,16 +96,18 @@ contract Thread is Initializable, FrabricDAO, IThread {
       // Not calling complete on a passed Dissolution may also be grounds for a bond slash
       // The intent is to allow the agent to not listen to impropriety with the Frabric as arbitrator
       // See the Frabric's community policies for more information on process
-      require(msg.sender == agent, "Thread: Only the agent can complete a dissolution proposal");
+      if (msg.sender != agent) {
+        revert NotAgent(msg.sender, agent);
+      }
       Dissolution memory dissolution = _dissolutions[id];
-      IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.amount);
+      IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.price);
       IFrabricERC20(erc20).pause();
-      IERC20(dissolution.token).approve(erc20, dissolution.amount);
+      IERC20(dissolution.token).approve(erc20, dissolution.price);
       // See IFrabricERC20 for why that doesn't include IDividendERC20 despite FrabricERC20 being a DividendERC20
-      IDividendERC20(erc20).distribute(dissolution.token, dissolution.amount);
+      IDividendERC20(erc20).distribute(dissolution.token, dissolution.price);
       emit Dissolved(id);
     } else {
-      require(false, "Thread: Trying to complete an unknown proposal type");
+      revert UnhandledEnumCase("Thread _completeSpecificProposal", _pType);
     }
   }
 }
