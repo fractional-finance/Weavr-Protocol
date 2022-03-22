@@ -24,8 +24,6 @@ interface IFrabricDAO is IDAO {
 
   function commonProposalBit() external view returns (uint256);
 
-  function canPropose() external view returns (bool);
-
   function proposePaper(string calldata info) external returns (uint256);
   function proposeUpgrade(
     address beacon,
@@ -43,7 +41,6 @@ interface IFrabricDAO is IDAO {
   ) external returns (uint256);
 }
 
-error NotAuthorizedToPropose(address caller);
 error MintingDifferentToken(address specified, address token);
 error SellingWithDifferentTarget(address target, address expected);
 error UnhandledEnumCase(string label, uint256 enumValue);

@@ -90,7 +90,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() initializer {}
 
-  function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {
+  function canPropose() public view override(IDAO, DAO) returns (bool) {
     return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);
   }
 
@@ -98,7 +98,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     ParticipantType participantType,
     address[] memory participants,
     string calldata info
-  ) external override beforeProposal() returns (uint256) {
+  ) external override returns (uint256) {
     if (participantType == ParticipantType.Null) {
       // CommonProposalType.ParticipantRemoval should be used
       revert ProposingNullParticipants();
@@ -130,7 +130,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     bool slash,
     uint256 amount,
     string calldata info
-  ) external override beforeProposal() returns (uint256) {
+  ) external override returns (uint256) {
     _removeBond[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
     if (uint256(governor[_governor]) < uint256(GovernorStatus.Active)) {
       // Arguably a misuse as this actually checks they were never an active governor
@@ -149,7 +149,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     address tradeToken,
     uint256 target,
     string calldata info
-  ) external override beforeProposal() returns (uint256) {
+  ) external override returns (uint256) {
     // Doesn't check for being alphanumeric due to iteration costs
     if ((bytes(name).length < 3) || (bytes(name).length > 30) || (bytes(symbol).length < 2) || (bytes(symbol).length > 5)) {
       revert InvalidName(name, symbol);
@@ -170,7 +170,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     uint256 _proposalType,
     bytes calldata data,
     string calldata info
-  ) external beforeProposal() returns (uint256) {
+  ) external returns (uint256) {
     // Lock down the selector to prevent arbitrary calls
     // While data is still arbitrary, it has reduced scope thanks to this, and can only be decoded in expected ways
     bytes4 selector;

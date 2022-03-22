@@ -43,7 +43,7 @@ contract Thread is Initializable, FrabricDAO, IThread {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() initializer {}
 
-  function canPropose() public view override(IFrabricDAO, FrabricDAO) returns (bool) {
+  function canPropose() public view override(IDAO, DAO) returns (bool) {
     return (
       // Whitelisted token holder
       (
@@ -63,7 +63,7 @@ contract Thread is Initializable, FrabricDAO, IThread {
   function proposeAgentChange(
     address _agent,
     string calldata info
-  ) external beforeProposal() override returns (uint256 id) {
+  ) external override returns (uint256 id) {
     _agents[_nextProposalID] = _agent;
     emit AgentChangeProposed(_nextProposalID, _agent);
     return _createProposal(uint256(ThreadProposalType.AgentChange), info);
@@ -72,7 +72,7 @@ contract Thread is Initializable, FrabricDAO, IThread {
   function proposeFrabricChange(
     address _frabric,
     string calldata info
-  ) external beforeProposal() override returns (uint256 id) {
+  ) external override returns (uint256 id) {
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
     return _createProposal(uint256(ThreadProposalType.FrabricChange), info);
@@ -82,7 +82,7 @@ contract Thread is Initializable, FrabricDAO, IThread {
     address token,
     uint256 price,
     string calldata info
-  ) external beforeProposal() override returns (uint256 id) {
+  ) external override returns (uint256 id) {
     if (price == 0) {
       revert ZeroPrice();
     }

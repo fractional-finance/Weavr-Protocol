@@ -45,17 +45,12 @@ abstract contract DAO is Initializable, IDAO {
     votingPeriod = _votingPeriod;
   }
 
-  function proposalVoteBlock(uint256 id) external view override returns (uint256) {
-    return _proposals[id].voteBlock;
-  }
-  function proposalVoteDirection(uint256 id, address voter) external view override returns (VoteDirection) {
-    return _proposals[id].voters[voter];
-  }
-  function proposalVotes(uint256 id) external view override returns (int256) {
-    return _proposals[id].votes;
-  }
-  function proposalTotalVotes(uint256 id) external view override returns (uint256) {
-    return _proposals[id].totalVotes;
+  function canPropose() public virtual view returns (bool);
+  modifier beforeProposal() {
+    if (!canPropose()) {
+      revert NotAuthorizedToPropose(msg.sender);
+    }
+    _;
   }
 
   // Uses storage as all proposals checked for activity are storage
@@ -84,8 +79,7 @@ abstract contract DAO is Initializable, IDAO {
     }
   }
 
-  // Not exposed as despite working with arbitrary calldata, this calldata is currently contract crafted for specific purposes
-  function _createProposal(uint256 proposalType, string calldata info) internal returns (uint256 id) {
+  function _createProposal(uint256 proposalType, string calldata info) internal beforeProposal() returns (uint256 id) {
     id = _nextProposalID;
     _nextProposalID++;
 
@@ -110,7 +104,8 @@ abstract contract DAO is Initializable, IDAO {
     }
   }
 
-  function vote(uint256 id, VoteDirection direction) public override {
+  // Reuse canPropose to determine if the person is included on the whitelist
+  function vote(uint256 id, VoteDirection direction) public override beforeProposal() {
     Proposal storage proposal = activeProposal(id);
     if (proposal.voters[msg.sender] == direction) {
       revert AlreadyVotedInDirection(id, msg.sender, direction);
@@ -231,5 +226,18 @@ abstract contract DAO is Initializable, IDAO {
     proposal.state = ProposalState.Cancelled;
     proposal.stateStartTime = block.timestamp;
     emit ProposalStateChanged(id, proposal.state);
+  }
+
+  function proposalVoteBlock(uint256 id) external view override returns (uint256) {
+    return _proposals[id].voteBlock;
+  }
+  function proposalVoteDirection(uint256 id, address voter) external view override returns (VoteDirection) {
+    return _proposals[id].voters[voter];
+  }
+  function proposalVotes(uint256 id) external view override returns (int256) {
+    return _proposals[id].votes;
+  }
+  function proposalTotalVotes(uint256 id) external view override returns (uint256) {
+    return _proposals[id].totalVotes;
   }
 }

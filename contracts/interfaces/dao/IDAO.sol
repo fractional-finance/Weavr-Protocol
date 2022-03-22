@@ -21,10 +21,7 @@ interface IDAO {
 
   function erc20() external view returns (address);
 
-  function proposalVoteBlock(uint256 id) external view returns (uint256);
-  function proposalVoteDirection(uint256 id, address voter) external view returns (VoteDirection);
-  function proposalVotes(uint256 id) external view returns (int256);
-  function proposalTotalVotes(uint256 id) external view returns (uint256);
+  function canPropose() external view returns (bool);
   function proposalActive(uint256 id) external view returns (bool);
 
   function vote(uint256 id, VoteDirection direction) external;
@@ -32,8 +29,14 @@ interface IDAO {
   function cancelProposal(uint256 id, address[] calldata voters) external;
   function completeProposal(uint256 id) external;
   function withdrawProposal(uint256 id) external;
+
+  function proposalVoteBlock(uint256 id) external view returns (uint256);
+  function proposalVoteDirection(uint256 id, address voter) external view returns (VoteDirection);
+  function proposalVotes(uint256 id) external view returns (int256);
+  function proposalTotalVotes(uint256 id) external view returns (uint256);
 }
 
+error NotAuthorizedToPropose(address caller);
 error InactiveProposal(uint256 id);
 error AlreadyVotedInDirection(uint256 id, address voter, IDAO.VoteDirection direction);
 error NoVotes(address voter);

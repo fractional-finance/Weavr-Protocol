@@ -38,19 +38,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     __DAO_init(_erc20, _votingPeriod);
   }
 
-  // Don't allow anyone to propose. This function should always be overriden
-  function canPropose() public virtual view returns (bool) {
-    return false;
-  }
-
-  modifier beforeProposal() {
-    if (!canPropose()) {
-      revert NotAuthorizedToPropose(msg.sender);
-    }
-    _;
-  }
-
-  function proposePaper(string calldata info) external beforeProposal() returns (uint256) {
+  function proposePaper(string calldata info) external returns (uint256) {
     // No dedicated event as the DAO emits type and info
     return _createProposal(uint256(CommonProposalType.Paper) | commonProposalBit, info);
   }
@@ -61,7 +49,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     address instance,
     address code,
     string calldata info
-  ) external beforeProposal() returns (uint256) {
+  ) external returns (uint256) {
     _upgrade[_nextProposalID] = Upgrade(beacon, instance, code);
     // Doesn't index code as parsing the Beacon's logs for its indexed code argument
     // will return every time a contract upgraded to it
@@ -80,7 +68,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     uint256 price,
     uint256 amount,
     string calldata info
-  ) external beforeProposal() returns (uint256) {
+  ) external returns (uint256) {
     if (mint) {
       if (token != erc20) {
         revert MintingDifferentToken(token, erc20);
@@ -106,7 +94,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
   function proposeParticipantRemoval(
     address participant,
     string calldata info
-  ) external beforeProposal() returns (uint256) {
+  ) external returns (uint256) {
     _removals[_nextProposalID] = participant;
     emit RemovalProposed(_nextProposalID, participant);
     return _createProposal(uint256(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
