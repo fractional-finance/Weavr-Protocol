@@ -94,18 +94,34 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
 
     uint256 balance = balanceOf(person);
     if (balance != 0) {
-      _removal = true;
-      // If transfer had re-entrancy (ERC777 which this should truly not be),
-      // this could be abused to remove whitelisted accounts. Right now,
-      // _transfer does make external calls in the form of whitelist() which is only view
-      // Therefore, this is safe
-      _transfer(person, auction, balance);
-      _removal = false;
+      uint256 rounds = 4;
+      uint256 amount = balance / rounds;
+      // Dust, yet create the auction for technical accuracy
+      // The real importance is on making sure this code doesn't error as that'll
+      // prevent the removal from actually executing
+      if (amount == 0) {
+        rounds = 1;
+      }
 
-      // List the transferred tokens
-      // Doesn't use some approval system as then anyone who approves the contract
-      // could have arbitrary listings created for them
-      IAuction(auction).listTransferred(address(this), dexToken, person);
+      for (uint256 i = 0; i < rounds; i++) {
+        // If this is the final round, compensate for any rounding errors
+        if (i == (rounds - 1)) {
+          amount = balance - ((balance / rounds) * i);
+        }
+
+        _removal = true;
+        // If transfer had re-entrancy (ERC777 which this should truly not be),
+        // this could be abused to remove whitelisted accounts. Right now,
+        // _transfer does make external calls in the form of whitelist() which is only view
+        // Therefore, this is safe
+        _transfer(person, auction, amount);
+        _removal = false;
+
+        // List the transferred tokens
+        // Doesn't use some approval system as then anyone who approves the contract
+        // could have arbitrary listings created for them
+        IAuction(auction).listTransferred(address(this), dexToken, person, block.timestamp + (i * (1 weeks)));
+      }
     }
   }
 

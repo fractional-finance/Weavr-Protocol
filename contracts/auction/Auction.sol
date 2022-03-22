@@ -23,6 +23,7 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
     uint256 amount;
     address bidder;
     uint256 bid;
+    uint256 start;
     uint256 end;
   }
   mapping(uint256 => AuctionStruct) internal _auctions;
@@ -43,7 +44,7 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
     balances[token] = balance;
   }
 
-  function listTransferred(address token, address traded, address seller) public override nonReentrant {
+  function listTransferred(address token, address traded, address seller, uint256 start) public override nonReentrant {
     uint256 amount = getTransferred(token);
     if (amount == 0) {
       revert ZeroAmount();
@@ -65,22 +66,27 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
       revert NotWhitelisted(address(this));
     }
 
-    _auctions[nextID] = AuctionStruct(token, traded, seller, amount, address(0), 0, block.timestamp + (1 weeks));
-    emit NewAuction(nextID, token, seller, traded, amount);
+    _auctions[nextID] = AuctionStruct(token, traded, seller, amount, address(0), 0, start, block.timestamp + (1 weeks));
+    emit NewAuction(nextID, token, seller, traded, amount, start);
     nextID++;
   }
 
-  function list(address token, address traded, uint256 amount) external override {
+  function list(address token, address traded, uint256 amount, uint256 start) external override {
     // Could re-enter here, yet the final call (which executes first) to list (or bid)
     // will be executed with sum(transferred) while every other instance will execute with 0
     // (or whatever value was transferred on top, yet that would be legitimately and newly transferred)
     // Not exploitable
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-    listTransferred(token, traded, msg.sender);
+    listTransferred(token, traded, msg.sender, start);
   }
 
   function bid(uint256 id, uint256 amount) external override nonReentrant {
     AuctionStruct storage auction = _auctions[id];
+
+    // Check the auction has started
+    if (block.timestamp < auction.start) {
+      revert AuctionPending(block.timestamp, auction.start);
+    }
 
     // Check the auction isn't over
     if (block.timestamp > auction.end) {
@@ -160,7 +166,7 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
   }
 
   function auctionActive(uint256 id) external view override returns (bool) {
-    return block.timestamp <= _auctions[id].end;
+    return (_auctions[id].start <= block.timestamp) && (block.timestamp <= _auctions[id].end);
   }
   function getCurrentBidder(uint256 id) external view override returns (address) {
     return _auctions[id].bidder;
