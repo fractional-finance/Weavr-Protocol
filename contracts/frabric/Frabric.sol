@@ -20,19 +20,20 @@ import "../dao/FrabricDAO.sol";
 import "../interfaces/frabric/IFrabric.sol";
 
 contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
-  address public override kyc;
+  mapping(address => ParticipantType) public participant;
+
   address public override bond;
   address public override threadDeployer;
-
-  // The proposal structs are private as their events are easily grabbed and contain the needed information
+  address public override kyc;
 
   struct Participants {
     ParticipantType pType;
     address[] participants;
     uint256 passed;
   }
+  // The proposal structs are private as their events are easily grabbed and contain the needed information
   mapping(uint256 => Participants) private _participants;
-  mapping(address => ParticipantType) public participant;
+
   mapping(address => GovernorStatus) public governor;
 
   struct RemoveBondProposal {
@@ -61,9 +62,9 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
   // The erc20 is expected to be fully initialized via JS during deployment
   function initialize(
     address _erc20,
+    address[] calldata genesis,
     address _bond,
     address _threadDeployer,
-    address[] calldata genesis,
     address _kyc
   ) external initializer {
     __EIP712_init("Frabric Protocol", "1");

@@ -31,8 +31,6 @@ interface IFrabric is IFrabricDAO {
     Removed
   }
 
-  event KYCChanged(address indexed oldKYC, address indexed newKYC);
-
   event ParticipantsProposed(
     uint256 indexed id,
     ParticipantType indexed participantType,
@@ -59,17 +57,21 @@ interface IFrabric is IFrabricDAO {
     string info
   );
 
-  function kyc() external view returns (address);
+  event KYCChanged(address indexed oldKYC, address indexed newKYC);
+
+  function participant(address participant) external view returns (ParticipantType);
+
   function bond() external view returns (address);
   function threadDeployer() external view returns (address);
-  function participant(address participant) external view returns (ParticipantType);
+  function kyc() external view returns (address);
+
   function governor(address governor) external view returns (GovernorStatus);
 
   function initialize(
     address _erc20,
+    address[] calldata genesis,
     address _bond,
     address _threadDeployer,
-    address[] calldata genesis,
     address _kyc
   ) external;
 

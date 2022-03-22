@@ -105,7 +105,7 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
   const frabric = await upgrades.deployBeaconProxy(
     proxy,
     Frabric,
-    [frbc.address, bond.address, threadDeployer.address, genesisList, kyc]
+    [frbc.address, genesisList, bond.address, threadDeployer.address, kyc]
   );
   await frabric.deployed();
   await frbc.setWhitelisted(frabric.address, ethers.utils.id("Frabric"));
