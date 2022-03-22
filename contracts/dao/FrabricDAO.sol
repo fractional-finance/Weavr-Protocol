@@ -11,6 +11,11 @@ import "./DAO.sol";
 import "../interfaces/dao/IFrabricDAO.sol";
 
 // Implements proposals mutual to both Threads and the Frabric
+// This could be merged directly into DAO, as the Thread and Frabric contracts use this
+// yet DAO is only used by this
+// This offers smaller, more compartamentalized code, and directly integrating the two
+// doesn't actually offer any efficiency benefits. The new structs, the new variables, and
+// the new code are still needed, meaning it really just inlines _completeProposal
 abstract contract FrabricDAO is IFrabricDAO, DAO {
   using SafeERC20 for IERC20;
 
