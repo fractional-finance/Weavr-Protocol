@@ -1,9 +1,9 @@
 node_modules
-build
-.vscode
-.idea
 artifacts
 cache
+.openzeppelin
 coverage
 coverage.json
-.openzeppelin
+
+.vscode
+.idea
