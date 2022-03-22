@@ -13,7 +13,11 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   using SafeERC20 for IERC20;
 
   // Token to trade against, presumably a USD stablecoin or WETH
-  address public dexToken;
+  address public override dexToken;
+  // Last known balance of the DEX token
+  uint256 public override dexBalance;
+  // DEX token balances of traders on the DEX
+  mapping(address => uint256) public override dexBalances;
 
   // Locked funds of the token this is integrated into
   mapping(address => uint256) public locked;
@@ -39,11 +43,25 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   function __IntegratedLimitOrderDEX_init(address _dexToken) internal onlyInitializing {
     __ReentrancyGuard_init();
     dexToken = _dexToken;
+    dexBalance = 0;
   }
 
   // Convert a token quantity to atomic units
   function atomic(uint256 amount) public override returns (uint256) {
     return amount * (10 ** decimals());
+  }
+
+  // Since this balance cannot be used for buying, it has no use in here
+  // Allow anyone to trigger a withdraw for anyone accordingly
+  function withdraw(address trader) public override nonReentrant {
+    uint256 amount = dexBalances[trader];
+    dexBalances[trader] = 0;
+    // Even if re-entrancy was possible, the difference in actual balance and
+    // dexBalance isn't exploitable. Solidity 0.8's underflow protections ensure
+    // it will revert unless the balance is topped up. Topping up the balance won't
+    // be credited as a transfer though and is solely an additional cost
+    IERC20(dexToken).safeTransfer(trader, amount);
+    dexBalance = IERC20(dexToken).balanceOf(address(this));
   }
 
   // Fill orders
@@ -64,10 +82,17 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
       // an invalid partial state to make its decision on if the trader is whitelisted
       // This function is trusted code, and here it is trusted to not be idiotic
       if (!whitelisted(point.orders[h].trader)) {
+        // If this isn't the last order...
         if (h != point.orders.length - 1) {
+          // Swap in the last order
           point.orders[h] = point.orders[point.orders.length - 1];
-          point.orders.pop();
+          // Decrement h to rerun this index
+          h--;
         }
+
+        // Delete the last order
+        point.orders.pop();
+        // Run the next iteration of the loop (which will break if we're done)
         continue;
       }
 
@@ -82,18 +107,18 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
 
       uint256 atomicAmount = atomic(thisAmount);
       if (buying) {
-        IERC20(dexToken).safeTransfer(point.orders[h].trader, price * thisAmount);
-        _transfer(point.orders[h].trader, trader, atomicAmount);
+        dexBalances[point.orders[h].trader] += price * thisAmount;
         locked[point.orders[h].trader] -= atomicAmount;
+        _transfer(point.orders[h].trader, trader, atomicAmount);
       } else {
-        _transfer(trader, point.orders[h].trader, atomicAmount);
         locked[trader] -= atomicAmount;
+        _transfer(trader, point.orders[h].trader, atomicAmount);
       }
     }
 
     // Transfer the DEX token sum if selling
     if (!buying) {
-      IERC20(dexToken).safeTransfer(trader, filled * price);
+      dexBalances[trader] += filled * price;
     }
 
     // h will always be after the last edited order
@@ -174,27 +199,15 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     return (filled, point.orders.length - 1);
   }
 
-  // Lets a trader to be specified as the receiver of the tokens in question
-  // This functionality is required by the DEXRouter and this remains secure thanks to payment being from msg.sender
   // Returns the same as action
-  // minimumAmount is in whole tokens (presumably 1e18 atomic units)
+  // Price is per whole token (presumably 1e18 atomic units)
+  // amount is in whole tokens
+  // minimumAmount is in whole tokens
   function buy(
     address trader,
-    uint256 payment,
     uint256 price,
     uint256 minimumAmount
   ) external override nonReentrant returns (uint256, uint256) {
-    // Require this be called by a contract
-    // Prevents anyone from building a UX which doesn't utilize DEXRouter
-    // While someone could write a different contract, anyone doing that is trusted to know what they're doing
-    // See DEXRouter for why this is so important
-    // This is moving JS responsibilities into Solidity, which isn't optimal due to gas costs,
-    // yet this is a potentially critical bug which someone may fall past if trying to move quickly
-    if (!AddressUpgradeable.isContract(msg.sender)) {
-      // This should be incredibly obvious
-      revert EOABuyer(msg.sender);
-    }
-
     // Make sure they're whitelisted so trade execution won't fail
     // This would be a DoS if it was allowed to place a standing order at this price point
     // It would be allowed to as long as it didn't error before hand by filling an order
@@ -203,41 +216,52 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
       revert NotWhitelisted(trader);
     }
 
-    // Support fee on transfer tokens
+    // Determine the value sent
+    // Not a pattern vulnerable to re-entrancy despite being a balance-based amount calculation
+    uint256 balance = IERC20(dexToken).balanceOf(address(this));
+    uint256 received = balance - dexBalance;
+    dexBalance = balance;
+
+    // Unfortunately, does not allow buying with the DEX balance as we don't have msg.sender available
+    // We could pass and verify a signature. It's just not worth it at this time
+
+    // Supports fee on transfer tokens
     // The Crowdfund contract actually verifies its token isn't fee on transfer
     // The Thread initializer uses the same token for both that and this
     // That said, any token which can have its fee set may be set to 0 during Crowdfund,
     // allowing it to pass, yet set to non-0 later in its life, causing this to fail
     // USDT notably has fee on transfer code, currently set to 0, that may someday activate
-    uint256 balance = IERC20(dexToken).balanceOf(address(this));
-    IERC20(dexToken).safeTransferFrom(msg.sender, address(this), payment);
-    uint256 received = IERC20(dexToken).balanceOf(address(this)) - balance;
     uint256 amount = received / price;
     if (amount < minimumAmount) {
       revert LessThanMinimumAmount(amount, minimumAmount);
     }
 
     // Dust may exist in the form of received - (price * amount) thanks to rounding errors
-    // While this likely isn't worth the gas it would cost to transfer it, do so to ensure correctness
+    // While this likely isn't worth the gas it's cost to write it, do so to ensure correctness
     uint256 dust = received - (price * amount);
-    if (received != 0) {
-      // Transfer to the trader as msg.sender is presumably a router contract which shouldn't hold funds
+    if (dust != 0) {
+      // Credit to the trader as msg.sender is presumably a router contract which shouldn't have funds
       // If a non-router contract trades on this DEX, it should specify itself as the trader, making this still valid
       // If this was directly chained into Uniswap though to execute a trade there, then this dust would effectively be burnt
       // It's insignificant enough to not bother adding an extra argument for that niche use case
-      IERC20(dexToken).safeTransfer(trader, dust);
+      dexBalances[trader] += dust;
     }
 
     return action(OrderType.Buy, OrderType.Sell, trader, price, amount);
   }
 
-  // amount is in 'whole' tokens (1e18)
-  function sell(uint256 price, uint256 amount) external override nonReentrant returns (uint256, uint256) {
+  // price and amount is per/in whole tokens
+  function sell(
+    uint256 price,
+    uint256 amount
+  ) external override nonReentrant returns (uint256 filled, uint256 id) {
     locked[msg.sender] += atomic(amount);
     if (balanceOf(msg.sender) < locked[msg.sender]) {
       revert NotEnoughFunds(locked[msg.sender], balanceOf(msg.sender));
     }
-    return action(OrderType.Sell, OrderType.Buy, msg.sender, price, amount);
+    (filled, id) = action(OrderType.Sell, OrderType.Buy, msg.sender, price, amount);
+    // Trigger a withdraw for any tokens from filled orders
+    withdraw(msg.sender);
   }
 
   // Doesn't require nonReentrant as all interactions are after checks and effects
@@ -267,7 +291,9 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     if (!whitelisted(order.trader)) {
       // Safe to re-enter as the order has already been deleted
       if (point.orderType == OrderType.Buy) {
-        IERC20(dexToken).safeTransfer(order.trader, price * order.amount);
+        // Inefficient yet prevents duplicating the withdraw function
+        dexBalances[order.trader] += price * order.amount;
+        withdraw(order.trader);
       }
       return;
     }
@@ -283,13 +309,12 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
       revert NotOrderTrader(msg.sender, point.orders[i].trader);
     }
 
-    if (point.orderType == OrderType.Sell) {
+    if (point.orderType == OrderType.Buy) {
+      // Ironically enough, this duplicates the above calling of the withdraw function
+      dexBalances[order.trader] += price * order.amount;
+      withdraw(order.trader);
+    } else if (point.orderType == OrderType.Sell) {
       locked[order.trader] -= atomic(order.amount);
-    // Technically, this can re-enter (ignoring nonReentrant) and when doing so flip the OrderType to Sell
-    // That wouldn't be an issue since this is `if {} else if`, yet would be an issue if `if {} if`
-    // Still placing Buy second for peace of mind
-    } else if (point.orderType == OrderType.Buy) {
-      IERC20(dexToken).safeTransfer(order.trader, price * order.amount);
     }
   }
 

@@ -32,41 +32,12 @@ contract DEXRouter is IDEXRouter {
   function buy(address token, uint256 payment, uint256 price, uint256 minimumAmount) external {
     IERC20 dexToken = IERC20(IIntegratedLimitOrderDEX(token).dexToken());
 
-    // Transfer only the needed amount of capital
-    dexToken.safeTransferFrom(msg.sender, address(this), payment);
-
-    // Gas optimization by not constantly calling approve if we already did
-    if (!_approved[token]) {
-      dexToken.approve(token, type(uint256).max);
-      _approved[token] = true;
-    }
-
-    // Place an order with the exact amount received, leaving this contract with 0 funds
-    // While this does support fee on transfer tokens, it'll unfortunately fare the fee twice
-    // These contracts should not be used with fee on transfer in general
-    // The support for them is more due to USDT being able to enable fee on transfer
-    // at any given moment, or in case someone insists on using a fee on transfer token,
-    // rather than any endorsement
-    IIntegratedLimitOrderDEX(token).buy(msg.sender, dexToken.balanceOf(address(this)), price, minimumAmount);
+    // Transfer only the specified of capital
+    dexToken.safeTransferFrom(msg.sender, token, payment);
+    IIntegratedLimitOrderDEX(token).buy(msg.sender, price, minimumAmount);
   }
 
-  // Technically, the uint256 max may be completely moved through here in volume
-  // While OZ ERC20s won't decrease the allowance if it's uint256 max, this isn't ERC20-spec behavior
-  // This allows a Thread ERC20 to reset its allowance in case it does ever run out
-  function refreshAllowance(address token) external {
-    IERC20(IIntegratedLimitOrderDEX(token).dexToken()).approve(token, type(uint256).max);
-    // Set _approved in case it wasn't already
-    // While this should never be called before buy is called, so this should always be set
-    // And even if it wasn't, it wouldn't be an issue, this should never be called
-    // It's at least extremely unlikely to be called, whereas buy is extremely likely
-    // That's why it makes sense to put these gas costs here
-    _approved[token] = true;
-  }
-
-  // Doesn't have a fund recover function as anyone can claim a Thread 'exists' to drain this contract of funds in it
-  // This contract should never hold funds yet we can't stop people from accidentally sending here
-  // A recover function would be nice accordingly, yet one already does exist thanks to the above
-  // To make it secure would require knowing legitimate vs illegitimate Threads,
-  // which would lock this router to a specific Frabric, stopping offshoots
-  // That is not acceptable behavior
+  // Doesn't have a fund recover function as this should never hold funds
+  // Any recovery function would be a MEV pit unless a specific address received the funds
+  // That would acknowledge a Frabric which is not the intent nor role of this contract
 }

@@ -31,7 +31,6 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
     tokenA: new uSDK.Token(1, usdc, 18),
     tokenB: new uSDK.Token(1, frbc.address, 18)
   });
-  await frbc.setWhitelisted(uniswap.address, ethers.utils.id("Uniswap v2 Router"));
   // Whitelisting the pair to create the LP token does break the whitelist to some degree
   // We're immediately creating a wrapped derivative token with no transfer limitations
   // That said, it's a derivative subject to reduced profit potential and unusable as FRBC
