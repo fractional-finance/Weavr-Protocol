@@ -78,7 +78,7 @@ interface IFrabric is IFrabricDAO {
     string calldata info
   ) external returns (uint256);
 
-  function approve(uint256 id, uint256 position, bytes32 kycHash) external;
+  function approve(uint256 id, uint256 position, bytes32 kycHash, bytes calldata signature) external;
 }
 
 error ProposingGenesisParticipants();
@@ -90,3 +90,4 @@ error ProposingFrabricChange(address thread);
 error ThreadProposalFailed(bytes error);
 error ParticipantProposalNotPassed(uint256 id);
 error ParticipantAlreadyApproved();
+error InvalidKYCSignature(address signer, address kyc);

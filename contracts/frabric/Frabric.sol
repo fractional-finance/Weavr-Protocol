@@ -2,8 +2,15 @@
 pragma solidity ^0.8.13;
 
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+// Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
+// EIP712 was created over 4 years ago and has undegone multiple versions since
+// Metamask supports multiple various versions of EIP712 and is committed to maintaing "v3" and "v4" support
+// The only distinction between the two is the support for arrays/structs in structs, which aren't used by this contract
+// Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 
 import "../interfaces/bond/IBond.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
@@ -13,7 +20,7 @@ import "../dao/FrabricDAO.sol";
 
 import "../interfaces/frabric/IFrabric.sol";
 
-contract Frabric is FrabricDAO, IFrabric {
+contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
   address public override kyc;
   address public override bond;
   address public override threadDeployer;
@@ -60,6 +67,7 @@ contract Frabric is FrabricDAO, IFrabric {
     address[] calldata genesis,
     address _kyc
   ) external initializer {
+    __EIP712_init("Frabric Protocol", "1");
     __FrabricDAO_init(_erc20, 2 weeks);
 
     // Simulate a full DAO proposal to add the genesis participants
@@ -268,8 +276,7 @@ contract Frabric is FrabricDAO, IFrabric {
     }
   }
 
-  function approve(uint256 id, uint256 position, bytes32 kycHash) external override {
-    require(msg.sender == kyc, "Frabric: Only the KYC can approve users");
+  function approve(uint256 id, uint256 position, bytes32 kycHash, bytes calldata signature) external override {
     if (_participants[id].passed == 0) {
       revert ParticipantProposalNotPassed(id);
     }
@@ -284,6 +291,25 @@ contract Frabric is FrabricDAO, IFrabric {
     }
     _participants[id].participants[position] = address(0);
 
+    // Places signer in a variable to make the information available for the error
+    // While generally, the errors include an abundance of information with the expectation they'll be caught in a call,
+    // and even if they are executed on chain, we don't care about the increased gas costs for the extreme minority,
+    // this calculation is extensive enough it's worth the variable (which shouldn't even change gas costs?)
+    address signer = ECDSA.recover(
+      _hashTypedDataV4(
+        keccak256(
+          abi.encode(
+            keccak256("KYCVerification(address participant,bytes32 kycHash)"),
+            approving,
+            kycHash
+          )
+        )
+      ),
+      signature
+    );
+    if (signer != kyc) {
+      revert InvalidKYCSignature(signer, kyc);
+    }
 
     // There is a chance this participant was in another proposal or duplicated in this one
     // In that case, they may already have a status in participant
