@@ -74,26 +74,20 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
   ) private returns (uint256) {
     // Fill orders until there are either no orders or our order is filled
     uint256 filled = 0;
-    uint256 h = 0;
-    for (; (h < point.orders.length) && (amount != 0); h++) {
+    uint256 h = point.orders.length - 1;
+    for (; amount != 0; h--) {
       // Trader was removed. Delete their order and move on
       // Technically this is an interaction, and check, in the middle of effects
       // This function is view meaning its only risk is calling the DEX and viewing
       // an invalid partial state to make its decision on if the trader is whitelisted
       // This function is trusted code, and here it is trusted to not be idiotic
-      if (!whitelisted(point.orders[h].trader)) {
-        // If this isn't the last order...
-        if (h != point.orders.length - 1) {
-          // Swap in the last order
-          point.orders[h] = point.orders[point.orders.length - 1];
-          // Decrement h to rerun this index
-          h--;
-        }
-
-        // Delete the last order
+      while (!whitelisted(point.orders[h].trader)) {
         point.orders.pop();
-        // Run the next iteration of the loop (which will break if we're done)
-        continue;
+        if (h == 0) {
+          break;
+        }
+        // We could also call continue here, yet this should be a bit more efficient
+        h--;
       }
 
       uint256 thisAmount = point.orders[h].amount;
@@ -114,6 +108,16 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
         locked[trader] -= atomicAmount;
         _transfer(trader, point.orders[h].trader, atomicAmount);
       }
+
+      // If we filled this order, delete it
+      if (point.orders[h].amount == 0) {
+        point.orders[h].pop();
+      }
+
+      // Break before underflowing
+      if (h == 0) {
+        break;
+      }
     }
 
     // Transfer the DEX token sum if selling
@@ -121,38 +125,9 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
       dexBalances[trader] += filled * price;
     }
 
-    // h will always be after the last edited order
-    h--;
-
-    // This crux order may have been partially filled or fully filled
-    // If it's partially filled, decrement again
-    if (point.orders[h].amount != 0) {
-      // Prevents reversion by underflow
-      // If we didn't fill any orders, there's nothing left to do
-      if (h == 0) {
-        return filled;
-      }
-      h--;
-    }
-
     // If we filled every order, set the order type to null
-    if (h == (point.orders.length - 1)) {
+    if (point.orders[h].length == 0) {
       point.orderType = OrderType.Null;
-      // Clear the orders array
-      // For now, this also offers a gas refund, yet future EIPs will likely remove this
-      while (point.orders.length != 0) {
-        point.orders.pop();
-      }
-    } else {
-      // Do a O(1) deletion from the orders array for each filled order
-      // A shift would be very expensive and the 18 decimal accuracy of Ethereum means preserving the order of orders wouldn't be helpful
-      // 1 wei is microscopic, so placing a 1 wei different order...
-      for (uint256 i = 0; i <= h; i++) {
-        if ((h + i) < point.orders.length) {
-          point.orders[i] = point.orders[point.orders.length - 1];
-        }
-        point.orders.pop();
-      }
     }
 
     return filled;
@@ -192,7 +167,7 @@ abstract contract IntegratedLimitOrderDEX is Initializable, ReentrancyGuardUpgra
     }
 
     // Add the new order
-    // We could also merge orders here, if an existing order at this price point existed
+    // We could also merge orders here, if an existing order for this trader at this price point existed
     point.orders.push(Order(trader, amount));
     emit OrderIncrease(trader, price, amount);
 
