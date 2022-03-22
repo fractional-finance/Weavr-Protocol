@@ -32,6 +32,7 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.4",
     "hardhat": "^2.9.1",
+    "merkletreejs": "^0.2.31",
     "solidity-coverage": "^0.7.20"
   },
   "resolutions": {

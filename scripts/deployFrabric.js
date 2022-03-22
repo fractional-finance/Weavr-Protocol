@@ -1,6 +1,8 @@
 const hre = require("hardhat");
 const { ethers, upgrades } = hre;
 
+const { MerkleTree } = require("merkletreejs");
+
 const u2SDK = require("@uniswap/v2-sdk");
 const uSDK = require("@uniswap/sdk-core");
 
@@ -102,10 +104,25 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
   );
 
   const Frabric = await ethers.getContractFactory("Frabric");
+  const root = (
+    new MerkleTree(
+      genesisList.map(
+        leaf => (leaf.substr(0, 2) + "000000000000000000000000" + leaf.substr(2))
+      ),
+      ethers.utils.keccak256
+    )
+  ).getRoot().toString("hex");
   const frabric = await upgrades.deployBeaconProxy(
     proxy,
     Frabric,
-    [frbc.address, genesisList, bond.address, threadDeployer.address, kyc]
+    [
+      frbc.address,
+      genesisList,
+      root ? ("0x" + root) : "0x0000000000000000000000000000000000000000000000000000000000000000",
+      bond.address,
+      threadDeployer.address,
+      kyc
+    ]
   );
   await frabric.deployed();
   await frbc.setWhitelisted(frabric.address, ethers.utils.id("Frabric"));

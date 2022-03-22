@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 
 // Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
 // EIP712 was created over 4 years ago and has undegone multiple versions since
@@ -28,8 +28,8 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
 
   struct Participants {
     ParticipantType pType;
-    address[] participants;
-    uint256 passed;
+    bytes32 participants;
+    bool passed;
   }
   // The proposal structs are private as their events are easily grabbed and contain the needed information
   mapping(uint256 => Participants) private _participants;
@@ -63,6 +63,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
   function initialize(
     address _erc20,
     address[] calldata genesis,
+    bytes32 genesisMerkle,
     address _bond,
     address _threadDeployer,
     address _kyc
@@ -71,7 +72,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     __FrabricDAO_init(_erc20, 2 weeks);
 
     // Simulate a full DAO proposal to add the genesis participants
-    emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesis);
+    emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesisMerkle);
     emit NewProposal(_nextProposalID, uint256(FrabricProposalType.Participants), address(0), "Genesis Participants");
     emit ProposalStateChanged(_nextProposalID, ProposalState.Active);
     emit ProposalStateChanged(_nextProposalID, ProposalState.Queued);
@@ -97,7 +98,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
 
   function proposeParticipants(
     ParticipantType participantType,
-    address[] memory participants,
+    bytes32 participants,
     string calldata info
   ) external override returns (uint256) {
     if (participantType == ParticipantType.Null) {
@@ -107,20 +108,19 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
       revert ProposingGenesisParticipants();
     }
 
-    if (participants.length != 1) {
-      if (participants.length == 0) {
-        revert ZeroParticipants();
-      }
-      if ((participantType != ParticipantType.Individual) && (participantType == ParticipantType.Corporation)) {
-        revert BatchParticipantsForNonBatchType(participants.length, participantType);
-      }
+    // Validate this to be an address if this ParticipantType should only be a single address
+    if (
+      ((participantType == ParticipantType.KYC) || (participantType == ParticipantType.Governor)) &&
+      (bytes32(bytes20(participants)) != participants)
+    ) {
+      revert InvalidAddress(address(bytes20(participants)));
     }
 
-    if ((participantType == ParticipantType.Governor) && (governor[participants[0]] != GovernorStatus.Null)) {
-      revert ExistingGovernor(participants[0], governor[participants[0]]);
+    if ((participantType == ParticipantType.Governor) && (governor[address(bytes20(participants))] != GovernorStatus.Null)) {
+      revert ExistingGovernor(address(bytes20(participants)), governor[address(bytes20(participants))]);
     }
 
-    _participants[_nextProposalID] = Participants(participantType, participants, 0);
+    _participants[_nextProposalID] = Participants(participantType, participants, false);
     emit ParticipantsProposed(_nextProposalID, participantType, participants);
     return _createProposal(uint256(FrabricProposalType.Participants), info);
   }
@@ -223,10 +223,11 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     if (pType == FrabricProposalType.Participants) {
       Participants storage participants = _participants[id];
       if (participants.pType == ParticipantType.KYC) {
-        emit KYCChanged(kyc, participants.participants[0]);
+        address newKYC = address(bytes20(participants.participants));
+        emit KYCChanged(kyc, newKYC);
         participant[kyc] = ParticipantType.Removed;
-        kyc = participants.participants[0];
-        participant[participants.participants[0]] = ParticipantType.KYC;
+        kyc = newKYC;
+        participant[kyc] = ParticipantType.KYC;
         // Delete for the gas savings
         delete _participants[id];
       } else {
@@ -237,14 +238,14 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
           // checking here to ensure if they already exist, they're not reset
           // to Unverified. While we could error here, we may as well delete
           // the invalid proposal and move on.
-          if (governor[participants.participants[0]] != GovernorStatus.Null) {
+          if (governor[address(bytes20(participants.participants))] != GovernorStatus.Null) {
             delete _participants[id];
             return;
           }
         }
 
         // Set this proposal as having passed so the KYC company can whitelist
-        participants.passed = 1;
+        participants.passed = true;
       }
 
     } else if (pType == FrabricProposalType.RemoveBond) {
@@ -277,21 +278,24 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     }
   }
 
-  function approve(uint256 id, uint256 position, bytes32 kycHash, bytes calldata signature) external override {
-    Participants storage participants = _participants[id];
-    if (participants.passed == 0) {
-      revert ParticipantProposalNotPassed(id);
+  function approve(
+    uint256 id,
+    address approving,
+    bytes32 kycHash,
+    bytes32[] memory proof,
+    bytes calldata signature
+  ) external override {
+    if (approving == address(0)) {
+      // Technically, it's an invalid participant, not an invalid address
+      revert InvalidAddress(address(0));
+    } else if (participant[approving] != ParticipantType.Null) {
+      revert ParticipantAlreadyApproved(approving);
     }
 
-    address approving = participants.participants[position];
-    // Technically, the original proposal may have the 0 address in it
-    // That would prevent this proposal from ever fully passing and being deleted
-    // That doesn't help anyone and is solely an annoyance to the Ethereum blockchain used (not even the Frabric)
-    if (approving == address(0)) {
-      // Doesn't include the address as it... can't. It's been deleted
-      revert ParticipantAlreadyApproved();
+    Participants storage participants = _participants[id];
+    if (!participants.passed) {
+      revert ParticipantsProposalNotPassed(id);
     }
-    participants.participants[position] = address(0);
 
     // Places signer in a variable to make the information available for the error
     // While generally, the errors include an abundance of information with the expectation they'll be caught in a call,
@@ -313,38 +317,22 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
       revert InvalidKYCSignature(signer, kyc);
     }
 
-    // There is a chance this participant was in another proposal or duplicated in this one
-    // In that case, they may already have a status in participant
-    // This isn't checked for during proposeParticipants due to gas costs
-    // Not only would it be a full iteration, yet it'd need to set an additional variable
-    // If the proposal doesn't pass, someone would have to step up and clear those variables,
-    // which isn't feasible
-
-    // We could error if they already exist in participant, yet that would prevent
-    // their entry in this proposal from being cleared, which would prevent this proposal
-    // from being deleted once all entires are cleared
-    // If someone went through all the effort to issue this transaction, let it finish
-    // It's an if check no matter what so it doesn't change the gas cost for the intended route
-
-    // If they aren't already present, add them
-    // If we blindly went ahead, they could be refiled (when they shouldn't be),
-    // or they can be added back from being removed, which is the real danger in duplicate proposal presence
-    // It would cache a DAO approval for arbitrarily long
-    if (participant[approving] == ParticipantType.Null) {
-      IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
-      participant[approving] = participants.pType;
+    // Verify the address was actually part of this proposal
+    // Directly use the address as a leaf. Since it's a RipeMD-160 hash of a 32-byte value, this shouldn't be an issue
+    if (!MerkleProofUpgradeable.verify(proof, participants.participants, bytes32(bytes20(approving)))) {
+      revert IncorrectParticipant(approving, participants.participants, proof);
     }
 
-    // If all participants have been handled, delete the proposal to claim the gas refund
-    // This works becaused passed is set to 1 when the proposal is passed
-    // While we could increment passed first, and then check if .passed - 1 ==,
-    // which would be easier to read/understand, this is a valid transformation
-    // which saves on gas
-    if (participants.passed == participants.participants.length) {
+    // Whitelist them and add them
+    IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
+    participant[approving] = participants.pType;
+    if (participants.pType == ParticipantType.Governor) {
+      governor[approving] = GovernorStatus.Active;
+      // Delete the proposal since it was just them
       delete _participants[id];
-      return;
     }
-    // Increment the amount of participants from this proposal which were handled
-    participants.passed++;
+
+    // We could delete _participants[id] here if we knew how many values were included in the Merkle
+    // This gas refund isn't worth the extra variable and tracking
   }
 }

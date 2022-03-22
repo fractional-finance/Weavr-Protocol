@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-
 // Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
 // EIP712 was created over 4 years ago and has undegone multiple versions since
 // Metamask supports multiple various versions of EIP712 and is committed to maintaing "v3" and "v4" support
@@ -25,13 +22,14 @@ contract InitialFrabric is EIP712Upgradeable, FrabricDAO, IInitialFrabric {
   // The erc20 is expected to be fully initialized via JS during deployment
   function initialize(
     address _erc20,
-    address[] calldata genesis
+    address[] calldata genesis,
+    bytes32 genesisMerkle
   ) external initializer {
     __EIP712_init("Frabric Protocol", "1");
     __FrabricDAO_init(_erc20, 2 weeks);
 
     // Simulate a full DAO proposal to add the genesis participants
-    emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesis);
+    emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesisMerkle);
     emit NewProposal(_nextProposalID, uint256(FrabricProposalType.Participants), address(0), "Genesis Participants");
     emit ProposalStateChanged(_nextProposalID, ProposalState.Active);
     emit ProposalStateChanged(_nextProposalID, ProposalState.Queued);

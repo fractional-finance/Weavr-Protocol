@@ -34,7 +34,7 @@ interface IFrabric is IFrabricDAO {
   event ParticipantsProposed(
     uint256 indexed id,
     ParticipantType indexed participantType,
-    address[] participants
+    bytes32 participants
   );
   event RemoveBondProposed(
     uint256 indexed id,
@@ -70,6 +70,7 @@ interface IFrabric is IFrabricDAO {
   function initialize(
     address _erc20,
     address[] calldata genesis,
+    bytes32 genesisMerkle,
     address _bond,
     address _threadDeployer,
     address _kyc
@@ -77,7 +78,7 @@ interface IFrabric is IFrabricDAO {
 
   function proposeParticipants(
     ParticipantType participantType,
-    address[] memory participants,
+    bytes32 participants,
     string calldata info
   ) external returns (uint256);
   function proposeRemoveBond(
@@ -101,18 +102,24 @@ interface IFrabric is IFrabricDAO {
     string calldata info
   ) external returns (uint256);
 
-  function approve(uint256 id, uint256 position, bytes32 kycHash, bytes calldata signature) external;
+  function approve(
+    uint256 id,
+    address approving,
+    bytes32 kycHash,
+    bytes32[] memory proof,
+    bytes calldata signature
+  ) external;
 }
 
 error ProposingNullParticipants();
 error ProposingGenesisParticipants();
-error ZeroParticipants();
-error BatchParticipantsForNonBatchType(uint256 proposed, IFrabric.ParticipantType participantType);
+error InvalidAddress(address invalid);
 error ExistingGovernor(address governor, IFrabric.GovernorStatus status);
 error InvalidName(string name, string symbol);
 error ProposingParticipantRemovalOnThread();
 error ProposingFrabricChange();
 error ExternalCallFailed(address called, bytes4 selector, bytes error);
-error ParticipantProposalNotPassed(uint256 id);
-error ParticipantAlreadyApproved();
+error ParticipantsProposalNotPassed(uint256 id);
+error ParticipantAlreadyApproved(address participant);
 error InvalidKYCSignature(address signer, address kyc);
+error IncorrectParticipant(address participant, bytes32 participants, bytes32[] proof);

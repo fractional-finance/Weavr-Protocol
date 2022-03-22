@@ -18,13 +18,14 @@ interface IInitialFrabric is IFrabricDAO {
   event ParticipantsProposed(
     uint256 indexed id,
     ParticipantType indexed participantType,
-    address[] participants
+    bytes32 participants
   );
 
   function participant(address participant) external view returns (ParticipantType);
 
   function initialize(
     address _erc20,
-    address[] calldata genesis
+    address[] calldata genesis,
+    bytes32 genesisMerkle
   ) external;
 }
