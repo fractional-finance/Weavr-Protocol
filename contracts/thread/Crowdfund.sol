@@ -252,7 +252,6 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
   }
 
   // Allow users to burn Crowdfund tokens to receive Thread tokens
-  // This is shared with Thread
   function burn(address depositor) external override {
     if (state != State.Finished) {
       revert InvalidState(state, State.Finished);

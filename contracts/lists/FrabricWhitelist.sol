@@ -22,11 +22,10 @@ abstract contract FrabricWhitelist is Initializable, GlobalWhitelist, IFrabricWh
 
   function whitelisted(address person) public view virtual override(IWhitelist, GlobalWhitelist) returns (bool) {
     return (
-      // Check our own whitelist first
-      GlobalWhitelist.whitelisted(person) ||
-      // Check the parent whitelist, yet don't trust its own global acceptance policy
-      // We have our own for a reason
-      ((parentWhitelist != address(0)) && IGlobalWhitelist(parentWhitelist).explicitlyWhitelisted(person))
+      // Check the parent whitelist
+      ((parentWhitelist != address(0)) && IGlobalWhitelist(parentWhitelist).whitelisted(person)) ||
+      // Check our own whitelist
+      GlobalWhitelist.whitelisted(person)
     );
   }
 }

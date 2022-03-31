@@ -12,5 +12,4 @@ interface IDividendERC20 {
 }
 
 error Delegation();
-error ZeroDistribution();
 error AlreadyClaimed(uint256 id);

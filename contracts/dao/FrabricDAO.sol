@@ -93,6 +93,12 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
       if (target != address(this)) {
         revert SellingWithDifferentTarget(target, address(this));
       }
+
+      // Because this is an ILO DEX, amount here will be atomic yet the ILO DEX
+      // will expect it to be whole
+      if ((amount / 1e18 * 1e18) != amount) {
+        revert NotRoundAmount(amount);
+      }
     }
 
     _tokenActions[_nextProposalID] = TokenAction(token, target, mint, price, amount);
@@ -138,7 +144,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
 
         // Not else to allow direct mint + sell
         if (action.price != 0) {
-          IIntegratedLimitOrderDEX(action.token).sell(action.price, action.amount);
+          IIntegratedLimitOrderDEX(action.token).sell(action.price, action.amount / 1e18);
         }
         delete _tokenActions[id];
 

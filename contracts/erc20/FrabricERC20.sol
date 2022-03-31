@@ -134,7 +134,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   function setWhitelisted(address person, bytes32 dataHash) external override onlyOwner {
     _setWhitelisted(person, dataHash);
 
-    // Remove them now
+    // If removing, remove them now
     // This will only apply to the Frabric/Thread in question
     // For a Frabric removal, this will remove them from the global whitelist,
     // and enable calling remove on any Thread. For a Thread, this won't change

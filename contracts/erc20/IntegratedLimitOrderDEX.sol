@@ -43,7 +43,6 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, IIntegr
   function __IntegratedLimitOrderDEX_init(address _dexToken) internal onlyInitializing {
     __ReentrancyGuard_init();
     dexToken = _dexToken;
-    dexBalance = 0;
   }
 
   // Convert a token quantity to atomic units
@@ -237,6 +236,11 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, IIntegr
     uint256 price,
     uint256 amount
   ) external override nonReentrant returns (uint256 filled, uint256 id) {
+    // Non-whitelisted caller could have funds if removed yet their tokens aren't seized yet
+    if (!whitelisted(msg.sender)) {
+      revert NotWhitelisted(msg.sender);
+    }
+
     locked[msg.sender] += atomic(amount);
     if (balanceOf(msg.sender) < locked[msg.sender]) {
       revert NotEnoughFunds(locked[msg.sender], balanceOf(msg.sender));

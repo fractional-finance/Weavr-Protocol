@@ -146,7 +146,15 @@ abstract contract DAO is Initializable, IDAO {
   }
 
   function queueProposal(uint256 id) external {
-    Proposal storage proposal = activeProposal(id);
+    Proposal storage proposal = id;
+    // Proposal should be Active to be queued
+    if (proposal.state != ProposalState.Active) {
+      revert InactiveProposal(id);
+    }
+    // Proposal's voting period should be over
+    if (block.timestamp < (proposal.stateStartTime + votingPeriod)) {
+      revert ActiveProposal(id, block.timestamp, proposal.stateStartTime + votingPeriod);
+    }
     // In case of a tie, err on the side of caution and fail the proposal
     if (proposal.votes <= 0) {
       revert ProposalFailed(id, proposal.votes);
@@ -229,9 +237,8 @@ abstract contract DAO is Initializable, IDAO {
     if (proposal.creator != msg.sender) {
       revert NotProposalCreator(id, proposal.creator, msg.sender);
     }
-    proposal.state = ProposalState.Cancelled;
-    proposal.stateStartTime = block.timestamp;
-    emit ProposalStateChanged(id, proposal.state);
+    delete _proposals[id];
+    emit ProposalStateChanged(id, ProposalState.Cancelled);
   }
 
   function proposalVoteBlock(uint256 id) external view override returns (uint256) {

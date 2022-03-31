@@ -87,6 +87,8 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     kyc = _kyc;
     bond = _bond;
     threadDeployer = _threadDeployer;
+
+    participant[kyc] = ParticipantType.KYC
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
