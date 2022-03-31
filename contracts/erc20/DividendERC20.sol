@@ -38,13 +38,19 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, IDividendERC20 {
   }
 
   // Dividend implementation
-  function distribute(address token, uint256 amount) external override {
+  function _distribute(address from, address token, uint256 amount) internal {
     if (amount == 0) {
       revert ZeroAmount();
     }
-    IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+    if (from != address(this)) {
+      IERC20(token).safeTransferFrom(from, address(this), amount);
+    }
     _distributions.push(Distribution(IERC20(token), amount, block.number));
     emit Distributed(token, amount);
+  }
+
+  function distribute(address token, uint256 amount) external override {
+    _distribute(msg.sender, token, amount);
   }
 
   function claim(address person, uint256 id) external override {

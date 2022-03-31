@@ -4,7 +4,9 @@ pragma solidity >=0.8.13;
 // Imports the ILO DEX interface due to shared errors
 import "../erc20/IIntegratedLimitOrderDEX.sol";
 
-interface ICrowdfund {
+import "../erc20/IDividendERC20.sol";
+
+interface ICrowdfund is IDividendERC20 {
   enum State {
     Active,
     Executing,
@@ -13,7 +15,7 @@ interface ICrowdfund {
   }
 
   event CrowdfundStarted(address indexed agent, address indexed thread, address indexed token, uint256 target);
-  event StateChange(State indexed state, bytes data);
+  event StateChange(State indexed state);
   event Deposit(address indexed depositor, uint256 amount);
   event Withdraw(address indexed depositor, uint256 amount);
   event Refund(address indexed depositor, uint256 refundAmount);
@@ -28,7 +30,6 @@ interface ICrowdfund {
   function deposited() external view returns (uint256);
 
   function state() external view returns (State);
-  function refunded() external view returns (uint256);
 
   function initialize(
     string memory name,
@@ -47,7 +48,6 @@ interface ICrowdfund {
   function cancel() external;
   function execute() external;
   function refund(uint256 amount) external;
-  function claimRefund(address depositor) external;
   function finish() external;
   function burn(address depositor) external;
 }

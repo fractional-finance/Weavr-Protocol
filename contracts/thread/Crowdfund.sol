@@ -5,13 +5,14 @@ import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable
 import { IERC20MetadataUpgradeable as IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-
 import "../interfaces/lists/IWhitelist.sol";
 import "../interfaces/thread/ICrowdfund.sol";
 import "../interfaces/thread/IThread.sol";
 
-contract Crowdfund is ERC20Upgradeable, ICrowdfund {
+import "../erc20/DividendERC20.sol";
+
+// Uses DividendERC20 for the distribution logic
+contract Crowdfund is DividendERC20, ICrowdfund {
   using SafeERC20 for IERC20;
 
   // Could be gas optimized using 1/2 instead of false/true
@@ -26,10 +27,10 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
   address public token;
   uint256 public target;
   State public state;
-  uint256 public refunded;
 
   // Alias the total supply to the amount of funds deposited
-  // Technically defined as the amount of funds deposited AND outstanding, with no refund claimed nor Thread tokens issued
+  // Technically defined as the amount of funds deposited AND outstanding, with
+  // no refund claimed nor Thread tokens issued
   function deposited() public view returns (uint256) {
     return totalSupply();
   }
@@ -56,7 +57,7 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
     state = State.Active;
     // This could be packed into the following, yet we'd lose indexing
     emit CrowdfundStarted(agent, thread, token, target);
-    emit StateChange(state, bytes(""));
+    emit StateChange(state);
 
     // Normalize 1 of the raise token to the thread token to ensure normalization won't fail
     normalizeRaiseToThread(1);
@@ -175,13 +176,8 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
 
     // Set the State to refunding
     state = State.Refunding;
-    // The refund formula is refund * balance / target
-    // Setting refund to target causes them to cancel out
-    // This triggers a refund of balance, AKA what the user deposited, which is
-    // what they should get since the funds never left the contract and were never used
-    refunded = target;
-    // Could use encodePacked as it's a single field yet this will be easier to work with
-    emit StateChange(state, abi.encode(deposited()));
+    _distribute(address(this), token, IERC20(token).balanceOf(address(this)));
+    emit StateChange(state);
   }
 
   // Transfer the funds from a Crowdfund to the agent for execution
@@ -193,7 +189,7 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
       revert InvalidState(state, State.Active);
     }
     state = State.Executing;
-    emit StateChange(state, bytes(""));
+    emit StateChange(state);
 
     IERC20(token).safeTransfer(agent, target);
   }
@@ -207,37 +203,16 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
       revert InvalidState(state, State.Executing);
     }
     state = State.Refunding;
-    emit StateChange(state, abi.encode(refunded));
+    emit StateChange(state);
 
     // Allows the agent to refund 0
     // If this is improper, they should be bond slashed accordingly
-    refunded = amount;
+    // They should be bond slashed for any refunded amount which is too low
+    // Upon arbitration ruling the amount is too low, the agent could step in
+    // and issue a new distribution
     if (amount != 0) {
-      IERC20(token).safeTransferFrom(agent, address(this), refunded);
+      _distribute(agent, token, amount);
     }
-  }
-
-  function claimRefund(address depositor) external {
-    if (state != State.Refunding) {
-      revert InvalidState(state, State.Refunding);
-    }
-
-    uint256 balance = balanceOf(depositor);
-    if (balance == 0) {
-      revert ZeroAmount();
-    }
-
-    uint256 refundAmount = (refunded * balance) / target;
-    if (refundAmount == 0) {
-      revert ZeroAmount();
-    }
-
-    // If for some reason, we move to an ERC777, re-entrancy may be possible here
-    // with the balance at the start of the transaction.
-    // burn will throw on the second execution however, making this irrelevant
-    burnInternal(depositor, balance);
-    IERC20(token).safeTransfer(depositor, refundAmount);
-    emit Refund(depositor, refundAmount);
   }
 
   function finish() external {
@@ -248,7 +223,7 @@ contract Crowdfund is ERC20Upgradeable, ICrowdfund {
       revert InvalidState(state, State.Executing);
     }
     state = State.Finished;
-    emit StateChange(state, bytes(""));
+    emit StateChange(state);
   }
 
   // Allow users to burn Crowdfund tokens to receive Thread tokens
