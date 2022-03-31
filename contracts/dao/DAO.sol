@@ -32,8 +32,10 @@ abstract contract DAO is Initializable, IDAO {
   address public override erc20;
   uint256 public override votingPeriod;
 
-  mapping(uint256 => Proposal) private _proposals;
   uint256 internal _nextProposalID;
+  mapping(uint256 => Proposal) private _proposals;
+
+  mapping(uint256 => bool) public override passed;
 
   function __DAO_init(address _erc20, uint256 _votingPeriod) internal onlyInitializing {
     erc20 = _erc20;
@@ -219,6 +221,9 @@ abstract contract DAO is Initializable, IDAO {
       revert StillQueued(id, block.timestamp, proposal.stateStartTime + (12 hours));
     }
     delete _proposals[id];
+    // Solely used for getter functionality
+    // While we could use it for state checks, we already need to check it's specifically Queued
+    passed[id] = true;
     emit ProposalStateChanged(id, ProposalState.Executed);
 
     // Re-entrancy here would do nothing as the proposal has had its state updated

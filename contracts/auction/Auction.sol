@@ -13,8 +13,8 @@ contract Auction is IAuction {
   using SafeERC20 for IERC20;
 
   mapping(address => uint256) private _tokenBalances;
-  uint256 private _nextID;
 
+  uint256 private _nextID;
   struct AuctionStruct {
     address token;
     address traded;

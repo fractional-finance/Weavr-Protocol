@@ -21,6 +21,7 @@ interface IDAO {
 
   function erc20() external view returns (address);
   function votingPeriod() external view returns (uint256);
+  function passed() external view returns (bool);
 
   function canPropose() external view returns (bool);
   function proposalActive(uint256 id) external view returns (bool);
