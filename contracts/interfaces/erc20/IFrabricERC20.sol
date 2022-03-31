@@ -21,6 +21,7 @@ interface IFrabricERC20 is IFrabricWhitelist, IIntegratedLimitOrderDEX {
   ) external;
 
   function mint(address to, uint256 amount) external;
+  function burn(uint256 amount) external;
   function remove(address person) external;
 
   function setParentWhitelist(address whitelist) external;

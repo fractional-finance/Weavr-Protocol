@@ -86,7 +86,7 @@ contract Thread is FrabricDAO, IThread {
   function proposeAgentChange(
     address _agent,
     string calldata info
-  ) external override returns (uint256 id) {
+  ) external override returns (uint256) {
     _agents[_nextProposalID] = _agent;
     emit AgentChangeProposed(_nextProposalID, _agent);
     return _createProposal(uint256(ThreadProposalType.AgentChange), info);
@@ -95,7 +95,7 @@ contract Thread is FrabricDAO, IThread {
   function proposeFrabricChange(
     address _frabric,
     string calldata info
-  ) external override returns (uint256 id) {
+  ) external override returns (uint256) {
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
     return _createProposal(uint256(ThreadProposalType.FrabricChange), info);
@@ -105,7 +105,7 @@ contract Thread is FrabricDAO, IThread {
     address token,
     uint256 price,
     string calldata info
-  ) external override returns (uint256 id) {
+  ) external override returns (uint256) {
     if (price == 0) {
       revert ZeroPrice();
     }

@@ -146,7 +146,7 @@ abstract contract DAO is Initializable, IDAO {
   }
 
   function queueProposal(uint256 id) external {
-    Proposal storage proposal = id;
+    Proposal storage proposal = _proposals[id];
     // Proposal should be Active to be queued
     if (proposal.state != ProposalState.Active) {
       revert InactiveProposal(id);

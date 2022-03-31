@@ -41,6 +41,7 @@ error NotAuthorizedToPropose(address caller);
 error InactiveProposal(uint256 id);
 error AlreadyVotedInDirection(uint256 id, address voter, IDAO.VoteDirection direction);
 error NoVotes(address voter);
+error ActiveProposal(uint256 id, uint256 time, uint256 endTime);
 error ProposalFailed(uint256 id, int256 votes);
 error NotEnoughParticipation(uint256 id, uint256 totalVotes, uint256 required);
 error NotQueued(uint256 id, IDAO.ProposalState state);

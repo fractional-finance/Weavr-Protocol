@@ -6,6 +6,7 @@ import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgra
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
+import "../interfaces/errors/Common.sol";
 import "../interfaces/erc20/IDividendERC20.sol";
 
 // ERC20 Votes expanded with dividend functionality
@@ -54,7 +55,7 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, IDividendERC20 {
     uint256 blockNumber = _distributions[id].block;
     uint256 amount = _distributions[id].amount * getPastVotes(person, blockNumber) / getPastTotalSupply(blockNumber);
     if (amount == 0) {
-      revert ZeroDistribution();
+      revert ZeroAmount();
     }
     _distributions[id].token.safeTransfer(person, amount);
     emit Claimed(person, id, amount);

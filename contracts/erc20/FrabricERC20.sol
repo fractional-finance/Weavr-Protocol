@@ -78,6 +78,10 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     }
   }
 
+  function burn(uint256 amount) external override {
+    _burn(msg.sender, amount);
+  }
+
   function remove(address person) public override nonReentrant {
     // If removal is true, this is this contract removing them, so ignore whitelist status
     // Else, check if they actually were removed from the whitelist

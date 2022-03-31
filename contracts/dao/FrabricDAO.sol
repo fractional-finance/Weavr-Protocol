@@ -43,10 +43,6 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     __DAO_init(_erc20, _votingPeriod);
   }
 
-  function whitelisted(address person) internal view override(DAO) returns (bool) {
-    return IFrabricERC20(erc20).whitelisted(person);
-  }
-
   function proposePaper(string calldata info) external returns (uint256) {
     // No dedicated event as the DAO emits type and info
     return _createProposal(uint256(CommonProposalType.Paper) | commonProposalBit, info);
