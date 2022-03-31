@@ -29,8 +29,8 @@ abstract contract DAO is Initializable, IDAO {
     uint256 pType;
   }
 
-  address public erc20;
-  uint256 public votingPeriod;
+  address public override erc20;
+  uint256 public override votingPeriod;
 
   mapping(uint256 => Proposal) private _proposals;
   uint256 internal _nextProposalID;

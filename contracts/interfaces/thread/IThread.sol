@@ -13,6 +13,7 @@ interface IThread is IFrabricDAO {
   event Dissolved(uint256 indexed id);
 
   enum ThreadProposalType {
+    EnableUpgrades,
     AgentChange,
     FrabricChange,
     Dissolution
@@ -20,6 +21,7 @@ interface IThread is IFrabricDAO {
 
   function agent() external view returns (address);
   function frabric() external view returns (address);
+  function upgradesEnabled() external view returns (uint256);
 
   function initialize(
     address _erc20,
@@ -27,6 +29,7 @@ interface IThread is IFrabricDAO {
     address _frabric
   ) external;
 
+  function proposeEnablingUpgrades(string calldata info) external returns (uint256);
   function proposeAgentChange(
     address _agent,
     string calldata info

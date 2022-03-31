@@ -52,13 +52,33 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
     return _createProposal(uint256(CommonProposalType.Paper) | commonProposalBit, info);
   }
 
+  // Allowed to be overriden (see Thread for why)
+  // Isn't required to be overriden and assumes Upgrade proposals are valid like
+  // any other proposal unless overriden
+  function _canProposeUpgrade(
+    address /*beacon*/,
+    address /*instance*/,
+    address /*code*/
+  ) internal view virtual returns (bool) {
+    return true;
+  }
+
   // Allows upgrading itself or any contract owned by itself
+  // Specifying any irrelevant beacon will work yet won't have any impact
+  // Specifying an arbitrary contract would also work if it has functions/
+  // a fallback function which don't error when called
+  // Between human review, function definition requirements, and the lack of privileges bestowed,
+  // this is considered to be appropriately managed
   function proposeUpgrade(
     address beacon,
     address instance,
     address code,
     string calldata info
   ) external returns (uint256) {
+    if (!_canProposeUpgrade(beacon, instance, code)) {
+      revert ProposingUpgrade(beacon, instance, code);
+    }
+
     _upgrades[_nextProposalID] = Upgrade(beacon, instance, code);
     // Doesn't index code as parsing the Beacon's logs for its indexed code argument
     // will return every time a contract upgraded to it

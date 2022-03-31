@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "../interfaces/erc20/IDividendERC20.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
+import "../interfaces/frabric/IFrabric.sol";
 
 import "../dao/FrabricDAO.sol";
 
@@ -13,6 +14,7 @@ contract Thread is FrabricDAO, IThread {
 
   address public override agent;
   address public override frabric;
+  uint256 public override upgradesEnabled;
 
   struct Dissolution {
     address purchaser;
@@ -60,6 +62,27 @@ contract Thread is FrabricDAO, IThread {
     );
   }
 
+  function _canProposeUpgrade(
+    address beacon,
+    address instance,
+    address code
+  ) internal view override returns (bool) {
+    return (
+      // If upgrades are enabled, all good
+      (block.timestamp >= upgradesEnabled) ||
+      // Upgrades to the current code/release channels are always allowed
+      // This prevents the Frabric from forcing an update onto Threads and allows
+      // switching between versions presumably published by the Frabric
+      (code == IFrabricBeacon(beacon).implementation(instance)) ||
+      (uint160(code) <= IFrabricBeacon(beacon).releaseChannels())
+    );
+  }
+
+  function proposeEnablingUpgrades(string calldata info) external returns (uint256) {
+    // Doesn't emit a dedicated event for the same reason Paper proposals don't
+    return _createProposal(uint256(ThreadProposalType.EnableUpgrades), info);
+  }
+
   function proposeAgentChange(
     address _agent,
     string calldata info
@@ -93,7 +116,22 @@ contract Thread is FrabricDAO, IThread {
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
     ThreadProposalType pType = ThreadProposalType(_pType);
-    if (pType == ThreadProposalType.AgentChange) {
+    if (pType == ThreadProposalType.EnableUpgrades) {
+      // Enable upgrades after the Frabric's voting period + 1 week
+
+      // There is an attack where a Thread upgrades and claws back timelocked tokens
+      // Once this proposal passes, the Frabric can immediately void its timelock,
+      // yet it'll need 2 weeks to pass a proposal on what to do with them
+      // The added 1 week is because neither selling on the token's DEX nor an auction
+      // would complete instantly, so this gives a buffer for it to execute
+
+      // While the Frabric also needs time to decide what to do and can't be expected
+      // to be perfect with time, enabling upgrades only enables Upgrade proposals to be created
+      // That means there's an additional delay of the Thread's voting period (1 week)
+      // while the actual Upgrade proposal occurs, granting that time
+      upgradesEnabled = block.timestamp + IDAO(frabric).votingPeriod() + (1 weeks);
+
+    } else if (pType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);
       agent = _agents[id];
       delete _agents[id];
@@ -101,6 +139,8 @@ contract Thread is FrabricDAO, IThread {
     } else if (pType == ThreadProposalType.FrabricChange) {
       emit FrabricChanged(frabric, _frabrics[id]);
       frabric = _frabrics[id];
+      // Update our parent whitelist to the new Frabric's
+      IFrabricERC20(erc20).setParentWhitelist(IFrabric(frabric).erc20());
       delete _frabrics[id];
 
     } else if (pType == ThreadProposalType.Dissolution) {

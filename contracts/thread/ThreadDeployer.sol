@@ -141,11 +141,16 @@ contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
   // Claim locked tokens
   function claim(address erc20) external {
     // If this ERC20 never had a lockup, this will automatically clear
-    // This allows the Frabric to recover tokens sent to this address by mistake in theory, yet in reality should never matter
-    if (block.timestamp < lockup[erc20]) {
+    // This allows the Frabric to recover tokens sent to this address by mistake in theory,
+    // yet in reality this should never matter
+    // If the lockup does exist, the erc20 is interpreted as a Thread (which is guaranteed
+    // as we deployed it and set a lockup for it). If it has upgrades enabled, the
+    // timelock is automatically voided to prevent the contract from upgrading and
+    // clawing back the tokens
+    if (!((block.timestamp >= lockup[erc20]) || (IThread(erc20).upgradesEnabled() != 0))) {
       revert TimelockNotExpired(erc20, block.timestamp, lockup[erc20]);
     }
-    // Transfer the 6% to the Frabric
+    // Transfer the locked tokens to the Frabric
     IERC20(erc20).safeTransfer(owner(), IERC20(erc20).balanceOf(address(this)));
   }
 }
