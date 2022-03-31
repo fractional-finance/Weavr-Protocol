@@ -8,7 +8,7 @@ const deployTimelock = require("./deployTimelock.js");
 
 module.exports = async (erc20Beacon, auction) => {
   const crowdfundProxy = await deployCrowdfundProxy();
-  const threadBeacon = await thread.deployThreadBeacon();
+  const threadBeacon = await thread.deployBeacon();
   const timelock = await deployTimelock();
 
   const ThreadDeployer = await ethers.getContractFactory("ThreadDeployer");
@@ -23,7 +23,6 @@ module.exports = async (erc20Beacon, auction) => {
     ThreadDeployer,
     [crowdfundProxy.address, erc20Beacon, threadBeacon.address, auction, timelock.address]
   );
-  await threadDeployer.deployed();
 
   // Transfer ownership of the timelock to the ThreadDeployer
   await timelock.transferOwnership(threadDeployer.address);

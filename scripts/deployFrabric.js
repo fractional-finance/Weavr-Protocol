@@ -7,7 +7,7 @@ const u2SDK = require("@uniswap/v2-sdk");
 const uSDK = require("@uniswap/sdk-core");
 
 const deployBeacon = require("./deployBeacon.js");
-const FrabricERC20 = require("./deployFrabricERC20.js");
+const fERC20 = require("./deployFrabricERC20.js");
 const deployBond = require("./deployBond.js");
 const deployThreadDeployer = require("./deployThreadDeployer.js");
 const deployDEXRouter = require("./deployDEXRouter.js");
@@ -15,7 +15,7 @@ const deployDEXRouter = require("./deployDEXRouter.js");
 module.exports = async (usdc, uniswap, genesis, kyc) => {
   const signer = (await ethers.getSigners())[0];
 
-  const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usdc);
+  const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await fERC20.deployFRBC(usdc);
   await frbc.setWhitelisted(auction.address, ethers.utils.id("Auction"));
 
   // Deploy the Uniswap pair to get the bond token
@@ -121,7 +121,6 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
       kyc
     ]
   );
-  await frabric.deployed();
   await frbc.setWhitelisted(frabric.address, ethers.utils.id("Frabric"));
 
   // Transfer ownership of everything to the Frabric
@@ -172,9 +171,7 @@ if (require.main === module) {
       process.hhCompiled = true;
 
       const Token = await ethers.getContractFactory("TestERC20");
-      usdc = await Token.deploy("USD Test", "USD");
-      await usdc.deployed();
-      usdc = usdc.address;
+      usdc = (await Token.deploy("USD Test", "USD")).address;
 
       uniswap = (await require("./deployUniswap.js")()).router.address;
 

@@ -4,29 +4,27 @@ const { ethers, upgrades } = hre;
 const deployBeacon = require("./deployBeacon.js");
 
 module.exports = {
-  deployThreadBeacon: async () => {
+  deployBeacon: async () => {
     process.hhCompiled ? null : await hre.run("compile");
     process.hhCompiled = true;
     return await deployBeacon([2], await ethers.getContractFactory("Thread"));
   },
 
+  // Doesn't use ThreadDeployer in order to prevent the need to fake an entire Crowdfund
   deployTestThread: async (agent) => {
     const TestERC20 = await ethers.getContractFactory("TestERC20");
     const token = await TestERC20.deploy("Test Token", "TERC");
-    await token.deployed();
 
-    const FrabricERC20 = require("./deployFrabricERC20.js");
-    const erc20Beacon = await FrabricERC20.deployFrabricERC20Beacon();
-    const { auction, erc20 } = await FrabricERC20.deployFrabricERC20(erc20Beacon, null);
+    const fERC20 = require("./deployFrabricERC20.js");
+    const erc20Beacon = await FrabricERC20.deployBeacon();
+    const { auction, erc20 } = await FrabricERC20.deploy(erc20Beacon, null);
 
     const TestFrabric = await ethers.getContractFactory("TestFrabric");
     const frabric = await TestFrabric.deploy();
-    await frabric.deployed();
 
     const beacon = await module.exports.deployThreadBeacon();
     const Thread = await ethers.getContractFactory("Thread");
     const thread = await upgrades.deployBeaconProxy(beacon, Thread, [erc20.address, agent, frabric.address]);
-    await thread.deployed();
 
     await erc20.initialize(
       "Test Thread Token",
@@ -43,10 +41,8 @@ module.exports = {
 };
 
 if (require.main === module) {
-  module.exports.deployThreadBeacon()
-    .then(beacon => {
-      console.log("Thread Beacon: " + beacon.address);
-    })
+  module.exports.deployBeacon()
+    .then(beacon => console.log("Thread Beacon: " + beacon.address))
     .catch(error => {
       console.error(error);
       process.exit(1);

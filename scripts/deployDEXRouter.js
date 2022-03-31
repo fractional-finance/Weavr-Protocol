@@ -5,7 +5,14 @@ module.exports = async () => {
   process.hhCompiled ? null : await hre.run("compile");
   process.hhCompiled = true;
 
-  const router = await (await ethers.getContractFactory("DEXRouter")).deploy();
-  await router.deployed();
-  return router;
+  return await (await ethers.getContractFactory("DEXRouter")).deploy();
 };
+
+if (require.main === module) {
+  module.exports()
+    .then(router => console.log("DEX Router: " + router.address))
+    .catch(error => {
+      console.error(error);
+      process.exit(1);
+    });
+}

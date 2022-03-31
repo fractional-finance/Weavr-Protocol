@@ -11,7 +11,6 @@ module.exports = async (beacon, args) => {
   );
   // Use a fee setter address of 0
   const factory = await Factory.deploy("0x0000000000000000000000000000000000000000");
-  await factory.deployed();
 
   const Router = await ethers.ContractFactory.fromSolidity(
     require("@uniswap/v2-periphery/build/UniswapV2Router02.json"),
@@ -19,7 +18,6 @@ module.exports = async (beacon, args) => {
   );
   // Use a WETH address of 0 as we never use ETH functionality
   const router = await Router.deploy(factory.address, "0x0000000000000000000000000000000000000000");
-  await router.deployed();
 
   return { factory, router };
 };

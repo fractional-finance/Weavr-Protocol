@@ -19,7 +19,6 @@ module.exports = async (usdc, bondToken) => {
     Bond,
     [usdc, bondToken]
   );
-  await bond.deployed();
 
   return { proxy, bond };
 };

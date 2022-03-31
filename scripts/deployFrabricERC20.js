@@ -5,7 +5,7 @@ const deployBeacon = require("./deployBeacon.js");
 const deployAuction = require("./deployAuction.js");
 
 module.exports = {
-  deployFrabricERC20Beacon: async () => {
+  deployBeacon: async () => {
     process.hhCompiled ? null : await hre.run("compile");
     process.hhCompiled = true;
 
@@ -13,7 +13,7 @@ module.exports = {
   },
 
   // Solely used for testing (as exported, used in this file for deployFRBC)
-  deployFrabricERC20: async (beacon, args) => {
+  deploy: async (beacon, args) => {
     const auction = await deployAuction();
     const FrabricERC20 = await ethers.getContractFactory("FrabricERC20");
     const erc20 = await upgrades.deployBeaconProxy(
@@ -22,13 +22,12 @@ module.exports = {
       args == null ? [] : [...args, auction.auction.address],
       args == null ? { initializer: false } : {}
     );
-    await erc20.deployed();
     return { auctionProxy: auction.proxy, auction: auction.auction, erc20 };
   },
 
   deployFRBC: async (usdc) => {
-    const beacon = await module.exports.deployFrabricERC20Beacon();
-    const frbc = await module.exports.deployFrabricERC20(
+    const beacon = await module.exports.deployBeacon();
+    const frbc = await module.exports.deploy(
       beacon,
       [
         "Frabric Token",
