@@ -14,6 +14,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/thread/IThread.sol";
 import "../interfaces/thread/ICrowdfund.sol";
+import "../interfaces/erc20/ITimelock.sol";
 
 import "../interfaces/frabric/IFrabric.sol";
 
@@ -26,14 +27,14 @@ contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
   address public override erc20Beacon;
   address public override threadBeacon;
   address public override auction;
-
-  mapping(address => uint256) public override lockup;
+  address public override timelock;
 
   function initialize(
     address _crowdfundProxy,
     address _erc20Beacon,
     address _threadBeacon,
-    address _auction
+    address _auction,
+    address _timelock
   ) public override initializer {
     __Ownable_init();
 
@@ -47,6 +48,7 @@ contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
     threadBeacon = _threadBeacon;
 
     auction = _auction;
+    timelock = _timelock;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -65,12 +67,14 @@ contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
   // Takes in a variant in order to support multiple variations easily in the future
   // This could be anything from different Thread architectures to different lockup schemes
   function deploy(
-    uint256 variant,
+    uint256 _variant,
     address agent,
     string memory name,
     string memory symbol,
     bytes calldata data
   ) external override onlyOwner {
+    // Fixes a stack too deep error
+    uint256 variant = _variant;
     if (variant != 0) {
       revert UnknownVariant(variant);
     }
@@ -132,25 +136,22 @@ contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
     // Transfer the Thread token to the Crowdfund
     IERC20(erc20).safeTransfer(crowdfund, threadBaseTokenSupply);
 
-    // Set a lockup for the Thread's token
-    lockup[erc20] = block.timestamp + (4 weeks);
+    // Create the timelock and transfer the additional tokens to it
+    ITimelock(timelock).lock(erc20, 180 days);
+    IERC20(erc20).safeTransfer(timelock, threadTokenSupply - threadBaseTokenSupply);
 
-    emit Thread(agent, tradeToken, erc20, thread, crowdfund);
+    emit Thread(variant, agent, tradeToken, erc20, thread, crowdfund);
   }
 
-  // Claim locked tokens
-  function claim(address erc20) external {
-    // If this ERC20 never had a lockup, this will automatically clear
-    // This allows the Frabric to recover tokens sent to this address by mistake in theory,
-    // yet in reality this should never matter
-    // If the lockup does exist, the erc20 is interpreted as a Thread (which is guaranteed
-    // as we deployed it and set a lockup for it). If it has upgrades enabled, the
-    // timelock is automatically voided to prevent the contract from upgrading and
-    // clawing back the tokens
-    if (!((block.timestamp >= lockup[erc20]) || (IThread(erc20).upgradesEnabled() != 0))) {
-      revert TimelockNotExpired(erc20, block.timestamp, lockup[erc20]);
-    }
-    // Transfer the locked tokens to the Frabric
+  // Recover tokens sent here
+  function recover(address erc20) public override {
     IERC20(erc20).safeTransfer(owner(), IERC20(erc20).balanceOf(address(this)));
+  }
+
+  // Claim a timelock (which sends tokens here) and forward them to the Frabric
+  // Purely a helper function
+  function claimTimelock(address erc20) external override {
+    ITimelock(timelock).claim(erc20);
+    recover(erc20);
   }
 }

@@ -3,6 +3,7 @@ pragma solidity >=0.8.13;
 
 interface IThreadDeployer {
   event Thread(
+    uint256 indexed variant,
     address indexed agent,
     address indexed tradeToken,
     address erc20,
@@ -14,17 +15,17 @@ interface IThreadDeployer {
   function erc20Beacon() external view returns (address);
   function threadBeacon() external view returns (address);
   function auction() external view returns (address);
-
-  function lockup(address erc20) external view returns (uint256);
+  function timelock() external view returns (address);
 
   function initialize(
     address _crowdfundProxy,
     address _erc20Beacon,
     address _threadBeacon,
-    address auction
+    address auction,
+    address timelock
   ) external;
 
-  function validate(uint256 varaint, bytes calldata data) external pure;
+  function validate(uint256 varaint, bytes calldata data) external view;
 
   function deploy(
     uint256 varaint,
@@ -33,8 +34,10 @@ interface IThreadDeployer {
     string memory symbol,
     bytes calldata data
   ) external;
+
+  function recover(address erc20) external;
+  function claimTimelock(address erc20) external;
 }
 
 error UnknownVariant(uint256 id);
 error NonStaticDecimals(uint8 beforeDecimals, uint8 afterDecimals);
-error TimelockNotExpired(address token, uint256 time, uint256 lockedUntil);
