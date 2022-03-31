@@ -33,7 +33,7 @@ interface IFrabricERC20 is IFrabricWhitelist, IIntegratedLimitOrderDEX {
   function unpause() external;
 }
 
-error SupplyExceedsInt256(uint256 supply);
+error SupplyExceedsUInt112(uint256 supply);
 error NotMintable();
 error Whitelisted(address person);
 error CurrentlyPaused();

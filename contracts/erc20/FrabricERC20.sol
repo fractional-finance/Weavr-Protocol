@@ -41,9 +41,11 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     // If the latter, this is intended behavior
     _setWhitelisted(msg.sender, keccak256("Initializer"));
 
-    // Make sure the supply is in the bounds needed for DAO operations
-    if (supply > uint256(type(int256).max)) {
-      revert SupplyExceedsInt256(supply);
+    // Make sure the supply is within bounds
+    // The DAO code sets an upper bound of int256.max
+    // Uniswap and more frequently use uint112 which is still a very reasonable bound
+    if (supply > uint256(type(uint112).max)) {
+      revert SupplyExceedsUInt112(supply);
     }
 
     // Mint the supply
@@ -73,8 +75,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
       revert NotMintable();
     }
     _mint(to, amount);
-    if (totalSupply() > uint256(type(int256).max)) {
-      revert SupplyExceedsInt256(totalSupply());
+    if (totalSupply() > uint256(type(uint112).max)) {
+      revert SupplyExceedsUInt112(totalSupply());
     }
   }
 
