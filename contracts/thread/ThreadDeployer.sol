@@ -127,18 +127,24 @@ contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
       revert NonStaticDecimals(decimals, IERC20Metadata(erc20).decimals());
     }
 
-    // Whitelist the Crowdfund to hold the Thread tokens
+    // Whitelist the Crowdfund and transfer the Thread tokens to it
     IFrabricERC20(erc20).setWhitelisted(crowdfund, keccak256("Crowdfund"));
+    IERC20(erc20).safeTransfer(crowdfund, threadBaseTokenSupply);
+
+    // Whitelist Timelock to hold the additional tokens
+    // This could be done at a global level given how all Thread tokens sync with this contract
+    // That said, not whitelisting it globally avoids FRBC from being sent here accidentally
+    IFrabricERC20(erc20).setWhitelisted(timelock, keccak256("Timelock"));
+
+    // Create the lock and transfer the additional tokens to it
+    ITimelock(timelock).lock(erc20, 180 days);
+    IERC20(erc20).safeTransfer(timelock, threadTokenSupply - threadBaseTokenSupply);
+
+    // Remove ourself from the token's whitelist
+    IFrabricERC20(erc20).setWhitelisted(address(this), bytes32(0));
 
     // Transfer token ownership to the Thread
     OwnableUpgradeable(erc20).transferOwnership(thread);
-
-    // Transfer the Thread token to the Crowdfund
-    IERC20(erc20).safeTransfer(crowdfund, threadBaseTokenSupply);
-
-    // Create the timelock and transfer the additional tokens to it
-    ITimelock(timelock).lock(erc20, 180 days);
-    IERC20(erc20).safeTransfer(timelock, threadTokenSupply - threadBaseTokenSupply);
 
     emit Thread(variant, agent, tradeToken, erc20, thread, crowdfund);
   }

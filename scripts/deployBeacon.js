@@ -3,11 +3,6 @@ const { ethers } = hre;
 
 // Support overriding the Beacon. It's generally Beacon yet sometimes SingleBeacon
 module.exports = async (args, codeFactory, Beacon) => {
-  // Run compile if it hasn't been run already
-  // Prevents a print statement of "Nothing to compile" from repeatedly appearing
-  process.hhCompiled ? null : await hre.run("compile");
-  process.hhCompiled = true;
-
   const code = await codeFactory.deploy();
   await code.deployed();
 

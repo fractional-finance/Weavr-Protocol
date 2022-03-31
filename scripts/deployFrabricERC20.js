@@ -2,28 +2,29 @@ const hre = require("hardhat");
 const { ethers, upgrades } = hre;
 
 const deployBeacon = require("./deployBeacon.js");
+const deployAuction = require("./deployAuction.js");
 
 module.exports = {
   deployFrabricERC20Beacon: async () => {
-    return await deployBeacon([2], await ethers.getContractFactory("FrabricERC20"));
-  },
-
-  // Solely used for testing (as exported, used in this file for the intended to be used deployFRBC)
-  deployFrabricERC20: async (beacon, args) => {
     process.hhCompiled ? null : await hre.run("compile");
     process.hhCompiled = true;
 
-    const FrabricERC20 = await ethers.getContractFactory("FrabricERC20");
-
-    const frbc = await upgrades.deployBeaconProxy(beacon, FrabricERC20, args);
-    await frbc.deployed();
-    return frbc;
+    return await deployBeacon([2], await ethers.getContractFactory("FrabricERC20"));
   },
 
-  deployFRBC: async (usdc, auction) => {
-    let result = { beacon: await module.exports.deployFrabricERC20Beacon() };
-    result.frbc = await module.exports.deployFrabricERC20(
-      result.beacon,
+  // Solely used for testing (as exported, used in this file for deployFRBC)
+  deployFrabricERC20: async (beacon, args) => {
+    const auction = await deployAuction();
+    const FrabricERC20 = await ethers.getContractFactory("FrabricERC20");
+    const erc20 = await upgrades.deployBeaconProxy(beacon, FrabricERC20, [...args, auction.auction.address]);
+    await erc20.deployed();
+    return { erc20, auction };
+  },
+
+  deployFRBC: async (usdc) => {
+    const beacon = await module.exports.deployFrabricERC20Beacon();
+    const frbc = await module.exports.deployFrabricERC20(
+      beacon,
       [
         "Frabric Token",
         "FRBC",
@@ -32,11 +33,10 @@ module.exports = {
         true,
         // Parent whitelist doesn't exist
         "0x0000000000000000000000000000000000000000",
-        usdc,
-        auction
+        usdc
       ]
     );
-    return result;
+    return { auctionProxy: frbc.auction.proxy, auction: frbc.auction.auction, beacon, frbc: frbc.erc20 };
   }
 };
 
@@ -46,6 +46,8 @@ if (require.main === module) {
   // Will disable the DEX functionality yet will deploy, which is all this block wants
   module.exports.deployFRBC("0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000")
     .then(contracts => {
+      console.log("Auction Proxy:       " + contracts.auctionProxy.address);
+      console.log("Auction:             " + contracts.auction.address);
       console.log("FrabricERC20 Beacon: " + contracts.beacon.address);
       console.log("FRBC:                " + contracts.frbc.address);
     })

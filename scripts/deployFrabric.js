@@ -7,18 +7,15 @@ const u2SDK = require("@uniswap/v2-sdk");
 const uSDK = require("@uniswap/sdk-core");
 
 const deployBeacon = require("./deployBeacon.js");
-const deployAuction = require("./deployAuction.js");
 const FrabricERC20 = require("./deployFrabricERC20.js");
 const deployBond = require("./deployBond.js");
 const deployThreadDeployer = require("./deployThreadDeployer.js");
 const deployDEXRouter = require("./deployDEXRouter.js");
 
 module.exports = async (usdc, uniswap, genesis, kyc) => {
-  let signer = (await ethers.getSigners())[0];
+  const signer = (await ethers.getSigners())[0];
 
-  const { proxy: auctionProxy, auction } = await deployAuction();
-
-  const { beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usdc, auction.address);
+  const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usdc);
   await frbc.setWhitelisted(auction.address, ethers.utils.id("Auction"));
 
   // Deploy the Uniswap pair to get the bond token
@@ -28,7 +25,7 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
     signer
   );
 
-  let pair = u2SDK.computePairAddress({
+  const pair = u2SDK.computePairAddress({
     factoryAddress: await uniswap.factory(),
     tokenA: new uSDK.Token(1, usdc, 18),
     tokenB: new uSDK.Token(1, frbc.address, 18)
@@ -41,7 +38,7 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
 
   // Process the genesis
   let genesisList = [];
-  for (let person in genesis) {
+  for (const person in genesis) {
     await frbc.setWhitelisted(person, ethers.utils.id(genesis[person].info));
     await frbc.mint(person, genesis[person].amount);
     genesisList.push(person);
@@ -91,9 +88,9 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
 
   const { proxy: bondProxy, bond } = await deployBond(usdc, pair);
   const {
-    proxy: threadDeployerProxy,
     crowdfundProxy,
     threadBeacon,
+    proxy: threadDeployerProxy,
     threadDeployer
   } = await deployThreadDeployer(erc20Beacon.address, auction.address);
 

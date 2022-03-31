@@ -4,6 +4,11 @@ const { ethers, upgrades } = hre;
 const deployBeacon = require("./deployBeacon.js");
 
 module.exports = async () => {
+  // Run compile if it hasn't been run already
+  // Prevents a print statement of "Nothing to compile" from repeatedly appearing
+  process.hhCompiled ? null : await hre.run("compile");
+  process.hhCompiled = true;
+
   const Auction = await ethers.getContractFactory("Auction");
   const proxy = await deployBeacon(
     [],

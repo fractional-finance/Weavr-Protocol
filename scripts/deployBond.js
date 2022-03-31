@@ -4,6 +4,9 @@ const { ethers, upgrades } = hre;
 const deployBeacon = require("./deployBeacon.js");
 
 module.exports = async (usdc, bondToken) => {
+  process.hhCompiled ? null : await hre.run("compile");
+  process.hhCompiled = true;
+
   const Bond = await ethers.getContractFactory("Bond");
   const proxy = await deployBeacon(
     [],

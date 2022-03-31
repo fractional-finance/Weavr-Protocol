@@ -5,14 +5,13 @@ const deployBeacon = require("./deployBeacon.js");
 
 module.exports = {
   deployThreadBeacon: async () => {
+    process.hhCompiled ? null : await hre.run("compile");
+    process.hhCompiled = true;
     return await deployBeacon([2], await ethers.getContractFactory("Thread"));
   },
 
   // Solely used for testing
   deployThread: async (beacon, args) => {
-    process.hhCompiled ? null : await hre.run("compile");
-    process.hhCompiled = true;
-
     const Thread = await ethers.getContractFactory("Thread");
 
     const thread = await upgrades.deployBeaconProxy(beacon, Thread, args);
