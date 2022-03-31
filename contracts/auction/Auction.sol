@@ -4,13 +4,13 @@ pragma solidity >=0.8.13;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "../interfaces/lists/IWhitelist.sol";
 
 import "../interfaces/auction/IAuction.sol";
 
-contract Auction is ReentrancyGuardUpgradeable, IAuction {
+contract Auction is OwnableUpgradeable, IAuction {
   using SafeERC20 for IERC20;
 
   mapping(address => uint256) public override balances;
@@ -27,24 +27,30 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
     uint256 end;
   }
   mapping(uint256 => AuctionStruct) private _auctions;
+  mapping(address => mapping(address => uint256)) public override pending;
 
   // Unlike the DEXRouter which is meant to be static to ensure safety of approvals,
   // this Auction contract is ingrained into the Frabric and Threads. While this
   // will also likely get approvals, its code is controlled by the Frabric, not each
   // Thread, and it needs to be able to evolve with the protocol
   function initialize() external initializer {
-    __ReentrancyGuard_init();
+    __Ownable_init();
   }
 
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() initializer {}
+
   // Not vulnerable to re-entrancy, despite being a balance based amount calculation,
-  // as it's not before-after. It's stored-current
+  // as it's not before-after. It's stored-current. While someone could re-enter
+  // before hand (assuming ERC777 which we don't use), that would cause the first
+  // executed transfer to be treated as the sum and every other transfer to be treated as 0
   function getTransferred(address token) private returns (uint256 transferred) {
     uint256 balance = IERC20(token).balanceOf(address(this));
     transferred = balance - balances[token];
     balances[token] = balance;
   }
 
-  function listTransferred(address token, address traded, address seller, uint256 start) public override nonReentrant {
+  function listTransferred(address token, address traded, address seller, uint256 start) public override {
     uint256 amount = getTransferred(token);
     if (amount == 0) {
       revert ZeroAmount();
@@ -54,11 +60,11 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
     // only Thread token reliance is on the whitelist function, as it needs to verify
     // bidders can actually receive the auction's tokens
     // Call whitelist in order to verify we can, preventing auction creation if we can't
-    // If list was used, this will cause the tokens to be returned (by virtue of never
+    // If list was used, this will cause the tokens to be pending (by virtue of never
     // being transferred). If listTransferred was used, someone sent tokens to a contract
     // when they shouldn't have and now they're trapped. They technically can be recovered
     // with a fake auction using them as a bid, or we could add a recovery function,
-    // yet any recovery function would be MEV'd in seconds. It's not worth the complexity
+    // yet any recovery function would be voided via the above fake auction strategy
     // Also, instead of ignoring the return value, check it because we're already here
     // It should be noted fallback functions may not error here, and may return true
     // There's only so much we can do
@@ -80,7 +86,7 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
     listTransferred(token, traded, msg.sender, start);
   }
 
-  function bid(uint256 id, uint256 amount) external override nonReentrant {
+  function bid(uint256 id, uint256 amount) external override {
     AuctionStruct storage auction = _auctions[id];
 
     // Check the auction has started
@@ -93,21 +99,19 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
       revert AuctionOver(block.timestamp, auction.end);
     }
 
-    // Check the amount is greater than the current bid
-    if (amount <= auction.bid) {
-      revert BidTooLow(amount, auction.bid);
-    }
-
     // Transfer the funds
+    // While this very easily could re-enter, the only checks so far have been on
+    // block.timestamp which will be static against start/end which will also be static
+    // (technically, end may be extended, yet that wouldn't change the above behavior)
+    // A re-enter could cause multiple bids to execute for this auction, yet no writes have happened yet
+    // All amounts would need to be legitimately transferred and the amount transferred is verified to
+    // be enough for a new bid below
     IERC20(auction.traded).safeTransferFrom(msg.sender, address(this), amount);
     amount = getTransferred(auction.traded);
-    // Check the amount actually transferred is greater than the current bid
-    // They would not be either due to fee on transfer or if the above external call
-    // re-entered into list/listTransferred. Neither of those are issues so long as this check exists
-    // This check should also make non-reentrancy into this function a non-issue, as any competing bid
-    // placement won't work unless it was higher than the previous bid, and lower than this one,
-    // in which case it'll process without issue
-    // All of these functions are still nonReentrant just to err on the side of caution
+
+    // Check the amount is greater than the current bid
+    // It would not be either due to fee on transfer or if the above external call
+    // re-entered into list/listTransferred/bid
     if (amount <= auction.bid) {
       revert BidTooLow(amount, auction.bid);
     }
@@ -118,11 +122,9 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
     }
 
     // Return funds
-    // If anything does peer in at this time, we don't have any partial state updates to view
-    // nonReentrant guarantees safety for updating variables after. Without it, we'd
-    // need to cache these and do it last
-    IERC20(auction.traded).safeTransfer(auction.bidder, auction.amount);
-    balances[auction.traded] = IERC20(auction.traded).balanceOf(address(this));
+    // Uses an internal mapping in case the transfer back fails for whatever reason,
+    // preventing further bids and enabling a cheap win
+    pending[auction.traded][auction.bidder] += auction.amount;
 
     // Update the bidder and bid
     auction.bidder = msg.sender;
@@ -136,13 +138,12 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
     }
   }
 
-  function complete(uint256 id) external override nonReentrant {
+  function complete(uint256 id) external override {
     AuctionStruct memory auction = _auctions[id];
     // Prevents re-entrancy regarding this auction and returns a gas refund
     // While other auctions can still be accessed during re-entry, the only side effect
     // is the fact token balances will be decreased. This means additional funds must be transferred in
-    // for list/listTransferred to even work, and since they won't be credited, this is never advantageous
-    // Though again, all functions do have nonReentrant just to be safe
+    // for list/listTransferred/bid to even work, and since they won't be credited, this is never advantageous
     delete _auctions[id];
 
     if (block.timestamp <= auction.end) {
@@ -150,19 +151,32 @@ contract Auction is ReentrancyGuardUpgradeable, IAuction {
     }
 
     // If no one bid, return the tokens to the seller
+    // If this auction was the result of a removal, this'll fail because they're not whitelisted
+    // Burn their tokens in this case
     if (auction.bidder == address(0)) {
-      IERC20(auction.token).safeTransfer(auction.seller, auction.amount);
-      balances[auction.token] = IERC20(auction.token).balanceOf(address(this));
+      if (!IWhitelist(auction.token).whitelisted(auction.seller)) {
+        IFrabricERC20(auction.token).burn(auction.amount);
+        balances[auction.token] = IERC20(auction.token).balanceOf(address(this));
+      } else {
+        pending[auction.token][auction.seller] += auction.amount;
+      }
       return;
     }
 
     // Else, transfer to the bidder
-    IERC20(auction.token).safeTransfer(auction.bidder, auction.amount);
-    balances[auction.token] = IERC20(auction.token).balanceOf(address(this));
-    IERC20(auction.traded).safeTransfer(auction.seller, auction.bid);
-    balances[auction.traded] = IERC20(auction.traded).balanceOf(address(this));
+    pending[auction.token][auction.bidder] += auction.amount;
+    pending[auction.traded][auction.seller] += auction.bid;
 
     emit AuctionCompleted(id);
+  }
+
+  function withdraw(address token, address trader) external override returns (uint256) {
+    uint256 amount = pending[token][trader];
+    pending[token][trader] = 0;
+    // pending has already been cleared. While someone could try to manipulate balances here,
+    // see the comment in complete for why this is pointless
+    IERC20(token).safeTransfer(trader, amount)
+    balances[token] = IERC20(token).balanceOf(address(this));
   }
 
   function auctionActive(uint256 id) external view override returns (bool) {
