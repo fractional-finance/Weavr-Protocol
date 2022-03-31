@@ -17,13 +17,13 @@ interface IAuction {
   event Bid(uint256 indexed id, address bidder, uint256 amount);
   event AuctionCompleted(uint256 indexed id);
 
-  function balances(address token) external returns (uint256);
-  function nextID() external returns (uint256);
+  function balances(address token, address amount) external returns (uint256);
 
-  function list(address token, address traded, uint256 amount, uint256 start) external;
-  function listTransferred(address token, address traded, address seller, uint256 start) external;
+  function list(address token, address traded, uint256 amount, uint256 start, uint256 time) external;
+  function listTransferred(address token, address traded, address seller, uint256 start, uint256 time) external;
   function bid(uint256 id, uint256 amount) external;
   function complete(uint256 id) external;
+  function withdraw(address token, address trader) external;
 
   function auctionActive(uint256 id) external view returns (bool);
   function getCurrentBidder(uint256 id) external view returns (address);
