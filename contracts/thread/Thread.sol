@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import "../interfaces/erc20/IDividendERC20.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
-import "../interfaces/frabric/IFrabric.sol";
 
 import "../dao/FrabricDAO.sol";
 
@@ -140,7 +139,7 @@ contract Thread is FrabricDAO, IThread {
       emit FrabricChanged(frabric, _frabrics[id]);
       frabric = _frabrics[id];
       // Update our parent whitelist to the new Frabric's
-      IFrabricERC20(erc20).setParentWhitelist(IFrabric(frabric).erc20());
+      IFrabricERC20(erc20).setParentWhitelist(IDAO(frabric).erc20());
       delete _frabrics[id];
 
     } else if (pType == ThreadProposalType.Dissolution) {

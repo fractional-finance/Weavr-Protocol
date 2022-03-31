@@ -16,9 +16,14 @@ module.exports = {
   deployFrabricERC20: async (beacon, args) => {
     const auction = await deployAuction();
     const FrabricERC20 = await ethers.getContractFactory("FrabricERC20");
-    const erc20 = await upgrades.deployBeaconProxy(beacon, FrabricERC20, [...args, auction.auction.address]);
+    const erc20 = await upgrades.deployBeaconProxy(
+      beacon,
+      FrabricERC20,
+      args == null ? [] : [...args, auction.auction.address],
+      args == null ? { initializer: false } : {}
+    );
     await erc20.deployed();
-    return { erc20, auction };
+    return { auctionProxy: auction.proxy, auction: auction.auction, erc20 };
   },
 
   deployFRBC: async (usdc) => {
@@ -36,7 +41,7 @@ module.exports = {
         usdc
       ]
     );
-    return { auctionProxy: frbc.auction.proxy, auction: frbc.auction.auction, beacon, frbc: frbc.erc20 };
+    return { auctionProxy: frbc.auctionProxy, auction: frbc.auction, beacon, frbc: frbc.erc20 };
   }
 };
 
