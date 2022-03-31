@@ -4,14 +4,12 @@ pragma solidity >=0.8.13;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
 import "../interfaces/lists/IWhitelist.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../interfaces/auction/IAuction.sol";
 
-contract Auction is OwnableUpgradeable, IAuction {
+contract Auction is IAuction {
   using SafeERC20 for IERC20;
 
   mapping(address => uint256) private _tokenBalances;
@@ -31,17 +29,6 @@ contract Auction is OwnableUpgradeable, IAuction {
   mapping(uint256 => AuctionStruct) private _auctions;
 
   mapping(address => mapping(address => uint256)) public override balances;
-
-  // Unlike the DEXRouter which is meant to be static to ensure safety of approvals,
-  // this Auction contract is ingrained into the Frabric and Threads. While this
-  // will also likely get approvals, its code is controlled by the Frabric, not each
-  // Thread, and it needs to be able to evolve with the protocol
-  function initialize() external initializer {
-    __Ownable_init();
-  }
-
-  /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {}
 
   // Not vulnerable to re-entrancy, despite being a balance based amount calculation,
   // as it's not before-after. It's stored-current. While someone could re-enter

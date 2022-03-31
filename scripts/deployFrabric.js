@@ -125,8 +125,10 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
   await frbc.setWhitelisted(frabric.address, ethers.utils.id("Frabric"));
 
   // Transfer ownership of everything to the Frabric
-  // Auction contract which only needs Ownership so its Beacon allows upgrading it
-  await auction.transferOwnership(frabric.address);
+  // The Auction isn't owned as it doesn't need to be
+  // While it does need to be upgraded, it tracks the (sole) release channel of its SingleBeacon
+  // That's what needs to be owned
+  await auctionProxy.transferOwnership(frabric.address);
   // FrabricERC20 beacon and FRBC
   await erc20Beacon.transferOwnership(frabric.address);
   await frbc.transferOwnership(frabric.address);
