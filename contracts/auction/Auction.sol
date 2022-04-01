@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -15,6 +16,7 @@ import "../interfaces/auction/IAuction.sol";
 
 contract Auction is Initializable, Composable, IAuctionSum {
   using SafeERC20 for IERC20;
+  using ERC165Checker for address;
 
   mapping(address => uint256) private _tokenBalances;
 
@@ -65,17 +67,14 @@ contract Auction is Initializable, Composable, IAuctionSum {
     // This is only intended to be used with Thread tokens, yet technically its
     // only Thread token reliance is on the whitelist function, as it needs to verify
     // bidders can actually receive the auction's tokens
-    // Call whitelist in order to verify we can, preventing auction creation if we can't
-    // If list was used, this will cause the tokens to be pending (by virtue of never
-    // being transferred). If listTransferred was used, someone sent tokens to a contract
+
+    // If listTransferred was used, and this check fails, someone sent tokens to a contract
     // when they shouldn't have and now they're trapped. They technically can be recovered
     // with a fake auction using them as a bid, or we could add a recovery function,
     // yet any recovery function would be voided via the above fake auction strategy
-    // Also, instead of ignoring the return value, check it because we're already here
-    // It should be noted fallback functions may not error here, and may return true
-    // There's only so much we can do
-    if (!IFrabricWhitelist(token).whitelisted(address(this))) {
-      revert NotWhitelisted(address(this));
+    // That makes it pointless
+    if (!token.supportsInterface(type(IFrabricWhitelist).interfaceId)) {
+      revert UnsupportedInterface(token, type(IFrabricWhitelist).interfaceId);
     }
 
     _auctions[_nextID] = AuctionStruct(token, traded, seller, amount, address(0), 0, start, length, start + length);

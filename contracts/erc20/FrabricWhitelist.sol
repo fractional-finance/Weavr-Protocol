@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.9;
 
+import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
+
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../common/Composable.sol";
@@ -9,6 +11,8 @@ import "../interfaces/erc20/IFrabricWhitelist.sol";
 
 // Whitelist which tracks a parent (if set), whitelists with KYC hashes instead of booleans, and can be disabled someday
 abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhitelistSum {
+  using ERC165Checker for address;
+
   bool public override global;
   // Whitelist used for the entire Frabric platform
   address public override parentWhitelist;
@@ -16,6 +20,12 @@ abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhiteli
   mapping(address => bytes32) public override info;
 
   function _setParentWhitelist(address parent) internal {
+    if ((parent != address(0)) && (!parent.supportsInterface(type(IFrabricWhitelist).interfaceId))) {
+      revert UnsupportedInterface(parent, type(IFrabricWhitelist).interfaceId);
+    }
+
+    // Does still emit even if address 0 was changed to address 0
+    // Used to signify address 0 as the parent is a conscious decision
     emit ParentWhitelistChange(parentWhitelist, parent);
     parentWhitelist = parent;
   }
@@ -31,6 +41,7 @@ abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhiteli
     if (info[person] == dataHash) {
       return;
     }
+
     emit WhitelistUpdate(person, info[person], dataHash);
     info[person] = dataHash;
   }

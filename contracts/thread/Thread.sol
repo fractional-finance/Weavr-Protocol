@@ -10,6 +10,7 @@ import "../interfaces/thread/IThread.sol";
 
 contract Thread is FrabricDAO, IThreadSum {
   using SafeERC20 for IERC20;
+  using ERC165Checker for address;
 
   address public override agent;
   address public override frabric;
@@ -97,6 +98,8 @@ contract Thread is FrabricDAO, IThreadSum {
     address _agent,
     string calldata info
   ) external override returns (uint256) {
+    // We could validate this agent is a valid governor at this time yet it's
+    // the Thread's choice to make
     _agents[_nextProposalID] = _agent;
     emit AgentChangeProposed(_nextProposalID, _agent);
     return _createProposal(uint256(ThreadProposalType.AgentChange), info);
@@ -106,6 +109,15 @@ contract Thread is FrabricDAO, IThreadSum {
     address _frabric,
     string calldata info
   ) external override returns (uint256) {
+    // This Frabric technically only has to implement the DAO code
+    // It's used for its erc20 (parent whitelist) and its voting period at this time
+    // Technically, the erc20 must implement FrabricWhitelist
+    // That is implied by this Frabric implementing IDAO and when this executes,
+    // setParentWhitelist is executed, confirming the FrabricWhitelist interface
+    // is supported
+    if (!_frabric.supportsInterface(type(IDAO).interfaceId)) {
+      revert UnsupportedInterface(_frabric, type(IDAO).interfaceId);
+    }
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
     return _createProposal(uint256(ThreadProposalType.FrabricChange), info);
@@ -144,6 +156,11 @@ contract Thread is FrabricDAO, IThreadSum {
     } else if (pType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);
       agent = _agents[id];
+      // Have the agent themselves complete this proposal to signify their consent
+      // to becoming the agent for this Thread
+      if (msg.sender != agent) {
+        revert NotAgent(msg.sender, agent);
+      }
       delete _agents[id];
 
     } else if (pType == ThreadProposalType.FrabricChange) {

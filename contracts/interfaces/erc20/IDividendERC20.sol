@@ -4,6 +4,7 @@ pragma solidity >=0.8.9;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 
+import "../common/Errors.sol";
 import "../common/IComposable.sol";
 
 interface IDividendERC20 {

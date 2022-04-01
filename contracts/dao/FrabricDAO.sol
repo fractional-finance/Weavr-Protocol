@@ -74,6 +74,20 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
     address code,
     string calldata info
   ) external returns (uint256) {
+    if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
+      revert UnsupportedInterface(beacon, type(IFrabricBeacon).interfaceId);
+    }
+
+    bytes32 instanceName = IComposable(instance).contractName();
+    if (instanceName != IComposable(code).contractName()) {
+      revert DifferentContract(instanceName, IComposable(code).contractName());
+    }
+    // This check is also performed by the Beacon itself when calling upgrade
+    // It's just optimal to prevent this proposal from ever existing and being pending if it's not valid
+    if (instanceName != IFrabricBeacon(beacon).beaconName()) {
+      revert DifferentContract(instanceName, IFrabricBeacon(beacon).beaconName());
+    }
+
     if (!_canProposeUpgrade(beacon, instance, code)) {
       revert ProposingUpgrade(beacon, instance, code);
     }

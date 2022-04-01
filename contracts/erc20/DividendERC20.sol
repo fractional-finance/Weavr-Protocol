@@ -6,7 +6,6 @@ import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgra
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
-import "../interfaces/common/Errors.sol";
 import "../common/Composable.sol";
 
 import "../interfaces/erc20/IDividendERC20.sol";

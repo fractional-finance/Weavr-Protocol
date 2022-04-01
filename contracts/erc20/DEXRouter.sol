@@ -40,6 +40,9 @@ contract DEXRouter is Composable, IDEXRouterSum {
   }
 
   function buy(address token, uint256 payment, uint256 price, uint256 minimumAmount) external {
+    // Doesn't bother checking the supported interfaces to minimize gas usage
+    // If this function executes in its entirety, then the contract has all needed functions
+
     IERC20 dexToken = IERC20(IIntegratedLimitOrderDEX(token).dexToken());
 
     // Transfer only the specified of capital
