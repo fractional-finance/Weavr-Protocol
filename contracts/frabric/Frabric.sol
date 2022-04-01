@@ -11,7 +11,7 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgrad
 // Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 
-import "../interfaces/bond/IBond.sol";
+import "../interfaces/frabric/IBond.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
 import "../interfaces/thread/IThread.sol";
 
@@ -240,17 +240,18 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
         // Delete for the gas savings
         delete _participants[id];
       } else {
-        if (participants.pType == ParticipantType.Governor) {
-          // A similar check exists in proposeParticipants yet that doesn't
-          // prevent the same proposal from existing multiple times. This is
-          // an edge case which should never happen, yet handling it means
-          // checking here to ensure if they already exist, they're not reset
-          // to Unverified. While we could error here, we may as well delete
-          // the invalid proposal and move on.
-          if (governor[address(bytes20(participants.participants))] != GovernorStatus.Null) {
-            delete _participants[id];
-            return;
-          }
+        // A similar check exists in proposeParticipants yet that doesn't
+        // prevent the same proposal from existing multiple times simultaneously.
+        // This is an edge case which should never happen, yet handling it means
+        // checking here to ensure if they already exist, they're not reset
+        // to Unverified. While we could error here, we may as well delete
+        // the invalid proposal and move on with life
+        if (
+          (participants.pType == ParticipantType.Governor) &&
+          (governor[address(bytes20(participants.participants))] != GovernorStatus.Null)
+        ) {
+          delete _participants[id];
+          return;
         }
 
         // Set this proposal as having passed so the KYC company can whitelist

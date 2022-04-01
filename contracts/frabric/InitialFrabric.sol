@@ -8,7 +8,7 @@ pragma solidity ^0.8.9;
 // Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 
-import "../interfaces/bond/IBond.sol";
+import "../interfaces/frabric/IBond.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
 import "../interfaces/thread/IThread.sol";
 

@@ -8,7 +8,7 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "../erc20/DividendERC20.sol";
 import "../interfaces/frabric/IFrabric.sol";
 
-import "../interfaces/bond/IBond.sol";
+import "../interfaces/frabric/IBond.sol";
 
 // Enables bonding a Uniswap v2 LP token
 // Stablecoin - Utility token LP will promote a healthy market and enable trivially determining USD bond amount

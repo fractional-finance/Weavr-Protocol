@@ -12,7 +12,7 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../common/Composable.sol";
 
-import "../interfaces/auction/IAuction.sol";
+import "../interfaces/erc20/IAuction.sol";
 
 contract Auction is Initializable, Composable, IAuctionSum {
   using SafeERC20 for IERC20;

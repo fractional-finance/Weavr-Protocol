@@ -8,7 +8,7 @@ import "./DividendERC20.sol";
 import "./FrabricWhitelist.sol";
 import "./IntegratedLimitOrderDEX.sol";
 
-import "../interfaces/auction/IAuction.sol";
+import "../interfaces/erc20/IAuction.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
 

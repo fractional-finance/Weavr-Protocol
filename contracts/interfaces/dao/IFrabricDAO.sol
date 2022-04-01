@@ -47,4 +47,3 @@ error ProposingUpgrade(address beacon, address instance, address code);
 error MintingDifferentToken(address specified, address token);
 error SellingWithDifferentTarget(address target, address expected);
 error NotRoundAmount(uint256 amount);
-error UnhandledEnumCase(string label, uint256 enumValue);
