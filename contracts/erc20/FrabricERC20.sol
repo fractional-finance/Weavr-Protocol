@@ -130,7 +130,9 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   }
 
   // Whitelist functions
-  function whitelisted(address person) public view override(IntegratedLimitOrderDEX, IWhitelist, FrabricWhitelist) returns (bool) {
+  function whitelisted(
+    address person
+  ) public view override(IntegratedLimitOrderDEX, IFrabricWhitelist, FrabricWhitelist) returns (bool) {
     return FrabricWhitelist.whitelisted(person);
   }
   function setParentWhitelist(address whitelist) external override onlyOwner {
