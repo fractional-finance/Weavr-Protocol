@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../interfaces/lists/IWhitelist.sol";
+import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../interfaces/auction/IAuction.sol";
@@ -58,7 +58,7 @@ contract Auction is IAuction {
     // Also, instead of ignoring the return value, check it because we're already here
     // It should be noted fallback functions may not error here, and may return true
     // There's only so much we can do
-    if (!IWhitelist(token).whitelisted(address(this))) {
+    if (!IFrabricWhitelist(token).whitelisted(address(this))) {
       revert NotWhitelisted(address(this));
     }
 
@@ -107,7 +107,7 @@ contract Auction is IAuction {
     }
 
     // Make sure they're whitelisted and can actually receive the funds if they win the auction
-    if (!IWhitelist(auction.token).whitelisted(msg.sender)) {
+    if (!IFrabricWhitelist(auction.token).whitelisted(msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
 
@@ -151,7 +151,7 @@ contract Auction is IAuction {
     // If this auction was the result of a removal, this'll fail because they're not whitelisted
     // Burn their tokens in this case
     if (auction.bidder == address(0)) {
-      if (!IWhitelist(auction.token).whitelisted(auction.seller)) {
+      if (!IFrabricWhitelist(auction.token).whitelisted(auction.seller)) {
         // In a try/catch to ensure this auction completes no matter what
         // This is the only external call in this function
         try IFrabricERC20(auction.token).burn(auction.amount) {} catch {}

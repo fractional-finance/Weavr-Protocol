@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import "./DividendERC20.sol";
-import "../lists/FrabricWhitelist.sol";
+import "./FrabricWhitelist.sol";
 import "./IntegratedLimitOrderDEX.sol";
 
 import "../interfaces/auction/IAuction.sol";

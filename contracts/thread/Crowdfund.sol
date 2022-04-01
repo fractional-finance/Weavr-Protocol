@@ -5,7 +5,7 @@ import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable
 import { IERC20MetadataUpgradeable as IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../interfaces/lists/IWhitelist.sol";
+import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/thread/ICrowdfund.sol";
 import "../interfaces/thread/IThread.sol";
 
@@ -118,7 +118,7 @@ contract Crowdfund is DividendERC20, ICrowdfund {
       revert ZeroAmount();
     }
 
-    if (!IWhitelist(whitelist).whitelisted(msg.sender)) {
+    if (!IFrabricWhitelist(whitelist).whitelisted(msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
 

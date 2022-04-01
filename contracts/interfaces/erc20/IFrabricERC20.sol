@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "./IDividendERC20.sol";
-import "../lists/IFrabricWhitelist.sol";
+import "./IFrabricWhitelist.sol";
 import "./IIntegratedLimitOrderDEX.sol";
 
 // Doesn't include Ownable, IERC20, IVotes, and IDividendERC20 due to linearization issues by solc

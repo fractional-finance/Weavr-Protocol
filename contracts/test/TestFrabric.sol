@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity ^0.8.13;
 
-import "../lists/FrabricWhitelist.sol";
+import "../erc20/FrabricWhitelist.sol";
 
 contract TestFrabric is FrabricWhitelist {
   // Used by the Thread to determine how long to delay enabling Upgrade proposals for

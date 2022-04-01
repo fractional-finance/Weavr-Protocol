@@ -6,7 +6,7 @@ import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgra
 
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import "../interfaces/lists/IWhitelist.sol";
+import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
 abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, IIntegratedLimitOrderDEX {
