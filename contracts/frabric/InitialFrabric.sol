@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.9;
 
 // Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
 // EIP712 was created over 4 years ago and has undegone multiple versions since

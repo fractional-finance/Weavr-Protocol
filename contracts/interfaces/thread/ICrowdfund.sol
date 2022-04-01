@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity >=0.8.13;
+pragma solidity >=0.8.9;
 
 // Imports the ILO DEX interface due to shared errors
 import "../erc20/IIntegratedLimitOrderDEX.sol";

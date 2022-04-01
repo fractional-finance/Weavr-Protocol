@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.9;
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { IERC20MetadataUpgradeable as IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
@@ -44,7 +44,10 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     address _token,
     uint256 _target
   ) external initializer {
-    __DividendERC20_init(string.concat("Crowdfund ", name), string.concat("CF-", symbol));
+    __DividendERC20_init(
+      string(abi.encodePacked("Crowdfund ", name)),
+      string(abi.encodePacked("CF-", symbol))
+    );
 
     __Composable_init();
     contractName = keccak256("Crowdfund");

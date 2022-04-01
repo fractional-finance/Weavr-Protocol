@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -76,13 +76,17 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
   // This could be anything from different Thread architectures to different lockup schemes
   function deploy(
     uint256 _variant,
-    address agent,
-    string memory name,
-    string memory symbol,
+    address _agent,
+    string memory _name,
+    string memory _symbol,
     bytes calldata data
   ) external override onlyOwner {
-    // Fixes a stack too deep error
+    // Fixes stack too deep errors
     uint256 variant = _variant;
+    address agent = _agent;
+    string memory name = _name;
+    string memory symbol = _symbol;
+
     if (variant != 0) {
       revert UnknownVariant(variant);
     }
@@ -94,13 +98,11 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
 
     address thread = address(new BeaconProxy(
       threadBeacon,
-      abi.encodeCall(
-        IThread.initialize,
-        (
-          erc20,
-          agent,
-          msg.sender
-        )
+      abi.encodeWithSelector(
+        IThreadSum.initialize.selector,
+        erc20,
+        agent,
+        msg.sender
       )
     ));
 
@@ -108,17 +110,15 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
 
     address crowdfund = address(new BeaconProxy(
       crowdfundProxy,
-      abi.encodeCall(
-        ICrowdfund.initialize,
-        (
-          name,
-          symbol,
-          parentWhitelist,
-          agent,
-          thread,
-          tradeToken,
-          target
-        )
+      abi.encodeWithSelector(
+        ICrowdfundSum.initialize.selector,
+        name,
+        symbol,
+        parentWhitelist,
+        agent,
+        thread,
+        tradeToken,
+        target
       )
     ));
 
