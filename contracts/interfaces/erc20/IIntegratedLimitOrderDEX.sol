@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.13;
 
-import "../errors/Common.sol";
+import "../common/Errors.sol";
+import "../common/IComposable.sol";
 
 interface IIntegratedLimitOrderDEX {
   enum OrderType { Null, Buy, Sell }
@@ -31,6 +32,8 @@ interface IIntegratedLimitOrderDEX {
   function getOrderTrader(uint256 price, uint256 i) external view returns (address);
   function getOrderAmount(uint256 price, uint256 i) external view returns (uint256);
 }
+
+interface IIntegratedLimitOrderDEXSum is IComposable, IIntegratedLimitOrderDEX {}
 
 error LessThanMinimumAmount(uint256 amount, uint256 minimumAmount);
 error NotEnoughFunds(uint256 required, uint256 balance);

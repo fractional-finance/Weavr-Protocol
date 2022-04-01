@@ -7,10 +7,13 @@ import { IVotesUpgradeable as IVotes } from "@openzeppelin/contracts-upgradeable
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
+
+import "../common/Composable.sol";
+
 import "../interfaces/dao/IDAO.sol";
 
 // DAO around a FrabricERC20
-abstract contract DAO is Initializable, IDAO {
+abstract contract DAO is Initializable, Composable, IDAOSum {
   struct Proposal {
     // The following are embedded into easily accessible events
     address creator;
@@ -38,6 +41,8 @@ abstract contract DAO is Initializable, IDAO {
   mapping(uint256 => bool) public override passed;
 
   function __DAO_init(address _erc20, uint256 _votingPeriod) internal onlyInitializing {
+    supportsInterface[type(IDAO).interfaceId] = true;
+
     erc20 = _erc20;
     votingPeriod = _votingPeriod;
   }
@@ -107,7 +112,7 @@ abstract contract DAO is Initializable, IDAO {
     // Threads keep token balances until someone calls remove on them
     // This check prevents them from voting in the meantime, even though it could
     // eventually be handled by calling remove and cancelProposal when the time comes
-    if (!IFrabricERC20(erc20).whitelisted(msg.sender)) {
+    if (!IFrabricWhitelist(erc20).whitelisted(msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
 

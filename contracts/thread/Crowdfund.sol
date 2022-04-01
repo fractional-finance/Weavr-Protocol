@@ -12,7 +12,7 @@ import "../interfaces/thread/IThread.sol";
 import "../erc20/DividendERC20.sol";
 
 // Uses DividendERC20 for the distribution logic
-contract Crowdfund is DividendERC20, ICrowdfund {
+contract Crowdfund is DividendERC20, ICrowdfundSum {
   using SafeERC20 for IERC20;
 
   // Could be gas optimized using 1/2 instead of false/true
@@ -44,7 +44,13 @@ contract Crowdfund is DividendERC20, ICrowdfund {
     address _token,
     uint256 _target
   ) external initializer {
-    __ERC20_init(string.concat("Crowdfund ", name), string.concat("CF-", symbol));
+    __DividendERC20_init(string.concat("Crowdfund ", name), string.concat("CF-", symbol));
+
+    __Composable_init();
+    contractName = keccak256("Crowdfund");
+    version = 1;
+    supportsInterface[type(ICrowdfund).interfaceId] = true;
+
     whitelist = _whitelist;
     agent = _agent;
     thread = _thread;
@@ -64,7 +70,9 @@ contract Crowdfund is DividendERC20, ICrowdfund {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {}
+  constructor() initializer {
+    contractName = keccak256("Crowdfund");
+  }
 
   // Match the decimals of the underlying ERC20 which this ERC20 maps to
   // If no decimals are specified, assumes 18
@@ -236,6 +244,6 @@ contract Crowdfund is DividendERC20, ICrowdfund {
       revert ZeroAmount();
     }
     burnInternal(depositor, balance);
-    IERC20(IThread(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
+    IERC20(IDAO(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
   }
 }

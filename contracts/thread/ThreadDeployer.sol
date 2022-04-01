@@ -16,11 +16,11 @@ import "../interfaces/thread/IThread.sol";
 import "../interfaces/thread/ICrowdfund.sol";
 import "../interfaces/erc20/ITimelock.sol";
 
-import "../interfaces/frabric/IFrabric.sol";
+import "../common/Composable.sol";
 
 import "../interfaces/thread/IThreadDeployer.sol";
 
-contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
+contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
   using SafeERC20 for IERC20;
 
   address public override crowdfundProxy;
@@ -38,6 +38,12 @@ contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
   ) public override initializer {
     __Ownable_init();
 
+    __Composable_init();
+    contractName = keccak256("ThreadDeployer");
+    version = 1;
+    supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
+    supportsInterface[type(IThreadDeployer).interfaceId] = true;
+
     // This is technically a beacon to keep things consistent
     // That said, it can't actually upgrade itself and has no owner to upgrade it
     // Because of that, it's called a proxy instead of a beacon
@@ -52,7 +58,9 @@ contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {}
+  constructor() initializer {
+    contractName = keccak256("ThreadDeployer");
+  }
 
   // Validates a variant and byte data
   function validate(uint256 variant, bytes calldata data) external pure {
@@ -96,7 +104,7 @@ contract ThreadDeployer is OwnableUpgradeable, IThreadDeployer {
       )
     ));
 
-    address parentWhitelist = IFrabric(owner()).erc20();
+    address parentWhitelist = IDAO(owner()).erc20();
 
     address crowdfund = address(new BeaconProxy(
       crowdfundProxy,

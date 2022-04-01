@@ -19,7 +19,7 @@ import "../interfaces/bond/IBond.sol";
 
 // Emits a DividendERC20 for dividend functionality (as expected) and so Governors have a reminder of their Bond quantity on Etherscan
 
-contract Bond is OwnableUpgradeable, DividendERC20, IBond {
+contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
   using SafeERC20 for IERC20;
 
   address public override usd;
@@ -30,6 +30,12 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBond {
   function initialize(address _usd, address _token) external initializer {
     __Ownable_init();
     __DividendERC20_init("Frabric Bond", "bFBRC");
+
+    __Composable_init();
+    contractName = keccak256("Bond");
+    version = 1;
+    supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
+    supportsInterface[type(IBond).interfaceId] = true;
 
     usd = _usd;
     token = _token;
@@ -43,7 +49,9 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBond {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {}
+  constructor() initializer {
+    contractName = keccak256("Bond");
+  }
 
   function _beforeTokenTransfer(address from, address, uint256) internal view override {
     // from == address(0) means it's being minted

@@ -4,12 +4,16 @@ pragma solidity >=0.8.13;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
+import "../common/Composable.sol";
+
 import "../interfaces/auction/IAuction.sol";
 
-contract Auction is IAuction {
+contract Auction is Initializable, Composable, IAuctionSum {
   using SafeERC20 for IERC20;
 
   mapping(address => uint256) private _tokenBalances;
@@ -29,6 +33,18 @@ contract Auction is IAuction {
   mapping(uint256 => AuctionStruct) private _auctions;
 
   mapping(address => mapping(address => uint256)) public override balances;
+
+  function initialize() external initializer {
+    __Composable_init();
+    contractName = keccak256("Auction");
+    version = 1;
+    supportsInterface[type(IAuction).interfaceId] = true;
+  }
+
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() initializer {
+    contractName = keccak256("Auction");
+  }
 
   // Not vulnerable to re-entrancy, despite being a balance based amount calculation,
   // as it's not before-after. It's stored-current. While someone could re-enter

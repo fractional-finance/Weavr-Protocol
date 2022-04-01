@@ -3,7 +3,7 @@ pragma solidity >=0.8.13;
 
 import "../dao/IFrabricDAO.sol";
 
-interface IThread is IFrabricDAO {
+interface IThread {
   event AgentChangeProposed(uint256 indexed id, address indexed agent);
   event FrabricChangeProposed(uint256 indexed id, address indexed frabric);
   event DissolutionProposed(uint256 indexed id, address indexed purchaser, address indexed token, uint256 amount);
@@ -23,12 +23,6 @@ interface IThread is IFrabricDAO {
   function frabric() external view returns (address);
   function upgradesEnabled() external view returns (uint256);
 
-  function initialize(
-    address _erc20,
-    address _agent,
-    address _frabric
-  ) external;
-
   function proposeEnablingUpgrades(string calldata info) external returns (uint256);
   function proposeAgentChange(
     address _agent,
@@ -44,5 +38,7 @@ interface IThread is IFrabricDAO {
     string calldata info
   ) external returns (uint256);
 }
+
+interface IThreadSum is IFrabricDAOSum, IThread {}
 
 error NotAgent(address caller, address agent);

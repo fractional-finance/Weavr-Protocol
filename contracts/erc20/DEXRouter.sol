@@ -5,6 +5,9 @@ import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
+
+import "../common/Composable.sol";
+
 import "../interfaces/erc20/IDEXRouter.sol";
 
 // The IntegratedLimitOrderDEX has an issue where it can be upgraded with the FrabricERC20 by a Thread
@@ -24,10 +27,17 @@ import "../interfaces/erc20/IDEXRouter.sol";
 // only to sell them or provide liquidity (a form of holding yet one requiring equal
 // capital lockup while providing a service others can take advantage of)
 
-contract DEXRouter is IDEXRouter {
+contract DEXRouter is Composable, IDEXRouterSum {
   using SafeERC20 for IERC20;
 
   mapping(address => bool) internal _approved;
+
+  constructor() {
+    __Composable_init();
+    contractName = keccak256("DEXRouter");
+    version = type(uint256).max;
+    supportsInterface[type(IDEXRouter).interfaceId] = true;
+  }
 
   function buy(address token, uint256 payment, uint256 price, uint256 minimumAmount) external {
     IERC20 dexToken = IERC20(IIntegratedLimitOrderDEX(token).dexToken());

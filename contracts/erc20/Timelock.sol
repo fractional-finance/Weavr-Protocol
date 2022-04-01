@@ -6,12 +6,14 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "../common/Composable.sol";
+
 import "../interfaces/erc20/ITimelock.sol";
 
 // Just as the Thread can upgrade to claw back tokens, the Frabric could theoretically
 // upgrade the ThreadDeployer to void its timelock. This non-upgradeable contract
 // enforces it
-contract Timelock is Ownable, ITimelock {
+contract Timelock is Ownable, Composable, ITimelockSum {
   using SafeERC20 for IERC20;
 
   struct LockStruct {
@@ -20,7 +22,13 @@ contract Timelock is Ownable, ITimelock {
   }
   mapping(address => LockStruct) internal _locks;
 
-  constructor() Ownable() {}
+  constructor() Ownable() {
+    __Composable_init();
+    contractName = keccak256("Timelock");
+    version = type(uint256).max;
+    supportsInterface[type(Ownable).interfaceId] = true;
+    supportsInterface[type(ITimelock).interfaceId] = true;
+  }
 
   function lock(address token, uint256 months) external override onlyOwner {
     LockStruct storage _lock = _locks[token];

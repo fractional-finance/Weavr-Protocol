@@ -6,7 +6,7 @@ import "../erc20/IIntegratedLimitOrderDEX.sol";
 
 import "../erc20/IDividendERC20.sol";
 
-interface ICrowdfund is IDividendERC20 {
+interface ICrowdfund {
   enum State {
     Active,
     Executing,
@@ -31,16 +31,6 @@ interface ICrowdfund is IDividendERC20 {
 
   function state() external view returns (State);
 
-  function initialize(
-    string memory name,
-    string memory symbol,
-    address _whitelist,
-    address _agent,
-    address _thread,
-    address _token,
-    uint256 _target
-  ) external;
-
   function normalizeRaiseToThread(uint256 amount) external returns (uint256);
 
   function deposit(uint256 amount) external;
@@ -51,6 +41,8 @@ interface ICrowdfund is IDividendERC20 {
   function finish() external;
   function burn(address depositor) external;
 }
+
+interface ICrowdfundSum is IDividendERC20Sum, ICrowdfund {}
 
 error CrowdfundTransfer();
 error InvalidState(ICrowdfund.State current, ICrowdfund.State expected);

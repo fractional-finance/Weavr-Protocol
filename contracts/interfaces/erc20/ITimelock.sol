@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.13;
+
+import "../common/IComposable.sol";
 
 interface ITimelock {
   event Lock(address indexed token, uint256 indexed months);
@@ -11,6 +13,8 @@ interface ITimelock {
   function getLockNextTime(address token) external view returns (uint256);
   function getLockRemainingMonths(address token) external view returns (uint256);
 }
+
+interface ITimelockSum is IComposableSum, ITimelock {}
 
 error AlreadyLocked(address token);
 error Locked(address token, uint256 time, uint256 nextTime);

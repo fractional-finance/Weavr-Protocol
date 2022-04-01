@@ -8,7 +8,7 @@ import "../dao/FrabricDAO.sol";
 
 import "../interfaces/thread/IThread.sol";
 
-contract Thread is FrabricDAO, IThread {
+contract Thread is FrabricDAO, IThreadSum {
   using SafeERC20 for IERC20;
 
   address public override agent;
@@ -35,6 +35,12 @@ contract Thread is FrabricDAO, IThread {
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
     __FrabricDAO_init(_erc20, 1 weeks);
+
+    __Composable_init();
+    contractName = keccak256("Thread");
+    version = 1;
+    supportsInterface[type(IThread).interfaceId] = true;
+
     agent = _agent;
     frabric = _frabric;
     emit AgentChanged(address(0), agent);
@@ -42,13 +48,18 @@ contract Thread is FrabricDAO, IThread {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {}
+  constructor() initializer {
+    contractName = keccak256("Thread");
+  }
 
+  // Allows proposing even when paused so TokenActions can be issued to recover funds
+  // from this DAO. Also theoretically enables proposing an Upgrade to undo the pause
+  // if that's desired for whatever reason
   function canPropose() public view override(IDAO, DAO) returns (bool) {
     return (
       // Whitelisted token holder
       (
-        IFrabricERC20(erc20).whitelisted(msg.sender) &&
+        IFrabricWhitelist(erc20).whitelisted(msg.sender) &&
         (IERC20(erc20).balanceOf(msg.sender) != 0)
       ) ||
       // Both of these should also be whitelisted. It's not technically a requirement however

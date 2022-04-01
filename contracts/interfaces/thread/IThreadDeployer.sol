@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.13;
 
+import "../common/IComposable.sol";
+
 interface IThreadDeployer {
   event Thread(
     uint256 indexed variant,
@@ -17,14 +19,6 @@ interface IThreadDeployer {
   function auction() external view returns (address);
   function timelock() external view returns (address);
 
-  function initialize(
-    address _crowdfundProxy,
-    address _erc20Beacon,
-    address _threadBeacon,
-    address auction,
-    address timelock
-  ) external;
-
   function validate(uint256 varaint, bytes calldata data) external view;
 
   function deploy(
@@ -38,6 +32,8 @@ interface IThreadDeployer {
   function recover(address erc20) external;
   function claimTimelock(address erc20) external;
 }
+
+interface IThreadDeployerSum is IComposableSum, IThreadDeployer {}
 
 error UnknownVariant(uint256 id);
 error NonStaticDecimals(uint8 beforeDecimals, uint8 afterDecimals);

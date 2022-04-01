@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.13;
 
+import "../common/IComposable.sol";
+
 interface IDAO {
   enum ProposalState {
     Active,
@@ -37,6 +39,8 @@ interface IDAO {
   function proposalVotes(uint256 id) external view returns (int256);
   function proposalTotalVotes(uint256 id) external view returns (uint256);
 }
+
+interface IDAOSum is IComposable, IDAO {}
 
 error NotAuthorizedToPropose(address caller);
 error InactiveProposal(uint256 id);

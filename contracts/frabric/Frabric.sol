@@ -19,7 +19,7 @@ import "../dao/FrabricDAO.sol";
 
 import "../interfaces/frabric/IFrabric.sol";
 
-contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
+contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   mapping(address => ParticipantType) public participant;
 
   address public override bond;
@@ -71,6 +71,11 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
     __EIP712_init("Frabric Protocol", "1");
     __FrabricDAO_init(_erc20, 2 weeks);
 
+    __Composable_init();
+    contractName = "Frabric";
+    version = 2;
+    supportsInterface[type(IFrabric).interfaceId] = true;
+
     // Simulate a full DAO proposal to add the genesis participants
     emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesisMerkle);
     emit NewProposal(_nextProposalID, uint256(FrabricProposalType.Participants), address(0), "Genesis Participants");
@@ -92,7 +97,9 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabric {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {}
+  constructor() initializer {
+    contractName = keccak256("Frabric");
+  }
 
   function canPropose() public view override(IDAO, DAO) returns (bool) {
     return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);

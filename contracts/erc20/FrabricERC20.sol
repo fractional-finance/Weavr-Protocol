@@ -15,7 +15,7 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 // FrabricERC20s are tokens with a built in limit order DEX, along with governance and dividend functionality
 // The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
-contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20 {
+contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Sum {
   bool public override mintable;
   address public override auction;
   bool internal _removal;
@@ -29,11 +29,18 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     address dexToken,
     address _auction
   ) external initializer {
-    __DividendERC20_init(name, symbol);
     __Ownable_init();
     __Pausable_init();
+    __DividendERC20_init(name, symbol);
     __FrabricWhitelist_init(parentWhitelist);
     __IntegratedLimitOrderDEX_init(dexToken);
+
+    __Composable_init();
+    contractName = keccak256("FrabricERC20");
+    version = 1;
+    supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
+    supportsInterface[type(PausableUpgradeable).interfaceId] = true;
+    supportsInterface[type(IFrabricERC20).interfaceId] = true;
 
     // Whitelist the initializer
     // This is the Frabric's deployer/the ThreadDeployer
@@ -57,13 +64,17 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {}
+  constructor() initializer {
+    contractName = keccak256("FrabricERC20");
+  }
 
   // Redefine ERC20 functions so the DEX can pick them up as overrides and call them
   function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {
     ERC20Upgradeable._transfer(from, to, amount);
   }
-  function balanceOf(address account) public view override(ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint256) {
+  function balanceOf(
+    address account
+  ) public view override(IERC20Upgradeable, ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint256) {
     return ERC20Upgradeable.balanceOf(account);
   }
   function decimals() public view override(ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint8) {
@@ -153,10 +164,6 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
       _removal = true;
       remove(person);
     }
-  }
-
-  function globallyAccept() external override onlyOwner {
-    _globallyAccept();
   }
 
   // Pause functions

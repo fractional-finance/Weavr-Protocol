@@ -6,10 +6,12 @@ import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgra
 
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
+import "../common/Composable.sol";
+
 import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
-abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, IIntegratedLimitOrderDEX {
+abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composable, IIntegratedLimitOrderDEXSum {
   using SafeERC20 for IERC20;
 
   // Token to trade against, presumably a USD stablecoin or WETH
@@ -42,6 +44,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, IIntegr
 
   function __IntegratedLimitOrderDEX_init(address _dexToken) internal onlyInitializing {
     __ReentrancyGuard_init();
+    supportsInterface[type(IIntegratedLimitOrderDEX).interfaceId] = true;
     dexToken = _dexToken;
   }
 

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 import "../interfaces/beacon/IFrabricBeacon.sol";
@@ -16,8 +17,9 @@ import "../interfaces/dao/IFrabricDAO.sol";
 // This offers smaller, more compartamentalized code, and directly integrating the two
 // doesn't actually offer any efficiency benefits. The new structs, the new variables, and
 // the new code are still needed, meaning it really just inlines _completeProposal
-abstract contract FrabricDAO is IFrabricDAO, DAO {
+abstract contract FrabricDAO is DAO, IFrabricDAOSum {
   using SafeERC20 for IERC20;
+  using ERC165Checker for address;
 
   uint256 constant public commonProposalBit = 1 << 255;
 
@@ -41,6 +43,7 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
 
   function __FrabricDAO_init(address _erc20, uint256 _votingPeriod) internal onlyInitializing {
     __DAO_init(_erc20, _votingPeriod);
+    supportsInterface[type(IFrabricDAO).interfaceId] = true;
   }
 
   function proposePaper(string calldata info) external returns (uint256) {
@@ -108,6 +111,11 @@ abstract contract FrabricDAO is IFrabricDAO, DAO {
       // This enables minting and directly selling tokens, and removes mutability reducing scope
       if (target != address(this)) {
         revert SellingWithDifferentTarget(target, address(this));
+      }
+
+      // Ensure that we know how to sell this token
+      if (!token.supportsInterface(type(IIntegratedLimitOrderDEX).interfaceId)) {
+        revert UnsupportedInterface(token, type(IIntegratedLimitOrderDEX).interfaceId);
       }
 
       // Because this is an ILO DEX, amount here will be atomic yet the ILO DEX

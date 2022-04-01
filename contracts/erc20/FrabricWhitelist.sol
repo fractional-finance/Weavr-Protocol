@@ -3,11 +3,12 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+import "../common/Composable.sol";
 
 import "../interfaces/erc20/IFrabricWhitelist.sol";
 
 // Whitelist which tracks a parent (if set), whitelists with KYC hashes instead of booleans, and can be disabled someday
-abstract contract FrabricWhitelist is Initializable, IFrabricWhitelist {
+abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhitelistSum {
   bool public override global;
   // Whitelist used for the entire Frabric platform
   address public override parentWhitelist;
@@ -20,6 +21,7 @@ abstract contract FrabricWhitelist is Initializable, IFrabricWhitelist {
   }
 
   function __FrabricWhitelist_init(address parent) internal onlyInitializing {
+    supportsInterface[type(IFrabricWhitelist).interfaceId] = true;
     _setParentWhitelist(parent);
   }
 

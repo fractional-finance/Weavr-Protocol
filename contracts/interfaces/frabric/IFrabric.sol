@@ -3,7 +3,7 @@ pragma solidity >=0.8.13;
 
 import "../dao/IFrabricDAO.sol";
 
-interface IFrabric is IFrabricDAO {
+interface IFrabric {
   enum FrabricProposalType {
     Participants,
     RemoveBond,
@@ -67,15 +67,6 @@ interface IFrabric is IFrabricDAO {
 
   function governor(address governor) external view returns (GovernorStatus);
 
-  function initialize(
-    address _erc20,
-    address[] calldata genesis,
-    bytes32 genesisMerkle,
-    address _bond,
-    address _threadDeployer,
-    address _kyc
-  ) external;
-
   function proposeParticipants(
     ParticipantType participantType,
     bytes32 participants,
@@ -110,6 +101,8 @@ interface IFrabric is IFrabricDAO {
     bytes calldata signature
   ) external;
 }
+
+interface IFrabricSum is IFrabricDAOSum, IFrabric {}
 
 error ProposingNullParticipants();
 error ProposingGenesisParticipants();

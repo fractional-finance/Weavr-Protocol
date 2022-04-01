@@ -5,20 +5,9 @@ import "./IDividendERC20.sol";
 import "./IFrabricWhitelist.sol";
 import "./IIntegratedLimitOrderDEX.sol";
 
-// Doesn't include Ownable, IERC20, IVotes, and IDividendERC20 due to linearization issues by solc
-interface IFrabricERC20 is IFrabricWhitelist, IIntegratedLimitOrderDEX {
+interface IFrabricERC20 {
   function mintable() external view returns (bool);
   function auction() external view returns (address);
-
-  function initialize(
-    string memory name,
-    string memory symbol,
-    uint256 supply,
-    bool mintable,
-    address parentWhitelist,
-    address dexToken,
-    address auction
-  ) external;
 
   function mint(address to, uint256 amount) external;
   function burn(uint256 amount) external;
@@ -26,12 +15,13 @@ interface IFrabricERC20 is IFrabricWhitelist, IIntegratedLimitOrderDEX {
 
   function setParentWhitelist(address whitelist) external;
   function setWhitelisted(address person, bytes32 dataHash) external;
-  function globallyAccept() external;
 
   function paused() external view returns (bool);
   function pause() external;
   function unpause() external;
 }
+
+interface IFrabricERC20Sum is IDividendERC20Sum, IFrabricWhitelist, IIntegratedLimitOrderDEX, IFrabricERC20 {}
 
 error SupplyExceedsUInt112(uint256 supply);
 error NotMintable();

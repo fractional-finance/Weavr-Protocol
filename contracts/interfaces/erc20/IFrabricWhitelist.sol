@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.13;
 
+import "../common/IComposable.sol";
+
 interface IFrabricWhitelist {
   event ParentWhitelistChange(address oldParent, address newParent);
   // Info shouldn't be indexed when you consider it's unique per-person
@@ -16,5 +18,7 @@ interface IFrabricWhitelist {
   function whitelisted(address person) external view returns (bool);
   function explicitlyWhitelisted(address person) external view returns (bool);
 }
+
+interface IFrabricWhitelistSum is IComposable, IFrabricWhitelist {}
 
 error NotWhitelisted(address person);

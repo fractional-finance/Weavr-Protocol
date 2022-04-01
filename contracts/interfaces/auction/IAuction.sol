@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.13;
 
-import "../errors/Common.sol";
+import "../common/Errors.sol";
+import "../common/IComposable.sol";
 
 interface IAuction {
   // Indexes the ID as expected, the token so people can find auctions by the token being sold,
@@ -30,6 +31,8 @@ interface IAuction {
   function getCurrentBid(uint256 id) external view returns (uint256);
   function getEndTime(uint256 id) external view returns (uint256);
 }
+
+interface IAuctionSum is IComposableSum, IAuction {}
 
 error AuctionPending(uint256 time, uint256 start);
 error AuctionOver(uint256 time, uint256 end);

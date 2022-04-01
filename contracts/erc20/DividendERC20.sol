@@ -6,11 +6,13 @@ import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgra
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
-import "../interfaces/errors/Common.sol";
+import "../interfaces/common/Errors.sol";
+import "../common/Composable.sol";
+
 import "../interfaces/erc20/IDividendERC20.sol";
 
 // ERC20 Votes expanded with dividend functionality
-abstract contract DividendERC20 is ERC20VotesUpgradeable, IDividendERC20 {
+abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendERC20Sum {
   using SafeERC20 for IERC20;
 
   struct Distribution {
@@ -25,15 +27,22 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, IDividendERC20 {
     __ERC20_init(name, symbol);
     __ERC20Permit_init(name);
     __ERC20Votes_init();
+
+    supportsInterface[type(IERC20).interfaceId] = true;
+    supportsInterface[type(IERC20PermitUpgradeable).interfaceId] = true;
+    supportsInterface[type(IVotesUpgradeable).interfaceId] = true;
+    supportsInterface[type(IDividendERC20).interfaceId] = true;
   }
 
   // Disable delegation to enable dividends
   // Removes the need to track both historical balances AND historical voting power
   // Also resolves legal liability which is currently not fully explored and may be a concern
-  function delegate(address) public pure override {
+  function delegate(address) public pure override(IVotesUpgradeable, ERC20VotesUpgradeable) {
     revert Delegation();
   }
-  function delegateBySig(address, uint256, uint256, uint8, bytes32, bytes32) public pure override {
+  function delegateBySig(
+    address, uint256, uint256, uint8, bytes32, bytes32
+  ) public pure override(IVotesUpgradeable, ERC20VotesUpgradeable) {
     revert Delegation();
   }
 
