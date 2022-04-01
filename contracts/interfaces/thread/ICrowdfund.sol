@@ -42,7 +42,17 @@ interface ICrowdfund {
   function burn(address depositor) external;
 }
 
-interface ICrowdfundSum is IDividendERC20Sum, ICrowdfund {}
+interface ICrowdfundSum is IDividendERC20Sum, ICrowdfund {
+  function initialize(
+    string memory name,
+    string memory symbol,
+    address _whitelist,
+    address _agent,
+    address _thread,
+    address _token,
+    uint256 _target
+  ) external;
+}
 
 error CrowdfundTransfer();
 error InvalidState(ICrowdfund.State current, ICrowdfund.State expected);

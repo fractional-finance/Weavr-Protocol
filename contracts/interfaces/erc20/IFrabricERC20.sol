@@ -21,7 +21,17 @@ interface IFrabricERC20 {
   function unpause() external;
 }
 
-interface IFrabricERC20Sum is IDividendERC20Sum, IFrabricWhitelist, IIntegratedLimitOrderDEX, IFrabricERC20 {}
+interface IFrabricERC20Sum is IDividendERC20Sum, IFrabricWhitelist, IIntegratedLimitOrderDEX, IFrabricERC20 {
+  function initialize(
+    string memory name,
+    string memory symbol,
+    uint256 supply,
+    bool mintable,
+    address parentWhitelist,
+    address dexToken,
+    address auction
+  ) external;
+}
 
 error SupplyExceedsUInt112(uint256 supply);
 error NotMintable();

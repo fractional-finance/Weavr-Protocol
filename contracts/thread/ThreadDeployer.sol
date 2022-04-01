@@ -35,7 +35,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     address _threadBeacon,
     address _auction,
     address _timelock
-  ) public override initializer {
+  ) external initializer {
     __Ownable_init();
 
     __Composable_init();
@@ -130,7 +130,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
     // Add 6% on top for the Thread
     uint256 threadTokenSupply = threadBaseTokenSupply * 106 / 100;
-    IFrabricERC20(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken, auction);
+    IFrabricERC20Sum(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken, auction);
     if (decimals != IERC20Metadata(erc20).decimals()) {
       revert NonStaticDecimals(decimals, IERC20Metadata(erc20).decimals());
     }

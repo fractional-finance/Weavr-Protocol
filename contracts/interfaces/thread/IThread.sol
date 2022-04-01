@@ -39,6 +39,12 @@ interface IThread {
   ) external returns (uint256);
 }
 
-interface IThreadSum is IFrabricDAOSum, IThread {}
+interface IThreadSum is IFrabricDAOSum, IThread {
+  function initialize(
+    address _erc20,
+    address _agent,
+    address _frabric
+  ) external;
+}
 
 error NotAgent(address caller, address agent);
