@@ -3,8 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-
 import "../erc20/DividendERC20.sol";
 import "../interfaces/frabric/IFrabric.sol";
 
@@ -37,13 +35,10 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
     supportsInterface[type(IBond).interfaceId] = true;
 
+    // Tracks USD now to enable bond value detection in the future without shifting storage
+    // Minor forethought that doesn't really matter yet still advantageous
     usd = _usd;
     token = _token;
-
-    // Verify the specified bond token actually uses this USD token on one side
-    if ((IUniswapV2Pair(token).token0() != usd) && (IUniswapV2Pair(token).token1() != usd)) {
-      revert InvalidBondToken(usd, IUniswapV2Pair(token).token0(), IUniswapV2Pair(token).token1());
-    }
 
     _burning = false;
   }
@@ -84,13 +79,13 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
   // and the community, thinking that's beneficial, votes on it before slashing them
   function unbond(address governor, uint256 amount) external override onlyOwner {
     _burn(governor, amount);
-    IERC20(token).safeTransfer(governor, amount);
     emit Unbond(governor, amount);
+    IERC20(token).safeTransfer(governor, amount);
   }
 
   function slash(address governor, uint256 amount) external override onlyOwner {
     _burn(governor, amount);
-    IERC20(token).safeTransfer(owner(),  amount);
     emit Slash(governor, amount);
+    IERC20(token).safeTransfer(owner(),  amount);
   }
 }

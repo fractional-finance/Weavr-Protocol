@@ -20,6 +20,5 @@ interface IBond {
 
 interface IBondSum is IComposableSum, IBond {}
 
-error InvalidBondToken(address required, address token0, address token1);
 error BondTransfer();
 error NotActiveGovernor(address governor, IFrabric.GovernorStatus status);

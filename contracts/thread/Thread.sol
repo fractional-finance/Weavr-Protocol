@@ -160,19 +160,20 @@ contract Thread is FrabricDAO, IThreadSum {
     } else if (pType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);
       agent = _agents[id];
+      delete _agents[id];
+
       // Have the agent themselves complete this proposal to signify their consent
       // to becoming the agent for this Thread
       if (msg.sender != agent) {
         revert NotAgent(msg.sender, agent);
       }
-      delete _agents[id];
 
     } else if (pType == ThreadProposalType.FrabricChange) {
       emit FrabricChanged(frabric, _frabrics[id]);
       frabric = _frabrics[id];
+      delete _frabrics[id];
       // Update our parent whitelist to the new Frabric's
       IFrabricERC20(erc20).setParentWhitelist(IDAO(frabric).erc20());
-      delete _frabrics[id];
 
     } else if (pType == ThreadProposalType.Dissolution) {
       // Prevent the Thread from being locked up in a Dissolution the agent won't honor for whatever reason
@@ -186,7 +187,7 @@ contract Thread is FrabricDAO, IThreadSum {
       Dissolution storage dissolution = _dissolutions[id];
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.price);
       IFrabricERC20(erc20).pause();
-      IERC20(dissolution.token).approve(erc20, dissolution.price);
+      IERC20(dissolution.token).safeIncreaseAllowance(erc20, dissolution.price);
       // See IFrabricERC20 for why that doesn't include IDividendERC20 despite FrabricERC20 being a DividendERC20
       IDividendERC20(erc20).distribute(dissolution.token, dissolution.price);
       emit Dissolved(id);

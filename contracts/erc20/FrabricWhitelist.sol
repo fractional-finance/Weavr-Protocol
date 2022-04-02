@@ -13,6 +13,8 @@ import "../interfaces/erc20/IFrabricWhitelist.sol";
 abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhitelistSum {
   using ERC165Checker for address;
 
+  // This is intended to be settable without an upgrade in the future, yet no path currently will
+  // A future upgrade may add a governance-followable path to set it
   bool public override global;
   // Whitelist used for the entire Frabric platform
   address public override parentWhitelist;
@@ -32,6 +34,7 @@ abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhiteli
 
   function __FrabricWhitelist_init(address parent) internal onlyInitializing {
     supportsInterface[type(IFrabricWhitelist).interfaceId] = true;
+    global = false;
     _setParentWhitelist(parent);
   }
 

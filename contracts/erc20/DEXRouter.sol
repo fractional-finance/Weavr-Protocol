@@ -30,8 +30,6 @@ import "../interfaces/erc20/IDEXRouter.sol";
 contract DEXRouter is Composable, IDEXRouterSum {
   using SafeERC20 for IERC20;
 
-  mapping(address => bool) internal _approved;
-
   constructor() {
     __Composable_init();
     contractName = keccak256("DEXRouter");

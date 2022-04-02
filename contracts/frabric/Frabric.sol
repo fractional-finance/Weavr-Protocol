@@ -24,7 +24,7 @@ import "../interfaces/frabric/IFrabric.sol";
 contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   using ERC165Checker for address;
 
-  mapping(address => ParticipantType) public participant;
+  mapping(address => ParticipantType) public override participant;
 
   address public override bond;
   address public override threadDeployer;
@@ -38,7 +38,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   // The proposal structs are private as their events are easily grabbed and contain the needed information
   mapping(uint256 => Participants) private _participants;
 
-  mapping(address => GovernorStatus) public governor;
+  mapping(address => GovernorStatus) public override governor;
 
   struct RemoveBondProposal {
     address governor;
@@ -64,6 +64,9 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   mapping(uint256 => ThreadProposalProposal) private _threadProposals;
 
   // The erc20 is expected to be fully initialized via JS during deployment
+  // Given in practice, the InitialFrabric will upgrade to this, there's no reason
+  // for this to be here other than testing. While the upgrade should set
+  // bond/threadDeployer, KYC should be voted on via governance
   function initialize(
     address _erc20,
     address[] calldata genesis,
@@ -93,10 +96,10 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       participant[genesis[i]] = ParticipantType.Genesis;
     }
 
-    kyc = _kyc;
     bond = _bond;
     threadDeployer = _threadDeployer;
 
+    kyc = _kyc;
     participant[kyc] = ParticipantType.KYC;
   }
 
@@ -354,14 +357,16 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       revert IncorrectParticipant(approving, participants.participants, proof);
     }
 
-    // Whitelist them and add them
-    IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
+    // Set their status
     participant[approving] = participants.pType;
     if (participants.pType == ParticipantType.Governor) {
       governor[approving] = GovernorStatus.Active;
       // Delete the proposal since it was just them
       delete _participants[id];
     }
+
+    // Whitelist them
+    IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
 
     // We could delete _participants[id] here if we knew how many values were included in the Merkle
     // This gas refund isn't worth the extra variable and tracking
