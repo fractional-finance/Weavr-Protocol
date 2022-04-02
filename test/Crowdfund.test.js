@@ -2,7 +2,6 @@ const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const FrabricERC20 = require("../scripts/deployFrabricERC20.js");
 const Crowdfund = require("../scripts/deployCrowdfundProxy.js");
-const Beacon = require("../scripts/deployBeacon.js");
 const ThreadDeployer = require("../scripts/deployThreadDeployer.js");
 
 
@@ -12,19 +11,15 @@ describe("Crowdfund Positive Test Cases", async  () => {
   let target;
   let erc20Beacon;
   
-  let whitelist;
   let signer;
   let otherUser;
 
-  let threadDeployerProxy
-  let crowdfundProxy;
-  let threadBeacon;
   let threadDeployer;
   let auction = {
     address: "0x0000000000000000000000000000000000000000"
   };
 
-  beforeEach(async () => {
+  before(async () => {
     
     const Erc20 = await ethers.getContractFactory("TestERC20");
     erc20 = await Erc20.deploy("Test", "T");
@@ -34,12 +29,6 @@ describe("Crowdfund Positive Test Cases", async  () => {
     threadDeployer = await ThreadDeployer(erc20Beacon.address, auction.address);
 
     [signer, otherUser] = await ethers.getSigners();
-
-    const Whitelist = await ethers.getContractFactory("TestWhitelist");
-    whitelist = await Whitelist.deploy();
-    await whitelist.deployed();
-    await whitelist.whitelist(signer.address);
-    await whitelist.whitelist(otherUser.address);
 
     target = ethers.BigNumber.from("1000").toString();
     const ABIC = ethers.utils.defaultAbiCoder;
@@ -51,15 +40,12 @@ describe("Crowdfund Positive Test Cases", async  () => {
     const TestFrabric = await ethers.getContractFactory("TestFrabric");
     const testFrabric = await TestFrabric.deploy();
     await testFrabric.deployed();
+    await testFrabric.setWhitelisted(otherUser.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await testFrabric.setWhitelisted(signer.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    
     console.log(await threadDeployer.threadDeployer.owner());
     await threadDeployer.threadDeployer.transferOwnership(testFrabric.address);
-    // await threadDeployer.threadDeployer.connect(testFrabric.address).deploy(
-    //   0,
-    //   signer.address,
-    //   "TestThread",
-    //   "TT",
-    //   data
-    // );
+    
     const res = await testFrabric.threadDeployDeployer(
       threadDeployer.threadDeployer.address,
       0,
@@ -68,73 +54,103 @@ describe("Crowdfund Positive Test Cases", async  () => {
       "TT",
       data
     );
-    // crowdfund = res;
+    const add = (await threadDeployer.threadDeployer.queryFilter(threadDeployer.threadDeployer.filters.Thread()))[0].args.crowdfund;
+    const Crowdfund = await ethers.getContractFactory("Crowdfund");
+    crowdfund = Crowdfund.attach(add);
+
   });
-  it("Should launch a crowdfund with a non-zero fundraising target", async () => {
-    expect(crowdfundProxy).to.emit(Crowdfund, "CrowdfundStarted");
-    expect(crowdfundProxy).to.emit(Crowdfund, "StateChange");
+  describe("Test until finsish+burn", async () => {
+    it("Should launch a crowdfund with a non-zero fundraising target", async () => {
+      expect(threadDeployer.threadDeployer).to.emit(Crowdfund, "CrowdfundStarted");
+      expect(threadDeployer.threadDeployer).to.emit(Crowdfund, "StateChange");
+    });
+    it("Should deposit tokens as a new backer", async () => {    
+  
+      const balance = await erc20.balanceOf(signer.address);
+      const amount = ethers.BigNumber.from("100");
+      await erc20.approve(crowdfund.address, balance);
+      const tx = await crowdfund.deposit(amount);
+      expect(tx).to.emit(Crowdfund, "Deposit");
+      console.log((await crowdfund.deposited()).toNumber());
+  
+    });
+    it("Should withdraw tokens as an existing backer", async () => {
+      
+      const amount = ethers.BigNumber.from("100");
+      const tx = await crowdfund.withdraw(amount);
+      expect(tx).to.emit(Crowdfund, "Withdraw");
+      console.log((await crowdfund.deposited()).toNumber());
+  
+    });
+    it("Should trigger executing status if crowdfunding target was reached, and was previously active", async () => {
+  
+      const amount = ethers.BigNumber.from(target);
+      await crowdfund.deposit(amount);
+      console.log((await crowdfund.deposited()).toNumber());
+      const tx = await crowdfund.execute();
+      expect(tx).to.emit(Crowdfund, "StateChange");
+  
+    });
+    it("Should allow agent to trigger finished status if was previously executing", async () => {
+      
+      const tx = await crowdfund.finish();
+      expect(tx).to.emit(Crowdfund, "StateChange");
+  
+    });
+    it("Should burn backer crowdfund tokens when state changes to finished status", async () => {
+  
+      const depositor = signer.address;
+      const balance = await crowdfund.balanceOf(depositor);
+      const tx = await crowdfund.burn(depositor);
+      expect(await crowdfund.balanceOf(depositor)).to.equal(0);
+
+      const add = (await threadDeployer.threadDeployer.queryFilter(threadDeployer.threadDeployer.filters.Thread()))[0].args.erc20;
+      
+      const ERC20 = await ethers.getContractFactory("FrabricERC20");
+      ferc20 = ERC20.attach(add);
+      expect(await ferc20.balanceOf(depositor)).to.equal(balance);
+
+
+    });
+  
   });
-  it("Should deposit tokens as a new backer", async () => {    
+  describe("Implementation to refound a Crowdfund", async () => {
+    before(async () => {
+      const res = await testFrabric.threadDeployDeployer(
+        threadDeployer.threadDeployer.address,
+        0,
+        signer.address,
+        "TestThread",
+        "TT",
+        data
+      );
+      const add = (await threadDeployer.threadDeployer.queryFilter(threadDeployer.threadDeployer.filters.Thread()))[0].args.crowdfund;
+      const Crowdfund = await ethers.getContractFactory("Crowdfund");
+      crowdfund = Crowdfund.attach(add);
+    });
+    it("Should allow agent to trigger refunding status if was previously executing", async () => {
     
-    const balance = await erc20.balanceOf(signer.address);
-    const amount = ethers.BigNumber.from("100");
-    await erc20.approve(crowdfund.address, balance);
-    const tx = await crowdfund.deposit(amount);
-    expect(tx).to.emit(Crowdfund, "Deposit");
-    console.log((await crowdfund.deposited()).toNumber());
-
+      const amount = ethers.BigNumber.from(target);
+      const tx = await crowdfund.refund(amount);
+      expect(tx).to.emit(Crowdfund, "StateChange");
+  
+    });
+    it("Should allow backers to claim their funds if the crowdfund status is refunding, and burn their crowdfund ERC20 tokens", async () => {
+  
+      const amount = ethers.BigNumber.from(target);
+      const tx = await crowdfund.refund(signer.address);
+      expect(tx).to.emit(Crowdfund, "Refund");
+  
+    });
+    it("Should transfer total balance to agent when state changes to executing status", async () => {
+      
+      const agentBalance = await crowdfund.balanceOf(signer.address);
+      expect(agentBalance.toNumber()).to.equal(target);
+  
+    });
   });
-  it("Should withdraw tokens as an existing backer", async () => {
-    
-    const amount = ethers.BigNumber.from("100");
-    const tx = await crowdfund.withdraw(amount);
-    expect(tx).to.emit(Crowdfund, "Withdraw");
-    console.log((await crowdfund.deposited()).toNumber());
-
-  });
-  it("Should trigger executing status if crowdfunding target was reached, and was previously active", async () => {
-
-    const amount = ethers.BigNumber.from(target);
-    await crowdfund.deposit(amount);
-    console.log((await crowdfund.deposited()).toNumber());
-    const tx = await crowdfund.execute();
-    expect(tx).to.emit(Crowdfund, "StateChange");
-
-  });
-  it("Should allow agent to trigger refunding status if was previously executing", async () => {
-    
-    const amount = ethers.BigNumber.from(target);
-    const tx = await crowdfund.refund(amount);
-    expect(tx).to.emit(Crowdfund, "StateChange");
-
-  });
-  it("Should allow backers to claim their funds if the crowdfund status is refunding, and burn their crowdfund ERC20 tokens", async () => {
-
-    const amount = ethers.BigNumber.from(target);
-    const tx = await crowdfund.claimRefund(signer.address);
-    expect(tx).to.emit(Crowdfund, "Refund");
-
-  });
-  it("Should transfer total balance to agent when state changes to executing status", async () => {
-    
-    const agentBalance = await crowdfund.balanceOf(signer.address);
-    expect(agentBalance.toNumber()).to.equal(target);
-
-  });
-  it("Should allow agent to trigger finished status if was previously executing", async () => {
-    
-    console.log(crowdfund.state)
-    const tx = await crowdfund.finish();
-    expect(tx).to.emit(Crowdfund, "StateChange");
-
-  });
-  it("Should burn backer crowdfund tokens when state changes to finished status", async () => {
-
-    const depositor = signer.address;
-    console.log(await crowdfund.balanceOf(depositor));
-    const tx = await crowdfund.burn(depositor);
-    // expect(await crowdfund.balanceOf(depositor)).to.equal(0);
-  });
+  
+  
   
 });
 
