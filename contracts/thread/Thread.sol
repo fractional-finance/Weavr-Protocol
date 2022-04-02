@@ -37,9 +37,7 @@ contract Thread is FrabricDAO, IThreadSum {
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
     __FrabricDAO_init(_erc20, 1 weeks);
 
-    __Composable_init();
-    contractName = keccak256("Thread");
-    version = 1;
+    __Composable_init("Thread", false);
     supportsInterface[type(IThread).interfaceId] = true;
 
     agent = _agent;
@@ -49,9 +47,7 @@ contract Thread is FrabricDAO, IThreadSum {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {
-    contractName = keccak256("Thread");
-  }
+  constructor() Composable("Thread") initializer {}
 
   // Allows proposing even when paused so TokenActions can be issued to recover funds
   // from this DAO. Also theoretically enables proposing an Upgrade to undo the pause
@@ -109,6 +105,7 @@ contract Thread is FrabricDAO, IThreadSum {
     address _frabric,
     string calldata info
   ) external override returns (uint256) {
+    // Technically not needed, healthy to have
     if (IComposable(_frabric).contractName() != keccak256("Frabric")) {
       revert DifferentContract(IComposable(_frabric).contractName(), keccak256("Frabric"));
     }

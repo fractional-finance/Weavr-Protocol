@@ -49,9 +49,7 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
       string(abi.encodePacked("CF-", symbol))
     );
 
-    __Composable_init();
-    contractName = keccak256("Crowdfund");
-    version = 1;
+    __Composable_init("Crowdfund", false);
     supportsInterface[type(ICrowdfund).interfaceId] = true;
 
     whitelist = _whitelist;
@@ -73,9 +71,7 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {
-    contractName = keccak256("Crowdfund");
-  }
+  constructor() Composable("Crowdfund") initializer {}
 
   // Match the decimals of the underlying ERC20 which this ERC20 maps to
   // If no decimals are specified, assumes 18

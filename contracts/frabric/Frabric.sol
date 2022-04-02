@@ -78,9 +78,8 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     __EIP712_init("Frabric Protocol", "1");
     __FrabricDAO_init(_erc20, 2 weeks);
 
-    __Composable_init();
-    contractName = "Frabric";
-    version = 2;
+    __Composable_init("Frabric", false);
+    version++;
     supportsInterface[type(IFrabric).interfaceId] = true;
 
     // Simulate a full DAO proposal to add the genesis participants
@@ -104,9 +103,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {
-    contractName = keccak256("Frabric");
-  }
+  constructor() Composable("Frabric") initializer {}
 
   function canPropose() public view override(IDAO, DAO) returns (bool) {
     return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);
@@ -192,6 +189,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     bytes calldata data,
     string calldata info
   ) external returns (uint256) {
+    // Technically not needed given we check for interface support, yet a healthy check to have
     if (IComposable(thread).contractName() != keccak256("Thread")) {
       revert DifferentContract(IComposable(thread).contractName(), keccak256("Thread"));
     }

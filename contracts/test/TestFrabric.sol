@@ -19,7 +19,8 @@ contract TestFrabric is FrabricWhitelist {
     _setWhitelisted(person, dataHash);
   }
 
-  constructor() initializer {
+  constructor() Composable("Frabric") initializer {
+    __Composable_init("Frabric", false);
     __FrabricWhitelist_init(address(0));
   }
 }

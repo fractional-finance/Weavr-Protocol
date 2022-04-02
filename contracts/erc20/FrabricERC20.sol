@@ -35,9 +35,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     __FrabricWhitelist_init(parentWhitelist);
     __IntegratedLimitOrderDEX_init(dexToken);
 
-    __Composable_init();
-    contractName = keccak256("FrabricERC20");
-    version = 1;
+    __Composable_init("FrabricERC20", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
     supportsInterface[type(PausableUpgradeable).interfaceId] = true;
     supportsInterface[type(IFrabricERC20).interfaceId] = true;
@@ -64,9 +62,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {
-    contractName = keccak256("FrabricERC20");
-  }
+  constructor() Composable("FrabricERC20") initializer {}
 
   // Redefine ERC20 functions so the DEX can pick them up as overrides and call them
   function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {

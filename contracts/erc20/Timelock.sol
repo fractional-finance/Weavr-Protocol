@@ -22,10 +22,8 @@ contract Timelock is Ownable, Composable, ITimelockSum {
   }
   mapping(address => LockStruct) internal _locks;
 
-  constructor() Ownable() {
-    __Composable_init();
-    contractName = keccak256("Timelock");
-    version = type(uint256).max;
+  constructor() Composable("Timelock") Ownable() {
+    __Composable_init("Timelock", true);
     supportsInterface[type(Ownable).interfaceId] = true;
     supportsInterface[type(ITimelock).interfaceId] = true;
   }

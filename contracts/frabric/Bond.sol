@@ -29,9 +29,7 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
     __Ownable_init();
     __DividendERC20_init("Frabric Bond", "bFBRC");
 
-    __Composable_init();
-    contractName = keccak256("Bond");
-    version = 1;
+    __Composable_init("Bond", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
     supportsInterface[type(IBond).interfaceId] = true;
 
@@ -44,9 +42,7 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {
-    contractName = keccak256("Bond");
-  }
+  constructor() Composable("Bond") initializer {}
 
   function _beforeTokenTransfer(address from, address, uint256) internal view override {
     // from == address(0) means it's being minted
