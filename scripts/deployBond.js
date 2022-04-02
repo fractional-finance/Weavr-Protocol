@@ -23,5 +23,14 @@ module.exports = async (usdc, bondToken) => {
   return { proxy, bond };
 };
 
-// Doesn't have a main block to check this script's deployment validity
-// Doing so requires a Uniswap deployment which is out of scope for writing a basic check
+if (require.main === module) {
+  module.exports("0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000")
+    .then(contracts => {
+      console.log("Proxy: " + contracts.proxy.address);
+      console.log("Bond:  " + contracts.bond.address);
+    })
+    .catch(error => {
+      console.error(error);
+      process.exit(1);
+    });
+}

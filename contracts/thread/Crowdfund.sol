@@ -18,15 +18,15 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
   // Could be gas optimized using 1/2 instead of false/true
   bool private transferAllowed;
 
-  address public whitelist;
-  address public agent;
+  address public override whitelist;
+  address public override agent;
   // Thread isn't needed, just its ERC20
   // This keeps data relative and accessible though, being able to jump to a Thread via its Crowdfund
   // Being able to jump to its token isn't enough as the token doesn't know of the Thread
-  address public thread;
-  address public token;
-  uint256 public target;
   State public state;
+  address public override thread;
+  address public override token;
+  uint256 public override target;
 
   // Alias the total supply to the amount of funds deposited
   // Technically defined as the amount of funds deposited AND outstanding, with
@@ -171,9 +171,9 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     }
 
     burnInternal(msg.sender, amount);
+    emit Withdraw(msg.sender, amount);
 
     IERC20(token).safeTransfer(msg.sender, amount);
-    emit Withdraw(msg.sender, amount);
   }
 
   // Cancel a Crowdfund before execution starts

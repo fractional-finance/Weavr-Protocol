@@ -75,11 +75,11 @@ contract Beacon is Ownable, Composable, IFrabricBeaconSum {
       implementations[instance] = code;
     }
 
+    emit Upgrade(instance, code);
+
     // Ensure the new implementation is of the expected type
     if (IComposable(implementation(instance)).contractName() != beaconName) {
       revert DifferentContract(IComposable(implementation(instance)).contractName(), beaconName);
     }
-
-    emit Upgrade(instance, code);
   }
 }

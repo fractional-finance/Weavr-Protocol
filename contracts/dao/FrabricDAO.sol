@@ -21,7 +21,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
-  uint256 constant public commonProposalBit = 1 << 255;
+  uint256 constant public override commonProposalBit = 1 << 255;
 
   struct Upgrade {
     address beacon;
@@ -188,9 +188,9 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
 
       } else if (pType == CommonProposalType.ParticipantRemoval) {
         address removed = _removals[id];
+        delete _removals[id];
         IFrabricERC20(erc20).setWhitelisted(removed, bytes32(0));
         _participantRemoval(removed);
-        delete _removals[id];
 
       } else {
         revert UnhandledEnumCase("FrabricDAO _completeProposal CommonProposal", _pType);

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
+
 import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 
@@ -20,7 +22,9 @@ import "../dao/FrabricDAO.sol";
 import "../interfaces/frabric/IFrabric.sol";
 
 contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
-  mapping(address => ParticipantType) public participant;
+  using ERC165Checker for address;
+
+  mapping(address => ParticipantType) public override participant;
 
   address public override bond;
   address public override threadDeployer;
@@ -34,7 +38,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   // The proposal structs are private as their events are easily grabbed and contain the needed information
   mapping(uint256 => Participants) private _participants;
 
-  mapping(address => GovernorStatus) public governor;
+  mapping(address => GovernorStatus) public override governor;
 
   struct RemoveBondProposal {
     address governor;
@@ -60,6 +64,9 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   mapping(uint256 => ThreadProposalProposal) private _threadProposals;
 
   // The erc20 is expected to be fully initialized via JS during deployment
+  // Given in practice, the InitialFrabric will upgrade to this, there's no reason
+  // for this to be here other than testing. While the upgrade should set
+  // bond/threadDeployer, KYC should be voted on via governance
   function initialize(
     address _erc20,
     address[] calldata genesis,
@@ -89,10 +96,10 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       participant[genesis[i]] = ParticipantType.Genesis;
     }
 
-    kyc = _kyc;
     bond = _bond;
     threadDeployer = _threadDeployer;
 
+    kyc = _kyc;
     participant[kyc] = ParticipantType.KYC;
   }
 
@@ -167,6 +174,9 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       revert InvalidName(name, symbol);
     }
     // Validate the data now before creating the proposal
+    // ThreadProposal doesn't have this same level of validation yet not only are
+    // Threads a far more integral part of the system, ThreadProposal deals with an enum
+    // for proposal type. This variant field is a uint256 which has a much larger impact scope
     IThreadDeployer(threadDeployer).validate(variant, data);
     _threads[_nextProposalID] = ThreadProposal(variant, agent, name, symbol, data);
     emit ThreadProposed(_nextProposalID, variant, agent, name, symbol, data);
@@ -182,10 +192,20 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     bytes calldata data,
     string calldata info
   ) external returns (uint256) {
+    if (IComposable(thread).contractName() != keccak256("Thread")) {
+      revert DifferentContract(IComposable(thread).contractName(), keccak256("Thread"));
+    }
+
     // Lock down the selector to prevent arbitrary calls
     // While data is still arbitrary, it has reduced scope thanks to this, and can only be decoded in expected ways
+    // data isn't validated to be technically correct as the UI is trusted to sanity check it
+    // and present it accurately for humans to deliberate on
     bytes4 selector;
     if ((_proposalType & commonProposalBit) == commonProposalBit) {
+      if (!thread.supportsInterface(type(IFrabricDAO).interfaceId)) {
+        revert UnsupportedInterface(thread, type(IFrabricDAO).interfaceId);
+      }
+
       CommonProposalType pType = CommonProposalType(_proposalType ^ commonProposalBit);
       if (pType == CommonProposalType.Paper) {
         selector = IFrabricDAO.proposePaper.selector;
@@ -200,6 +220,10 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
         revert UnhandledEnumCase("Frabric proposeThreadProposal CommonProposal", _proposalType);
       }
     } else {
+      if (!thread.supportsInterface(type(IThread).interfaceId)) {
+        revert UnsupportedInterface(thread, type(IThread).interfaceId);
+      }
+
       IThread.ThreadProposalType pType = IThread.ThreadProposalType(_proposalType);
       if (pType == IThread.ThreadProposalType.AgentChange) {
         selector = IThread.proposeAgentChange.selector;
@@ -333,14 +357,16 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       revert IncorrectParticipant(approving, participants.participants, proof);
     }
 
-    // Whitelist them and add them
-    IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
+    // Set their status
     participant[approving] = participants.pType;
     if (participants.pType == ParticipantType.Governor) {
       governor[approving] = GovernorStatus.Active;
       // Delete the proposal since it was just them
       delete _participants[id];
     }
+
+    // Whitelist them
+    IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
 
     // We could delete _participants[id] here if we knew how many values were included in the Merkle
     // This gas refund isn't worth the extra variable and tracking

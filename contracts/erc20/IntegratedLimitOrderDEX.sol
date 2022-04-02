@@ -22,7 +22,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   mapping(address => uint256) public override dexBalances;
 
   // Locked funds of the token this is integrated into
-  mapping(address => uint256) public locked;
+  mapping(address => uint256) public override locked;
 
   struct Order {
     address trader;

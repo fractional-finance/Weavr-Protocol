@@ -23,6 +23,8 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
 
     // The following are exposed via getters
     uint256 voteBlock;
+    // This won't be deleted yet this struct is used in _proposals which atomically increments keys
+    // Therefore, this usage is safe
     mapping(address => VoteDirection) voters;
     // Safe due to the FrabricERC20 being uint224
     int256 votes;
@@ -66,7 +68,7 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
   // proposal.state == ProposalState.Active isn't reliable as expired proposals which didn't pass
   // will forever have their state set to ProposalState.Active
   // This call will check the proposal's expiry status as well
-  function proposalActive(uint256 id) public view override returns (bool) {
+  function proposalActive(uint256 id) external view override returns (bool) {
     return proposalActive(_proposals[id]);
   }
 
