@@ -53,24 +53,21 @@ describe("Crowdfund Positive Test Cases", async  () => {
     await testFrabric.deployed();
     console.log(await threadDeployer.threadDeployer.owner());
     await threadDeployer.threadDeployer.transferOwnership(testFrabric.address);
-    const funkySigner = await ethers.providers.jsonRpcProvider.connectUnchecked();
-    // console.log(testFrabric.address);
-    // console.log(await threadDeployer.threadDeployer.owner());
-    // console.log(testFrabric.signer);
-    await threadDeployer.threadDeployer.connect(funkySigner).deploy(
-      0,
-      signer.address,
-      "TestThread",
-      "TT",
-      data
-    );
-    // const res = await threadDeployer.threadDeployer.deploy(
+    // await threadDeployer.threadDeployer.connect(testFrabric.address).deploy(
     //   0,
     //   signer.address,
     //   "TestThread",
     //   "TT",
     //   data
     // );
+    const res = await testFrabric.threadDeployDeployer(
+      threadDeployer.threadDeployer.address,
+      0,
+      signer.address,
+      "TestThread",
+      "TT",
+      data
+    );
     // crowdfund = res;
   });
   it("Should launch a crowdfund with a non-zero fundraising target", async () => {
