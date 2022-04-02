@@ -11,4 +11,5 @@ contract TestWhitelist is FrabricWhitelist {
   function whitelist(address person) external {
     _setWhitelisted(person, bytes32(uint256(1)));
   }
+  constructor() Composable("TestWhitelist") {}
 }
