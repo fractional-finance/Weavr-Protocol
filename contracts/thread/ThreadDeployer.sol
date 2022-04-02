@@ -75,6 +75,8 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
   // Takes in a variant in order to support multiple variations easily in the future
   // This could be anything from different Thread architectures to different lockup schemes
   function deploy(
+    // Not an enum so the ThreadDeployer can be upgraded with more without requiring
+    // the Frabric to also be upgraded
     uint256 _variant,
     address _agent,
     string memory _name,

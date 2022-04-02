@@ -109,12 +109,16 @@ contract Thread is FrabricDAO, IThreadSum {
     address _frabric,
     string calldata info
   ) external override returns (uint256) {
+    if (IComposable(_frabric).contractName() != keccak256("Frabric")) {
+      revert DifferentContract(IComposable(_frabric).contractName(), keccak256("Frabric"));
+    }
+
     // This Frabric technically only has to implement the DAO code
     // It's used for its erc20 (parent whitelist) and its voting period at this time
     // Technically, the erc20 must implement FrabricWhitelist
     // That is implied by this Frabric implementing IDAO and when this executes,
     // setParentWhitelist is executed, confirming the FrabricWhitelist interface
-    // is supported
+    // is supported by it
     if (!_frabric.supportsInterface(type(IDAO).interfaceId)) {
       revert UnsupportedInterface(_frabric, type(IDAO).interfaceId);
     }
