@@ -18,10 +18,8 @@ contract Beacon is Ownable, Composable, IFrabricBeaconSum {
   bytes32 public immutable override beaconName;
   mapping(address => address) public override implementations;
 
-  constructor(uint8 _releaseChannels, bytes32 _beaconName) Ownable() {
-    __Composable_init();
-    contractName = keccak256("Beacon");
-    version = type(uint256).max;
+  constructor(uint8 _releaseChannels, bytes32 _beaconName) Composable("Beacon") Ownable() {
+    __Composable_init("Beacon", true);
     supportsInterface[type(Ownable).interfaceId] = true;
     supportsInterface[type(IBeacon).interfaceId] = true;
     supportsInterface[type(IFrabricBeacon).interfaceId] = true;

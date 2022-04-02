@@ -30,7 +30,9 @@ contract TestFrabric is FrabricWhitelist {
       IThreadDeployer(threadDeployer).deploy(_variant, _agent, _name, _symbol, data);
     }
 
-  constructor() initializer {
+  
+  constructor() Composable("Frabric") initializer {
+    __Composable_init("Frabric", false);
     __FrabricWhitelist_init(address(0));
   }
 }

@@ -28,9 +28,7 @@ contract InitialFrabric is EIP712Upgradeable, FrabricDAO, IInitialFrabricSum {
     __EIP712_init("Frabric Protocol", "1");
     __FrabricDAO_init(_erc20, 2 weeks);
 
-    __Composable_init();
-    contractName = "Frabric";
-    version = 1;
+    __Composable_init("Frabric", false);
     supportsInterface[type(IInitialFrabric).interfaceId] = true;
 
     // Simulate a full DAO proposal to add the genesis participants
@@ -48,9 +46,7 @@ contract InitialFrabric is EIP712Upgradeable, FrabricDAO, IInitialFrabricSum {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {
-    contractName = keccak256("Frabric");
-  }
+  constructor() Composable("Frabric") initializer {}
 
   function canPropose() public view override(IDAO, DAO) returns (bool) {
     return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);

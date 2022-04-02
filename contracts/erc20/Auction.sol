@@ -37,16 +37,12 @@ contract Auction is Initializable, Composable, IAuctionSum {
   mapping(address => mapping(address => uint256)) public override balances;
 
   function initialize() external initializer {
-    __Composable_init();
-    contractName = keccak256("Auction");
-    version = 1;
+    __Composable_init("Auction", false);
     supportsInterface[type(IAuction).interfaceId] = true;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {
-    contractName = keccak256("Auction");
-  }
+  constructor() Composable("Auction") initializer {}
 
   // Not vulnerable to re-entrancy, despite being a balance based amount calculation,
   // as it's not before-after. It's stored-current. While someone could re-enter

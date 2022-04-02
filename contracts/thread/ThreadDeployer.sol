@@ -38,9 +38,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
   ) external initializer {
     __Ownable_init();
 
-    __Composable_init();
-    contractName = keccak256("ThreadDeployer");
-    version = 1;
+    __Composable_init("ThreadDeployer", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
     supportsInterface[type(IThreadDeployer).interfaceId] = true;
 
@@ -58,9 +56,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() initializer {
-    contractName = keccak256("ThreadDeployer");
-  }
+  constructor() Composable("ThreadDeployer") initializer {}
 
   // Validates a variant and byte data
   function validate(uint256 variant, bytes calldata data) external pure {
