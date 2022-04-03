@@ -28,7 +28,7 @@ interface IDAO {
   function canPropose() external view returns (bool);
   function proposalActive(uint256 id) external view returns (bool);
 
-  function vote(uint256 id, VoteDirection direction) external;
+  function vote(uint256[] calldata id, VoteDirection[] calldata direction) external;
   function queueProposal(uint256 id) external;
   function cancelProposal(uint256 id, address[] calldata voters) external;
   function completeProposal(uint256 id) external;
@@ -45,7 +45,6 @@ interface IDAOSum is IComposable, IDAO {}
 error NotAuthorizedToPropose(address caller);
 error InactiveProposal(uint256 id);
 error AlreadyVotedInDirection(uint256 id, address voter, IDAO.VoteDirection direction);
-error NoVotes(address voter);
 error ActiveProposal(uint256 id, uint256 time, uint256 endTime);
 error ProposalFailed(uint256 id, int256 votes);
 error NotEnoughParticipation(uint256 id, uint256 totalVotes, uint256 required);

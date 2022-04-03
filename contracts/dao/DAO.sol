@@ -111,22 +111,17 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
     emit NewProposal(id, proposalType, proposal.creator, info);
     emit ProposalStateChanged(id, proposal.state);
 
-    // Automatically vote Yes for the creator
-    if (IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock) != 0) {
-      vote(id, VoteDirection.Yes);
+    // Automatically vote Yes for the creator if they're whitelisted
+    // They may not be whitelisted, if, in the case of Threads, they're the agent/Frabric
+    // Both of these should be whitelisted yet Threads can change them at any time
+    // Doing so doesn't automatically whitelist them to hold tokens
+    // In the case of the Frabric, they won't be whitelisted if they're the KYC company
+    if (IFrabricWhitelist(erc20).whitelisted(msg.sender)) {
+      _vote(id, VoteDirection.Yes);
     }
   }
 
-  function vote(uint256 id, VoteDirection direction) public override {
-    // Requires the caller to also be whitelisted. While the below NoVotes error
-    // should prevent this from happening, when the Frabric removes someone,
-    // Threads keep token balances until someone calls remove on them
-    // This check prevents them from voting in the meantime, even though it could
-    // eventually be handled by calling remove and cancelProposal when the time comes
-    if (!IFrabricWhitelist(erc20).whitelisted(msg.sender)) {
-      revert NotWhitelisted(msg.sender);
-    }
-
+  function _vote(uint256 id, VoteDirection direction) internal {
     Proposal storage proposal = activeProposal(id);
     VoteDirection voted = proposal.voters[msg.sender];
     if (voted == direction) {
@@ -135,7 +130,7 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
 
     int128 votes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
     if (votes == 0) {
-      revert NoVotes(msg.sender);
+      return;
     }
     // Remove old votes
     if (voted == VoteDirection.Yes) {
@@ -161,6 +156,27 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
     }
 
     emit Vote(id, direction, msg.sender, uint256(uint128(votes)));
+  }
+
+  // While it's not expected for this to be called in batch due to UX complexities,
+  // it's a very minor gas cost which does offer savings when multiple proposals
+  // are voted on at the same time
+  function vote(uint256[] memory ids, VoteDirection[] memory directions) external override {
+    // Requires the caller to also be whitelisted. While the below NoVotes error
+    // should prevent this from happening, when the Frabric removes someone,
+    // Threads keep token balances until someone calls remove on them
+    // This check prevents them from voting in the meantime, even though it could
+    // eventually be handled by calling remove and cancelProposal when the time comes
+    if (!IFrabricWhitelist(erc20).whitelisted(msg.sender)) {
+      revert NotWhitelisted(msg.sender);
+    }
+
+    for (uint256 i = 0; i < ids.length; i++) {
+      // Since Solidity arrays are bounds checked, this will simply error if directions
+      // is too short. If it's too long, it ignores the extras, and the actually processed
+      // data doesn't suffer from any mutability
+      _vote(ids[i], directions[i]);
+    }
   }
 
   function queueProposal(uint256 id) external {
