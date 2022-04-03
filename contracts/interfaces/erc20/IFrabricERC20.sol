@@ -35,6 +35,5 @@ interface IFrabricERC20Sum is IDividendERC20Sum, IFrabricWhitelist, IIntegratedL
 
 error SupplyExceedsUInt112(uint256 supply);
 error NotMintable();
-error Whitelisted(address person);
 error CurrentlyPaused();
 error BalanceLocked(uint256 balanceAfterTransfer, uint256 lockedBalance);

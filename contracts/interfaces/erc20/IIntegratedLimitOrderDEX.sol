@@ -10,6 +10,7 @@ interface IIntegratedLimitOrderDEX {
   event Filled(address indexed executor, address indexed orderer, uint256 indexed price, uint256 amount);
   event NewOrder(OrderType indexed orderType, uint256 indexed price);
   event OrderIncrease(address indexed trader, uint256 indexed price, uint256 amount);
+  event DeletedOrder(address indexed trader, uint256 indexed price, uint256 amount);
 
   function atomic(uint256 amount) external returns (uint256);
 
@@ -25,7 +26,7 @@ interface IIntegratedLimitOrderDEX {
     uint256 minimumAmount
   ) external returns (uint256, uint256);
   function sell(uint256 price, uint256 amount) external returns (uint256, uint256);
-  function cancelOrder(uint256 price, uint256 i) external;
+  function cancelOrder(uint256 price) external;
 
   function getPointType(uint256 price) external view returns (OrderType);
   function getOrderQuantity(uint256 price) external view returns (uint256);

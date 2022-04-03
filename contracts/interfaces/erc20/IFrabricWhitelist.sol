@@ -18,8 +18,12 @@ interface IFrabricWhitelist {
 
   function whitelisted(address person) external view returns (bool);
   function explicitlyWhitelisted(address person) external view returns (bool);
+
+  function removed(address person) external view returns (bool);
 }
 
 interface IFrabricWhitelistSum is IComposable, IFrabricWhitelist {}
 
 error NotWhitelisted(address person);
+error Whitelisted(address person);
+error Removed(address person);

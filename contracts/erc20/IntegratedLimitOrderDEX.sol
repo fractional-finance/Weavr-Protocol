@@ -37,10 +37,13 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   // Indexed by price
   mapping (uint256 => PricePoint) private _points;
 
-  function whitelisted(address person) public view virtual returns (bool);
   function _transfer(address from, address to, uint256 amount) internal virtual;
   function balanceOf(address account) public virtual returns (uint256);
   function decimals() public virtual returns (uint8);
+
+  function _remove(address person) internal virtual;
+  function whitelisted(address person) public view virtual returns (bool);
+  function removed(address person) public view virtual returns (bool);
 
   function __IntegratedLimitOrderDEX_init(address _dexToken) internal onlyInitializing {
     __ReentrancyGuard_init();
@@ -72,12 +75,13 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
   // Fill orders
   function fill(
-    bool buying,
     address trader,
     uint256 price,
     uint256 amount,
     PricePoint storage point
   ) private returns (uint256) {
+    bool buying = point.orderType == OrderType.Sell;
+
     // Fill orders until there are either no orders or our order is filled
     uint256 filled = 0;
     uint256 h = point.orders.length - 1;
@@ -89,6 +93,13 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
       // This function is trusted code, and here it is trusted to not be idiotic
       Order storage order = point.orders[h];
       while (!whitelisted(order.trader)) {
+        _remove(order.trader);
+
+        // If we're iterating over buy orders, return the removed trader's DEX tokens
+        if (!buying) {
+          dexBalances[order.trader] += price * order.amount;
+        }
+
         point.orders.pop();
         if (h == 0) {
           break;
@@ -161,7 +172,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     PricePoint storage point = _points[price];
     // If there's counter orders at this price, fill them
     if (point.orderType == other) {
-      filled = fill(current == OrderType.Buy, trader, price, amount, point);
+      filled = fill(trader, price, amount, point);
       // Return if fully filled
       if (filled == amount) {
         return (filled, 0);
@@ -239,7 +250,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     uint256 price,
     uint256 amount
   ) external override nonReentrant returns (uint256 filled, uint256 id) {
-    // Non-whitelisted caller could have funds if removed yet their tokens aren't seized yet
+    // Non-whitelisted caller could have funds to sell if removed from the Frabric yet not the Thread yet
     if (!whitelisted(msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
@@ -253,52 +264,58 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     withdrawDEXToken(msg.sender);
   }
 
-  // Shouldn't require nonReentrant as all interactions are after checks and effects
-  // Has nonReentrant to be safe
-  function cancelOrder(uint256 price, uint256 i) external override nonReentrant {
+  function cancelOrder(uint256 price) external override nonReentrant {
     PricePoint storage point = _points[price];
-    // Copy the order to memory
-    // If this order doesn't exist, Solidity's bounds check will catch it
-    Order memory order = point.orders[i];
-    // If this is not the last order, shift the last order down
-    if (i != (point.orders.length - 1)) {
-      point.orders[i] = point.orders[point.orders.length - 1];
-    }
-    // Delete the order
-    point.orders.pop();
 
-    // If the trader isn't whitelisted, meaning they were removed, return the counter token
-    // This allows anyone to cancel orders of those who were banned from the protocol
-    // Technically an interaction, yet whitelisted is trusted
-    // It should be noted that the effect of the order in question, being deleted, has already happened
-    if (!whitelisted(order.trader)) {
-      // Safe to re-enter as the order has already been deleted
-      if (point.orderType == OrderType.Buy) {
-        // Inefficient yet prevents duplicating the withdraw function
-        dexBalances[order.trader] += price * order.amount;
-        withdrawDEXToken(order.trader);
+    // This may be slightly more efficient if done in reverse order
+    // by potentially reducing shift count yet it's not worth the complexity
+    for (uint256 i = 0; i < point.orders.length; i++) {
+      Order storage order = point.orders[i];
+
+      // If they are no longer whitelisted, remove them
+      if (!whitelisted(order.trader)) {
+        _remove(order.trader);
       }
-      return;
+
+      if (
+        // Cancelling our own order
+        (order.trader == msg.sender) ||
+        // Cancelling the order of someone removed
+        // This is a cheaper check than calling whitelisted again
+        removed(order.trader)
+      ) {
+        if (point.orderType == OrderType.Buy) {
+          dexBalances[order.trader] += price * order.amount;
+        } else if (
+          (point.orderType == OrderType.Sell) &&
+          // If they were removed, they've already had their balance seized and put up for auction
+          // They should only get their traded token left floating on the DEX back (previous case)
+          (!removed(order.trader))
+        ) {
+          locked[order.trader] -= atomic(order.amount);
+        }
+
+        emit DeletedOrder(order.trader, price, order.amount);
+
+        // If this is not the last order, shift the last order down
+        if (i != (point.orders.length - 1)) {
+          point.orders[i] = point.orders[point.orders.length - 1];
+        }
+        // Delete the order
+        point.orders.pop();
+
+        // Decrement i so this order index is checked again
+        i--;
+      }
     }
 
-    // If the trader in question wasn't removed, ensure they were the actually
-    // the ones to cancel this order
-    // While generally these checks should be done before effects (deletion),
-    // the entire transaction will still revert without issue and this is the cleanest
-    // way to write the code given the requirement of anyone being able to cancel
-    // orders of those not whitelisted
-    // Also, no interactions have happened since the effects occurred
-    if (order.trader != msg.sender) {
-      revert NotOrderTrader(msg.sender, order.trader);
+    // Tidy up the order type
+    if (point.orders.length == 0) {
+      point.orderType = OrderType.Null;
     }
 
-    if (point.orderType == OrderType.Buy) {
-      // Ironically enough, this duplicates the above calling of the withdraw function
-      dexBalances[order.trader] += price * order.amount;
-      withdrawDEXToken(order.trader);
-    } else if (point.orderType == OrderType.Sell) {
-      locked[order.trader] -= atomic(order.amount);
-    }
+    // Withdraw our own funds to prevent the need for another transaction
+    withdrawDEXToken(msg.sender);
   }
 
   function getPointType(uint256 price) external view override returns (OrderType) {
@@ -315,6 +332,9 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
   function getOrderAmount(uint256 price, uint256 i) external view override returns (uint256) {
     Order memory order = _points[price].orders[i];
+    // The FrabricERC20 whitelisted function will check both whitelisted and removed
+    // When this order is actioned, if they're no longer whitelisted yet have yet to be removed,
+    // they will be removed, hence why either case has the order amount be effectively 0
     if (!whitelisted(order.trader)) {
       return 0;
     }

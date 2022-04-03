@@ -18,6 +18,7 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Sum {
   bool public override mintable;
   address public override auction;
+
   bool internal _removal;
 
   function initialize(
@@ -91,17 +92,12 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     _burn(msg.sender, amount);
   }
 
-  function remove(address person) public override nonReentrant {
-    // If removal is true, this is this contract removing them, so ignore whitelist status
-    // Else, check if they actually were removed from the whitelist
-    if ((!_removal) && (whitelisted(person))) {
-      revert Whitelisted(person);
+  function _remove(address person) internal override {
+    // If they were already removed, return
+    if (removed(person)) {
+      return;
     }
-    // Set _removal to false to ensure it's not a concern
-    // If it was accidentally left set, anyone could be removed
-    // This could be done by splitting the above if and adding an else yet this
-    // write should be cheap enough
-    _removal = false;
+    _setRemoved(person);
 
     // Clear the amount they have locked
     locked[person] = 0;
@@ -119,7 +115,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
 
       // Set _removal = true for the entire body as multiple transfers will occur
       // While this would be a risk if re-entrancy was possible, or if it was left set,
-      // this function is nonReentrant and it is set to false after the loop
+      // every function which calls this is nonReentrant and it is set to false after the loop
       _removal = true;
       for (uint256 i = 0; i < rounds; i++) {
         // If this is the final round, compensate for any rounding errors
@@ -136,17 +132,34 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     }
   }
 
+  function remove(address person) public override nonReentrant {
+    // Check they were actually removed from the whitelist
+    if (whitelisted(person)) {
+      revert Whitelisted(person);
+    }
+    _remove(person);
+  }
+
   // Whitelist functions
   function whitelisted(
     address person
   ) public view override(IntegratedLimitOrderDEX, IFrabricWhitelist, FrabricWhitelist) returns (bool) {
-    return FrabricWhitelist.whitelisted(person);
+    return FrabricWhitelist.whitelisted(person) && (!removed(person));
   }
+
+  function removed(address person) public view override(IntegratedLimitOrderDEX, IFrabricERC20) returns (bool) {
+    return FrabricWhitelist.removed(person);
+  }
+
   function setParentWhitelist(address whitelist) external override onlyOwner {
     _setParentWhitelist(whitelist);
   }
 
-  function setWhitelisted(address person, bytes32 dataHash) external override onlyOwner {
+  // nonReentrant would be overkill given onlyOwner except this needs to not be the initial vector
+  // while re-entrancy happens through functions labelled nonReentrant
+  // While the only external calls should be completely in-ecosystem and therefore to trusted code,
+  // _remove really isn't the thing to play around with
+  function setWhitelisted(address person, bytes32 dataHash) external override onlyOwner nonReentrant {
     _setWhitelisted(person, dataHash);
 
     // If removing, remove them now
@@ -155,10 +168,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     // and enable calling remove on any Thread. For a Thread, this won't change
     // the whitelist at all, as it'll still be whitelisted on the Frabric
     if (dataHash == bytes32(0)) {
-      // Set _removal to true so remove doesn't check the whitelist
-      // We could also use an external call and a msg.sender check
-      _removal = true;
-      remove(person);
+      _remove(person);
     }
   }
 
