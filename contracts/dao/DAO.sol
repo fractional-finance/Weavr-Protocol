@@ -197,8 +197,8 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
       if (proposal.voters[voters[i]] != VoteDirection.Yes) {
         revert NotYesVote(id, voters[i]);
       }
-      int128 oldVotes = int128(IVotes(erc20).getPastVotes(voters[i], proposal.voteBlock));
-      int128 votes = int128(IERC20(erc20).balanceOf(voters[i]));
+      int128 oldVotes = int128(uint128(IVotes(erc20).getPastVotes(voters[i], proposal.voteBlock)));
+      int128 votes = int128(uint128(IERC20(erc20).balanceOf(voters[i])));
       // If this voter's balance has actually increased in the time given,
       // that'll be reflected here. While we could error, as it goes against the
       // offchain calculation and intended action of this call, erroring guarantees

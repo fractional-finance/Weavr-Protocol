@@ -132,7 +132,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
           address(this),
           dexToken,
           person,
-          uint64(block.timestamp) + (i * (1 weeks)),
+          uint64(block.timestamp + (i * (1 weeks))),
           1 weeks
         );
       }
