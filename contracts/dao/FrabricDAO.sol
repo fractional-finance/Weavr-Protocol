@@ -5,6 +5,7 @@ import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgra
 import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
+import "../interfaces/erc20/IAuction.sol";
 import "../interfaces/beacon/IFrabricBeacon.sol";
 
 import "./DAO.sol";
@@ -124,7 +125,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
       // Target is ignored when selling tokens, yet not when minting them
       // This enables minting and directly selling tokens, and removes mutability reducing scope
       if (target != address(this)) {
-        revert SellingWithDifferentTarget(target, address(this));
+        revert TargetMalleability(target, address(this));
       }
 
       // Ensure that we know how to sell this token
@@ -137,6 +138,9 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
       if ((amount / 1e18 * 1e18) != amount) {
         revert NotRoundAmount(amount);
       }
+    // Only allow a zero amount to cancel an order at a given price
+    } else if (amount == 0) {
+      revert ZeroAmount();
     }
 
     _tokenActions[_nextProposalID] = TokenAction(token, target, mint, price, amount);
@@ -173,16 +177,40 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
 
       } else if (pType == CommonProposalType.TokenAction) {
         TokenAction storage action = _tokenActions[id];
-        if (action.mint) {
-          IFrabricERC20(erc20).mint(action.target, action.amount);
-        // The ILO DEX doesn't require transfer or even approve
-        } else if (action.price == 0) {
-          IERC20(action.token).safeTransfer(action.target, action.amount);
-        }
+        if (action.amount == 0) {
+          IntegratedLimitOrderDEX(action.token).cancelOrder(action.price);
+        } else {
+          if (action.mint) {
+            IFrabricERC20(erc20).mint(action.target, action.amount);
+          // The ILO DEX doesn't require transfer or even approve
+          } else if (action.price == 0) {
+            IERC20(action.token).safeTransfer(action.target, action.amount);
+          }
 
-        // Not else to allow direct mint + sell
-        if (action.price != 0) {
-          IIntegratedLimitOrderDEX(action.token).sell(action.price, action.amount / 1e18);
+          // Not else to allow direct mint + sell
+          if (action.price != 0) {
+            // These orders cannot be cancelled at this time without the DAO wash trading
+            // through the order, yet that may collide with others orders at the same price
+            // point, so this isn't actually a viable method
+            IIntegratedLimitOrderDEX(action.token).sell(action.price, action.amount / 1e18);
+
+          // Technically, TokenAction could not acknowledge Auction
+          // By transferring the tokens to another contract, the Auction can be safely created
+          // This is distinct from the ILO DEX as agreement is needed on what price to list at
+          // The issue is that the subcontract wouldn't know who transferred it tokens,
+          // so it must have an owner for its funds. This means creating a new contract per Frabric/Thread
+          // (or achieving global ERC777 adoptance yet that would be incredibly problematic for several reasons)
+          // The easiest solution is just to write a few lines into this contract to handle it.
+          } else if (action.target == IFrabricERC20(erc20).auction()) {
+            IAuction(action.target).listTransferred(
+              action.token,
+              // Use our ERC20's DEX token as the Auction token to receive
+              IIntegratedLimitOrderDEX(erc20).dexToken(),
+              address(this),
+              block.timestamp,
+              1 weeks
+            );
+          }
         }
         delete _tokenActions[id];
 
