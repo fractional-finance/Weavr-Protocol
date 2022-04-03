@@ -87,7 +87,7 @@ contract Thread is FrabricDAO, IThreadSum {
 
   function proposeEnablingUpgrades(string calldata info) external returns (uint256) {
     // Doesn't emit a dedicated event for the same reason Paper proposals don't
-    return _createProposal(uint256(ThreadProposalType.EnableUpgrades), info);
+    return _createProposal(uint16(ThreadProposalType.EnableUpgrades), info);
   }
 
   function proposeAgentChange(
@@ -98,7 +98,7 @@ contract Thread is FrabricDAO, IThreadSum {
     // the Thread's choice to make
     _agents[_nextProposalID] = _agent;
     emit AgentChangeProposed(_nextProposalID, _agent);
-    return _createProposal(uint256(ThreadProposalType.AgentChange), info);
+    return _createProposal(uint16(ThreadProposalType.AgentChange), info);
   }
 
   function proposeFrabricChange(
@@ -121,7 +121,7 @@ contract Thread is FrabricDAO, IThreadSum {
     }
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
-    return _createProposal(uint256(ThreadProposalType.FrabricChange), info);
+    return _createProposal(uint16(ThreadProposalType.FrabricChange), info);
   }
 
   function proposeDissolution(
@@ -134,7 +134,7 @@ contract Thread is FrabricDAO, IThreadSum {
     }
     _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, price);
     emit DissolutionProposed(_nextProposalID, msg.sender, token, price);
-    return _createProposal(uint256(ThreadProposalType.Dissolution), info);
+    return _createProposal(uint16(ThreadProposalType.Dissolution), info);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {

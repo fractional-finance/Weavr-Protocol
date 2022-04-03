@@ -32,8 +32,8 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
 
   struct Participants {
     ParticipantType pType;
-    bytes32 participants;
     bool passed;
+    bytes32 participants;
   }
   // The proposal structs are private as their events are easily grabbed and contain the needed information
   mapping(uint256 => Participants) private _participants;
@@ -48,10 +48,10 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   mapping(uint256 => RemoveBondProposal) private _removeBonds;
 
   struct ThreadProposal {
-    uint256 variant;
+    uint8 variant;
     address agent;
-    string name;
     string symbol;
+    string name;
     bytes data;
   }
   mapping(uint256 => ThreadProposal) private _threads;
@@ -84,7 +84,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
 
     // Simulate a full DAO proposal to add the genesis participants
     emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesisMerkle);
-    emit NewProposal(_nextProposalID, uint256(FrabricProposalType.Participants), address(0), "Genesis Participants");
+    emit NewProposal(_nextProposalID, uint16(FrabricProposalType.Participants), address(0), "Genesis Participants");
     emit ProposalStateChanged(_nextProposalID, ProposalState.Active);
     emit ProposalStateChanged(_nextProposalID, ProposalState.Queued);
     emit ProposalStateChanged(_nextProposalID, ProposalState.Executed);
@@ -133,9 +133,11 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       revert ExistingGovernor(address(bytes20(participants)), governor[address(bytes20(participants))]);
     }
 
-    _participants[_nextProposalID] = Participants(participantType, participants, false);
+    Participants storage pStruct = _participants[_nextProposalID];
+    pStruct.pType = participantType;
+    pStruct.participants = participants;
     emit ParticipantsProposed(_nextProposalID, participantType, participants);
-    return _createProposal(uint256(FrabricProposalType.Participants), info);
+    return _createProposal(uint16(FrabricProposalType.Participants), info);
   }
 
   function proposeRemoveBond(
@@ -152,11 +154,11 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
     emit RemoveBondProposed(_nextProposalID, _governor, slash, amount);
-    return _createProposal(uint256(FrabricProposalType.RemoveBond), info);
+    return _createProposal(uint16(FrabricProposalType.RemoveBond), info);
   }
 
   function proposeThread(
-    uint256 variant,
+    uint8 variant,
     address agent,
     string calldata name,
     string calldata symbol,
@@ -175,9 +177,14 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     // Threads a far more integral part of the system, ThreadProposal deals with an enum
     // for proposal type. This variant field is a uint256 which has a much larger impact scope
     IThreadDeployer(threadDeployer).validate(variant, data);
-    _threads[_nextProposalID] = ThreadProposal(variant, agent, name, symbol, data);
+    ThreadProposal storage proposal = _threads[_nextProposalID];
+    proposal.variant = variant;
+    proposal.agent = agent;
+    proposal.name = name;
+    proposal.symbol = symbol;
+    proposal.data = data;
     emit ThreadProposed(_nextProposalID, variant, agent, name, symbol, data);
-    return _createProposal(uint256(FrabricProposalType.Thread), info);
+    return _createProposal(uint16(FrabricProposalType.Thread), info);
   }
 
   // This does assume the Thread's API meets expectations compiled into the Frabric
@@ -185,7 +192,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   // These are both valid behaviors intended to be accessible by Threads
   function proposeThreadProposal(
     address thread,
-    uint256 _proposalType,
+    uint16 _proposalType,
     bytes calldata data,
     string calldata info
   ) external returns (uint256) {
@@ -239,7 +246,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
 
     _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, data);
     emit ThreadProposalProposed(_nextProposalID, thread, _proposalType, info);
-    return _createProposal(uint256(FrabricProposalType.ThreadProposal), info);
+    return _createProposal(uint16(FrabricProposalType.ThreadProposal), info);
   }
 
   function _participantRemoval(address _participant) internal override {

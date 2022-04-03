@@ -22,15 +22,23 @@ contract Auction is Initializable, Composable, IAuctionSum {
 
   uint256 private _nextID;
   struct AuctionStruct {
+    // These fields look horrible yet this is perfectly packed
     address token;
+    uint64 start;
+    uint32 length;
+    // 4 bytes left open in this slot
     address traded;
+    uint64 end;
+
+    // uint96 amounts would be perfectly packed here and support 70 billion 1e18
+    // That would be more than acceptable for all ERC20s worth more than 1 US cent
+    // (or if they're worth less, with appropriately shifted decimals)
+    // It's also a bit of a micro-optimization that reduces compatibility
+    // and could set an unfair, semi-hidden, bid value ceiling
     address seller;
     uint256 amount;
     address bidder;
     uint256 bid;
-    uint256 start;
-    uint256 length;
-    uint256 end;
   }
   mapping(uint256 => AuctionStruct) private _auctions;
 
@@ -54,18 +62,25 @@ contract Auction is Initializable, Composable, IAuctionSum {
     _tokenBalances[token] = balance;
   }
 
-  function listTransferred(address token, address traded, address seller, uint256 start, uint256 length) public override {
+  function listTransferred(address token, address traded, address seller, uint64 start, uint32 length) public override {
     uint256 amount = getTransferred(token);
     if (amount == 0) {
       revert ZeroAmount();
     }
 
-    _auctions[_nextID] = AuctionStruct(token, traded, seller, amount, address(0), 0, start, length, start + length);
-    emit NewAuction(_nextID, token, seller, traded, amount, start);
+    AuctionStruct storage auction = _auctions[_nextID];
+    auction.token = token;
+    auction.traded = traded;
+    auction.seller = seller;
+    auction.amount = amount;
+    auction.start = start;
+    auction.length = length;
+    auction.end = start + length;
+    emit NewAuction(_nextID, token, seller, traded, amount, start, length);
     _nextID++;
   }
 
-  function list(address token, address traded, uint256 amount, uint256 start, uint256 length) external override {
+  function list(address token, address traded, uint256 amount, uint64 start, uint32 length) external override {
     // Could re-enter here, yet the final call (which executes first) to list (or bid)
     // will be executed with sum(transferred) while every other instance will execute with 0
     // (or whatever value was transferred on top, yet that would be legitimately and newly transferred)
@@ -146,8 +161,8 @@ contract Auction is Initializable, Composable, IAuctionSum {
     // Only extend it until twice the auction length to prevent DoS attacks however
     // While this would be mutual (auctioneer doesn't get paid, bidder traps their funds),
     // there may still be sufficient incentive to do so
-    uint256 newEnd = block.timestamp + (1 days);
-    uint256 maxEnd = auction.start + (auction.length * 2);
+    uint64 newEnd = uint64(block.timestamp) + (1 days);
+    uint64 maxEnd = auction.start + (auction.length * 2);
     if (newEnd > maxEnd) {
       newEnd = maxEnd;
     }

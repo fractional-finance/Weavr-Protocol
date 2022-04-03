@@ -22,7 +22,7 @@ interface IThreadDeployer {
   function validate(uint256 varaint, bytes calldata data) external view;
 
   function deploy(
-    uint256 varaint,
+    uint8 varaint,
     address agent,
     string memory name,
     string memory symbol,

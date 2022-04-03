@@ -13,15 +13,16 @@ interface IAuction {
     address indexed seller,
     address traded,
     uint256 amount,
-    uint256 start
+    uint64 start,
+    uint32 length
   );
   event Bid(uint256 indexed id, address bidder, uint256 amount);
   event AuctionCompleted(uint256 indexed id);
 
   function balances(address token, address amount) external returns (uint256);
 
-  function list(address token, address traded, uint256 amount, uint256 start, uint256 time) external;
-  function listTransferred(address token, address traded, address seller, uint256 start, uint256 time) external;
+  function list(address token, address traded, uint256 amount, uint64 start, uint32 time) external;
+  function listTransferred(address token, address traded, address seller, uint64 start, uint32 time) external;
   function bid(uint256 id, uint256 amount) external;
   function complete(uint256 id) external;
   function withdraw(address token, address trader) external;

@@ -22,8 +22,8 @@ contract Timelock is Ownable, Composable, ITimelockSum {
   using ERC165Checker for address;
 
   struct LockStruct {
-    uint256 time;
-    uint256 months;
+    uint64 time;
+    uint8 months;
   }
   mapping(address => LockStruct) internal _locks;
 
@@ -33,7 +33,7 @@ contract Timelock is Ownable, Composable, ITimelockSum {
     supportsInterface[type(ITimelock).interfaceId] = true;
   }
 
-  function lock(address token, uint256 months) external override onlyOwner {
+  function lock(address token, uint8 months) external override onlyOwner {
     LockStruct storage _lock = _locks[token];
 
     // Would trivially be a DoS if token addresses were known in advance and this wasn't onlyOwner
@@ -41,7 +41,7 @@ contract Timelock is Ownable, Composable, ITimelockSum {
       revert AlreadyLocked(token);
     }
 
-    _lock.time = block.timestamp + (30 days);
+    _lock.time = uint64(block.timestamp) + (30 days);
     _lock.months = months;
     emit Lock(token, months);
   }
@@ -77,8 +77,8 @@ contract Timelock is Ownable, Composable, ITimelockSum {
 
     uint256 amount = IERC20(token).balanceOf(address(this)) / _lock.months;
     _lock.months -= 1;
-    IERC20(token).safeTransfer(owner(), amount);
     emit Claim(token, amount);
+    IERC20(token).safeTransfer(owner(), amount);
   }
 
   function getLockNextTime(address token) external view override returns (uint256) {

@@ -22,7 +22,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
-  uint256 constant public override commonProposalBit = 1 << 255;
+  uint16 constant public override commonProposalBit = 1 << 8;
 
   struct Upgrade {
     address beacon;
@@ -42,14 +42,14 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
 
   mapping(uint256 => address) internal _removals;
 
-  function __FrabricDAO_init(address _erc20, uint256 _votingPeriod) internal onlyInitializing {
+  function __FrabricDAO_init(address _erc20, uint64 _votingPeriod) internal onlyInitializing {
     __DAO_init(_erc20, _votingPeriod);
     supportsInterface[type(IFrabricDAO).interfaceId] = true;
   }
 
   function proposePaper(string calldata info) external returns (uint256) {
     // No dedicated event as the DAO emits type and info
-    return _createProposal(uint256(CommonProposalType.Paper) | commonProposalBit, info);
+    return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, info);
   }
 
   // Allowed to be overriden (see Thread for why)
@@ -100,7 +100,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
     // The only missing indexing case is when it's proposed to upgrade, yet that never passes/executes
     // This should be minimally considerable and coverable by outside solutions if truly needed
     emit UpgradeProposed(_nextProposalID, beacon, instance, code);
-    return _createProposal(uint256(CommonProposalType.Upgrade) | commonProposalBit, info);
+    return _createProposal(uint16(CommonProposalType.Upgrade) | commonProposalBit, info);
   }
 
   function proposeTokenAction(
@@ -145,7 +145,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
 
     _tokenActions[_nextProposalID] = TokenAction(token, target, mint, price, amount);
     emit TokenActionProposed(_nextProposalID, token, target, mint, price, amount);
-    return _createProposal(uint256(CommonProposalType.TokenAction) | commonProposalBit, info);
+    return _createProposal(uint16(CommonProposalType.TokenAction) | commonProposalBit, info);
   }
 
   function proposeParticipantRemoval(
@@ -154,7 +154,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
   ) external returns (uint256) {
     _removals[_nextProposalID] = participant;
     emit RemovalProposed(_nextProposalID, participant);
-    return _createProposal(uint256(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
+    return _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
   }
 
   // Has an empty body as it doesn't have to be overriden
@@ -207,7 +207,8 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
               // Use our ERC20's DEX token as the Auction token to receive
               IIntegratedLimitOrderDEX(erc20).dexToken(),
               address(this),
-              block.timestamp,
+              uint64(block.timestamp),
+              // A longer time period can be decided on and utilized via the above method
               1 weeks
             );
           }

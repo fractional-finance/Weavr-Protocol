@@ -79,7 +79,7 @@ interface IFrabric {
     string calldata info
   ) external returns (uint256);
   function proposeThread(
-    uint256 variant,
+    uint8 variant,
     address agent,
     string calldata name,
     string calldata symbol,
@@ -88,7 +88,7 @@ interface IFrabric {
   ) external returns (uint256);
   function proposeThreadProposal(
     address thread,
-    uint256 proposalType,
+    uint16 proposalType,
     bytes calldata data,
     string calldata info
   ) external returns (uint256);

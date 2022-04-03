@@ -19,30 +19,39 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
     address creator;
     ProposalState state;
     // This actually requires getting the block of the event as well, yet generally isn't needed
-    uint256 stateStartTime;
+    uint64 stateStartTime;
+
+    // Used by inheriting contracts
+    // This is intended to be an enum (limited to the 8-bit space) with a bit flag
+    // This allows 8 different categories of enums with a simple bit flag
+    // If they were shifted and used as a number...
+    // This could be uint24 as we have an extra byte in the slot right now, yet
+    // there's no reason to when this could probably be a uint10 if those were allowed
+    uint16 pType;
 
     // The following are exposed via getters
-    uint256 voteBlock;
     // This won't be deleted yet this struct is used in _proposals which atomically increments keys
     // Therefore, this usage is safe
     mapping(address => VoteDirection) voters;
-    // Safe due to the FrabricERC20 being uint224
-    int256 votes;
-    uint256 totalVotes;
+    // Safe due to the FrabricERC20 being uint112
+    int128 votes;
+    uint128 totalVotes;
 
-    // Used by inheriting contracts
-    uint256 pType;
+    // We have 24 bytes left in this storage slot and it'd more gas efficient to
+    // turn this into a uint256. Keeping it as uint64 gives us the option to pack
+    // more in this slot in the future though
+    uint64 voteBlock;
   }
 
   address public override erc20;
-  uint256 public override votingPeriod;
+  uint64 public override votingPeriod;
 
   uint256 internal _nextProposalID;
   mapping(uint256 => Proposal) private _proposals;
 
   mapping(uint256 => bool) public override passed;
 
-  function __DAO_init(address _erc20, uint256 _votingPeriod) internal onlyInitializing {
+  function __DAO_init(address _erc20, uint64 _votingPeriod) internal onlyInitializing {
     supportsInterface[type(IDAO).interfaceId] = true;
 
     erc20 = _erc20;
@@ -83,18 +92,18 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
     }
   }
 
-  function _createProposal(uint256 proposalType, string calldata info) internal beforeProposal() returns (uint256 id) {
+  function _createProposal(uint16 proposalType, string calldata info) internal beforeProposal() returns (uint256 id) {
     id = _nextProposalID;
     _nextProposalID++;
 
     Proposal storage proposal = _proposals[id];
     proposal.creator = msg.sender;
     proposal.state = ProposalState.Active;
-    proposal.stateStartTime = block.timestamp;
+    proposal.stateStartTime = uint64(block.timestamp);
     // Use the previous block as it's finalized
     // While the creator could have sold in this block, they can also sell over the next few weeks
     // This is why cancelProposal exists
-    proposal.voteBlock = block.number - 1;
+    proposal.voteBlock = uint64(block.number) - 1;
     proposal.pType = proposalType;
 
     // Separate event to allow indexing by type/creator while maintaining state machine consistency
@@ -124,7 +133,7 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
       revert AlreadyVotedInDirection(id, msg.sender, direction);
     }
 
-    int256 votes = int256(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock));
+    int128 votes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
     if (votes == 0) {
       revert NoVotes(msg.sender);
     }
@@ -135,7 +144,7 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
       proposal.votes += votes;
     } else {
       // If they had previously abstained, increase the amount of total votes
-      proposal.totalVotes += uint256(votes);
+      proposal.totalVotes += uint128(votes);
     }
 
     // Set new votes
@@ -148,10 +157,10 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
       // If they're now abstaining, decrease the amount of total votes
       // While abstaining could be considered valid as participation,
       // it'd require an extra variable to track and requiring opinionation is fine
-      proposal.totalVotes -= uint256(votes);
+      proposal.totalVotes -= uint128(votes);
     }
 
-    emit Vote(id, direction, msg.sender, uint256(votes));
+    emit Vote(id, direction, msg.sender, uint256(uint128(votes)));
   }
 
   function queueProposal(uint256 id) external {
@@ -173,7 +182,7 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
       revert NotEnoughParticipation(id, proposal.totalVotes, IERC20(erc20).totalSupply() / 10);
     }
     proposal.state = ProposalState.Queued;
-    proposal.stateStartTime = block.timestamp;
+    proposal.stateStartTime = uint64(block.timestamp);
     emit ProposalStateChanged(id, proposal.state);
   }
 
@@ -188,13 +197,16 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
       if (proposal.voters[voters[i]] != VoteDirection.Yes) {
         revert NotYesVote(id, voters[i]);
       }
-      uint256 oldVotes = IVotes(erc20).getPastVotes(voters[i], proposal.voteBlock);
-      uint256 votes = IERC20(erc20).balanceOf(voters[i]);
-      // This will error if their votes have actually increased since
-      // That would enable front running cancellation TXs with bumps of a single account
-      // This shouldn't be a feasible attack vector given retries though
-      // Writes directly to the votes to update it to its (more) accurate value
-      proposal.votes -= int256(oldVotes - votes);
+      int128 oldVotes = int128(IVotes(erc20).getPastVotes(voters[i], proposal.voteBlock));
+      int128 votes = int128(IERC20(erc20).balanceOf(voters[i]));
+      // If this voter's balance has actually increased in the time given,
+      // that'll be reflected here. While we could error, as it goes against the
+      // offchain calculation and intended action of this call, erroring guarantees
+      // this call will fail. By not erroring, we let the other voters have a chance
+      // at still having significant enough differences to warrant cancellation
+      // In the worst case, this will have increased gas cost before failing
+      // Writes directly to the votes field to update it to its (more) accurate value
+      proposal.votes -= int128(oldVotes - votes);
     }
     // If votes is 0, it would've failed queueProposal
     // Fail it here as well
@@ -203,7 +215,7 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
     }
 
     proposal.state = ProposalState.Cancelled;
-    proposal.stateStartTime = block.timestamp;
+    proposal.stateStartTime = uint64(block.timestamp);
     emit ProposalStateChanged(id, proposal.state);
   }
 

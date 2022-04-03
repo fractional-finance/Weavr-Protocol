@@ -22,7 +22,7 @@ interface IFrabricDAO {
   );
   event RemovalProposed(uint256 indexed id, address participant);
 
-  function commonProposalBit() external view returns (uint256);
+  function commonProposalBit() external view returns (uint16);
 
   function proposePaper(string calldata info) external returns (uint256);
   function proposeUpgrade(

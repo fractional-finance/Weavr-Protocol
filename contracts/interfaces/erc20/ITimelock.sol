@@ -4,10 +4,10 @@ pragma solidity >=0.8.9;
 import "../common/IComposable.sol";
 
 interface ITimelock {
-  event Lock(address indexed token, uint256 indexed months);
+  event Lock(address indexed token, uint8 indexed months);
   event Claim(address indexed token, uint256 amount);
 
-  function lock(address token, uint256 months) external;
+  function lock(address token, uint8 months) external;
   function claim(address token) external;
 
   function getLockNextTime(address token) external view returns (uint256);

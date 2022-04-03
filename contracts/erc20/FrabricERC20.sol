@@ -48,8 +48,10 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     _setWhitelisted(msg.sender, keccak256("Initializer"));
 
     // Make sure the supply is within bounds
-    // The DAO code sets an upper bound of int256.max
-    // Uniswap and more frequently use uint112 which is still a very reasonable bound
+    // The DAO code sets an upper bound of signed<int>.max
+    // Uniswap and more frequently use uint112 which is a perfectly functional bound
+    // The DAO code accordingly uses int128 which maintains storage efficiency
+    // while supporting the full uint112 range
     if (supply > uint256(type(uint112).max)) {
       revert SupplyExceedsUInt112(supply);
     }
@@ -126,7 +128,13 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
         _transfer(person, auction, amount);
 
         // List the transferred tokens
-        IAuction(auction).listTransferred(address(this), dexToken, person, block.timestamp + (i * (1 weeks)), 1 weeks);
+        IAuction(auction).listTransferred(
+          address(this),
+          dexToken,
+          person,
+          uint64(block.timestamp) + (i * (1 weeks)),
+          1 weeks
+        );
       }
       _removal = false;
     }

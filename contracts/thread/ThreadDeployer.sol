@@ -73,7 +73,8 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
   function deploy(
     // Not an enum so the ThreadDeployer can be upgraded with more without requiring
     // the Frabric to also be upgraded
-    uint256 _variant,
+    // Is an uint8 so this contract can use it as an enum if desired in the future
+    uint8 _variant,
     address _agent,
     string memory _name,
     string memory _symbol,
@@ -143,7 +144,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     IFrabricERC20(erc20).setWhitelisted(timelock, keccak256("Timelock"));
 
     // Create the lock and transfer the additional tokens to it
-    ITimelock(timelock).lock(erc20, 180 days);
+    ITimelock(timelock).lock(erc20, 6);
     IERC20(erc20).safeTransfer(timelock, threadTokenSupply - threadBaseTokenSupply);
 
     // Remove ourself from the token's whitelist

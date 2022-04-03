@@ -16,8 +16,8 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
 
   struct Distribution {
     IERC20 token;
+    uint64 block;
     uint256 amount;
-    uint256 block;
   }
   Distribution[] private _distributions;
   mapping(address => mapping(uint256 => bool)) public override claimedDistribution;
@@ -53,7 +53,7 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
     if (from != address(this)) {
       IERC20(token).safeTransferFrom(from, address(this), amount);
     }
-    _distributions.push(Distribution(IERC20(token), amount, block.number));
+    _distributions.push(Distribution(IERC20(token), uint64(block.number), amount));
     emit Distributed(token, amount);
   }
 
