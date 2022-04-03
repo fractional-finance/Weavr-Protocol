@@ -108,9 +108,9 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     }
   }
 
-  function burnInternal(address depositor, uint256 amount) private {
+  function _burn(address depositor, uint256 amount) internal override {
     transferAllowed = true;
-    _burn(depositor, amount);
+    super._burn(depositor, amount);
     transferAllowed = false;
   }
 
@@ -166,7 +166,7 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
       revert ZeroAmount();
     }
 
-    burnInternal(msg.sender, amount);
+    _burn(msg.sender, amount);
     emit Withdraw(msg.sender, amount);
 
     IERC20(token).safeTransfer(msg.sender, amount);
@@ -242,7 +242,7 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     if (balance == 0) {
       revert ZeroAmount();
     }
-    burnInternal(depositor, balance);
+    _burn(depositor, balance);
     IERC20(IDAO(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
   }
 }

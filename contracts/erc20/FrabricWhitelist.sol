@@ -52,7 +52,7 @@ abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhiteli
     // They will not be 0 if _setRemoved was called while they are whitelisted locally
     // _setRemoved is only called if they're not whitelisted and a local whitelist
     // will always work to count as whitelisted
-    if (removed[person]) {
+    if (_removed[person]) {
       revert Removed(person);
     }
 
@@ -65,7 +65,7 @@ abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhiteli
   // Removed is automatically set when removed from the whitelist yet also may be
   // triggered by the inheriting contract if they were removed from the parent whitelist
   function _setRemoved(address person) internal {
-    removed[person] = true;
+    _removed[person] = true;
   }
 
   function whitelisted(address person) public view virtual override returns (bool) {

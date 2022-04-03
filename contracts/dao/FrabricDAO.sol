@@ -178,7 +178,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
       } else if (pType == CommonProposalType.TokenAction) {
         TokenAction storage action = _tokenActions[id];
         if (action.amount == 0) {
-          IntegratedLimitOrderDEX(action.token).cancelOrder(action.price);
+          IIntegratedLimitOrderDEX(action.token).cancelOrder(action.price);
         } else {
           if (action.mint) {
             IFrabricERC20(erc20).mint(action.target, action.amount);
