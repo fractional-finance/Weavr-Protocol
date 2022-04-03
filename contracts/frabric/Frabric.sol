@@ -121,16 +121,16 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       revert ProposingGenesisParticipants();
     }
 
-    // Validate this to be an address if this ParticipantType should only be a single address
-    if (
-      ((participantType == ParticipantType.KYC) || (participantType == ParticipantType.Governor)) &&
-      (bytes32(bytes20(participants)) != participants)
-    ) {
-      revert InvalidAddress(address(bytes20(participants)));
-    }
 
-    if ((participantType == ParticipantType.Governor) && (governor[address(bytes20(participants))] != GovernorStatus.Null)) {
-      revert ExistingGovernor(address(bytes20(participants)), governor[address(bytes20(participants))]);
+    if ((participantType == ParticipantType.KYC) || (participantType == ParticipantType.Governor)) {
+      // Validate this to be an address if this ParticipantType should only be a single address
+      if (bytes32(bytes20(participants)) != participants) {
+        revert InvalidAddress(address(bytes20(participants)));
+      }
+
+      if (participant[address(bytes20(participants))] != ParticipantType.Null) {
+        revert ParticipantAlreadyApproved(address(bytes20(participants)));
+      }
     }
 
     Participants storage pStruct = _participants[_nextProposalID];
@@ -260,27 +260,40 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     FrabricProposalType pType = FrabricProposalType(_pType);
     if (pType == FrabricProposalType.Participants) {
       Participants storage participants = _participants[id];
+
       if (participants.pType == ParticipantType.KYC) {
         address newKYC = address(bytes20(participants.participants));
+        // This check also exists in proposeParticipants, yet that doesn't
+        // prevent the same participant from being proposed multiple times simultaneously
+        // This is an edge case which should never happen, yet handling it means
+        // checking here to ensure if they already exist, they're not overwritten
+        // While we could error here, we may as well delete the invalid proposal and move on with life
+        if (participant[newKYC] != ParticipantType.Null) {
+          delete _participants[id];
+          return;
+        }
+
         emit KYCChanged(kyc, newKYC);
         participant[kyc] = ParticipantType.Removed;
         kyc = newKYC;
         participant[kyc] = ParticipantType.KYC;
         // Delete for the gas savings
         delete _participants[id];
+
       } else {
-        // A similar check exists in proposeParticipants yet that doesn't
-        // prevent the same proposal from existing multiple times simultaneously.
-        // This is an edge case which should never happen, yet handling it means
-        // checking here to ensure if they already exist, they're not reset
-        // to Unverified. While we could error here, we may as well delete
-        // the invalid proposal and move on with life
-        if (
-          (participants.pType == ParticipantType.Governor) &&
-          (governor[address(bytes20(participants.participants))] != GovernorStatus.Null)
-        ) {
-          delete _participants[id];
-          return;
+        if (participants.pType == ParticipantType.Governor) {
+          if (
+            // Simultaneously proposed and became a different participant or approved governor
+            (participant[address(bytes20(participants.participants))] != ParticipantType.Null) ||
+            // Simultaneously proposed as a governor multiple times BUT solely Unverified
+            // Because of that, this isn't actually significant, as they'll be set to Unverified
+            // again and that's that. Best to clean up and move on though
+            (governor[address(bytes20(participants.participants))] != GovernorStatus.Null)
+          ) {
+            delete _participants[id];
+            return;
+          }
+          governor[address(bytes20(participants.participants))] = GovernorStatus.Unverified;
         }
 
         // Set this proposal as having passed so the KYC company can whitelist

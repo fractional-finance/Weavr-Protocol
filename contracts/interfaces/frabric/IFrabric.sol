@@ -107,12 +107,11 @@ interface IFrabricSum is IFrabricDAOSum, IFrabric {}
 error ProposingNullParticipants();
 error ProposingGenesisParticipants();
 error InvalidAddress(address invalid);
-error ExistingGovernor(address governor, IFrabric.GovernorStatus status);
+error ParticipantAlreadyApproved(address participant);
 error InvalidName(string name, string symbol);
 error ProposingParticipantRemovalOnThread();
 error ProposingFrabricChange();
 error ExternalCallFailed(address called, bytes4 selector, bytes error);
 error ParticipantsProposalNotPassed(uint256 id);
-error ParticipantAlreadyApproved(address participant);
 error InvalidKYCSignature(address signer, address kyc);
 error IncorrectParticipant(address participant, bytes32 participants, bytes32[] proof);
