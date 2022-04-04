@@ -27,14 +27,14 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     uint256 supply,
     bool _mintable,
     address parentWhitelist,
-    address dexToken,
+    address tradedToken,
     address _auction
   ) external override initializer {
     __Ownable_init();
     __Pausable_init();
     __DividendERC20_init(name, symbol);
     __FrabricWhitelist_init(parentWhitelist);
-    __IntegratedLimitOrderDEX_init(dexToken);
+    __IntegratedLimitOrderDEX_init(tradedToken);
 
     __Composable_init("FrabricERC20", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
@@ -130,7 +130,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
         // List the transferred tokens
         IAuctionCore(auction).listTransferred(
           address(this),
-          dexToken,
+          tradedToken,
           person,
           uint64(block.timestamp + (i * (1 weeks))),
           1 weeks

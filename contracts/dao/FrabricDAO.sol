@@ -205,7 +205,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAO {
             IAuctionCore(action.target).listTransferred(
               action.token,
               // Use our ERC20's DEX token as the Auction token to receive
-              IIntegratedLimitOrderDEXCore(erc20).dexToken(),
+              IIntegratedLimitOrderDEXCore(erc20).tradedToken(),
               address(this),
               uint64(block.timestamp),
               // A longer time period can be decided on and utilized via the above method

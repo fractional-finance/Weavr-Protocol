@@ -28,7 +28,7 @@ interface IFrabricERC20Initializable is IFrabricERC20 {
     uint256 supply,
     bool mintable,
     address parentWhitelist,
-    address dexToken,
+    address tradedToken,
     address auction
   ) external;
 }
