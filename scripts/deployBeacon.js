@@ -8,7 +8,7 @@ module.exports = async (args, codeFactory, Beacon) => {
   if (Beacon == null) {
     Beacon = await ethers.getContractFactory("Beacon");
   }
-  const beacon = await Beacon.deploy(...args, await code.contractName.call());
+  const beacon = await Beacon.deploy(await code.contractName.call(), ...args);
   // Sanity check ethers.utils.id usage while here
   // Ensures whitelist consistency for JS whitelisted participants/contracts and Solidity whitelisted contracts
   if ((await beacon.contractName.call()) != ethers.utils.id("Beacon")) {

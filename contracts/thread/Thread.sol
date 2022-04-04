@@ -72,16 +72,16 @@ contract Thread is FrabricDAO, IThreadSum {
   function _canProposeUpgrade(
     address beacon,
     address instance,
-    address code
+    address impl
   ) internal view override returns (bool) {
     return (
       // If upgrades are enabled, all good
       (block.timestamp >= upgradesEnabled) ||
-      // Upgrades to the current code/release channels are always allowed
+      // Upgrades to the current impl/release channels are always allowed
       // This prevents the Frabric from forcing an update onto Threads and allows
       // switching between versions presumably published by the Frabric
-      (code == IFrabricBeacon(beacon).implementation(instance)) ||
-      (uint160(code) <= IFrabricBeacon(beacon).releaseChannels())
+      (impl == IFrabricBeacon(beacon).implementation(instance)) ||
+      (uint160(impl) <= IFrabricBeacon(beacon).releaseChannels())
     );
   }
 
