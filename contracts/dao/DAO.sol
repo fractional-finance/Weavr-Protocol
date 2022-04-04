@@ -117,12 +117,11 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
     // Doing so doesn't automatically whitelist them to hold tokens
     // In the case of the Frabric, they won't be whitelisted if they're the KYC company
     if (IFrabricWhitelist(erc20).whitelisted(msg.sender)) {
-      _vote(id, VoteDirection.Yes);
+      _vote(id, proposal, VoteDirection.Yes);
     }
   }
 
-  function _vote(uint256 id, VoteDirection direction) internal {
-    Proposal storage proposal = activeProposal(id);
+  function _vote(uint256 id, Proposal storage proposal, VoteDirection direction) internal {
     VoteDirection voted = proposal.voters[msg.sender];
     if (voted == direction) {
       revert AlreadyVotedInDirection(id, msg.sender, direction);
@@ -175,7 +174,7 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
       // Since Solidity arrays are bounds checked, this will simply error if directions
       // is too short. If it's too long, it ignores the extras, and the actually processed
       // data doesn't suffer from any mutability
-      _vote(ids[i], directions[i]);
+      _vote(ids[i], activeProposal(ids[i]), directions[i]);
     }
   }
 
