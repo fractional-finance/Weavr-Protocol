@@ -13,6 +13,11 @@ abstract contract Composable is Initializable, IComposable {
   uint256 public override version;
   mapping(bytes4 => bool) public override supportsInterface;
 
+  // While this could probably get away with 5 variables, and other contracts
+  // with 20, the fact this is free (and a permanent decision) leads to using
+  // these large gaps
+  uint256[100] private __gap;
+
   // Code should set its name so Beacons can identify code
   // That said, code shouldn't declare support for interfaces or have any version
   // Hence this

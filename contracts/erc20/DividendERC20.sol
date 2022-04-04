@@ -27,6 +27,8 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
   mapping(uint256 => Distribution) private _distributions;
   mapping(address => mapping(uint256 => bool)) public override claimedDistribution;
 
+  uint256[100] private __gap;
+
   function __DividendERC20_init(string memory name, string memory symbol) internal {
     __ERC20_init(name, symbol);
     __ERC20Permit_init(name);

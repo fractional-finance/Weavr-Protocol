@@ -37,6 +37,8 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   // Indexed by price
   mapping (uint256 => PricePoint) private _points;
 
+  uint256[100] private __gap;
+
   function _transfer(address from, address to, uint256 amount) internal virtual;
   function balanceOf(address account) public virtual returns (uint256);
   function decimals() public virtual returns (uint8);

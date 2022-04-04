@@ -42,6 +42,8 @@ abstract contract FrabricDAO is DAO, IFrabricDAO {
 
   mapping(uint256 => address) internal _removals;
 
+  uint256[100] private __gap;
+
   function __FrabricDAO_init(address _erc20, uint64 _votingPeriod) internal onlyInitializing {
     __DAO_init(_erc20, _votingPeriod);
     supportsInterface[type(IFrabricDAO).interfaceId] = true;

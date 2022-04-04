@@ -21,6 +21,8 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   // List of people removed from the whitelist
   mapping(address => bool) internal _removed;
 
+  uint256[100] private __gap;
+
   function _setParentWhitelist(address parent) internal {
     if ((parent != address(0)) && (!parent.supportsInterface(type(IWhitelist).interfaceId))) {
       revert UnsupportedInterface(parent, type(IWhitelist).interfaceId);
