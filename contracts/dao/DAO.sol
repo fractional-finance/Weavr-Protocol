@@ -4,8 +4,6 @@ pragma solidity ^0.8.9;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { IVotesUpgradeable as IVotes } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../common/Composable.sol";
@@ -13,7 +11,7 @@ import "../common/Composable.sol";
 import "../interfaces/dao/IDAO.sol";
 
 // DAO around a FrabricERC20
-abstract contract DAO is Initializable, Composable, IDAO {
+abstract contract DAO is Composable, IDAO {
   struct Proposal {
     // The following are embedded into easily accessible events
     address creator;

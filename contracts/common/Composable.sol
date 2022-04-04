@@ -3,7 +3,9 @@ pragma solidity ^0.8.9;
 
 import "../interfaces/common/IComposable.sol";
 
-abstract contract Composable is IComposable {
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+abstract contract Composable is Initializable, IComposable {
   // Doesn't use "name" due to IERC20 using "name"
   bytes32 public override contractName;
   // Version is global, and not per-interface, as interfaces aren't "DAO" and "FrabricDAO"
@@ -22,10 +24,7 @@ abstract contract Composable is IComposable {
     contractName = keccak256(bytes(name));
   }
 
-  // Doesn't have onlyInitializing as it's intended to be used by both upgradeable and non-upgradeable contracts
-  // Avoids needing non-upgradeable contracts to descend from Initializable when this should never be in an exposed path
-  // It should always be in an initializer or constructor which can only be called once anyways
-  function __Composable_init(string memory name, bool finalized) internal {
+  function __Composable_init(string memory name, bool finalized) internal onlyInitializing {
     contractName = keccak256(bytes(name));
     if (!finalized) {
       version = 1;

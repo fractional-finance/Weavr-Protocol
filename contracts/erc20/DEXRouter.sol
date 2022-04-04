@@ -30,7 +30,7 @@ import "../interfaces/erc20/IDEXRouter.sol";
 contract DEXRouter is Composable, IDEXRouter {
   using SafeERC20 for IERC20;
 
-  constructor() Composable("DEXRouter") {
+  constructor() Composable("DEXRouter") initializer {
     __Composable_init("DEXRouter", true);
     supportsInterface[type(IDEXRouter).interfaceId] = true;
   }

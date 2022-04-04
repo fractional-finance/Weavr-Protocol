@@ -27,7 +27,7 @@ contract Timelock is Ownable, Composable, ITimelock {
   }
   mapping(address => LockStruct) internal _locks;
 
-  constructor() Composable("Timelock") Ownable() {
+  constructor() Composable("Timelock") Ownable() initializer {
     __Composable_init("Timelock", true);
     supportsInterface[type(Ownable).interfaceId] = true;
     supportsInterface[type(ITimelock).interfaceId] = true;

@@ -3,14 +3,12 @@ pragma solidity ^0.8.9;
 
 import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 import "../common/Composable.sol";
 
 import "../interfaces/erc20/IFrabricWhitelist.sol";
 
 // Whitelist which tracks a parent (if set), whitelists with KYC hashes instead of booleans, and can be disabled someday
-abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhitelist {
+abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   using ERC165Checker for address;
 
   // This is intended to be settable without an upgrade in the future, yet no path currently will

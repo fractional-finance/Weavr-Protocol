@@ -5,8 +5,6 @@ import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
@@ -14,7 +12,7 @@ import "../common/Composable.sol";
 
 import "../interfaces/erc20/IAuction.sol";
 
-contract Auction is Initializable, Composable, IAuctionInitializable {
+contract Auction is Composable, IAuctionInitializable {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
