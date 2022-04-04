@@ -56,7 +56,7 @@ contract Thread is FrabricDAO, IThreadSum {
     return (
       // Whitelisted token holder
       (
-        IFrabricWhitelist(erc20).whitelisted(msg.sender) &&
+        IWhitelist(erc20).whitelisted(msg.sender) &&
         (IERC20(erc20).balanceOf(msg.sender) != 0)
       ) ||
       // Both of these should also be whitelisted. It's not technically a requirement however

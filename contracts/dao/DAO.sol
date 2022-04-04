@@ -116,7 +116,7 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
     // Both of these should be whitelisted yet Threads can change them at any time
     // Doing so doesn't automatically whitelist them to hold tokens
     // In the case of the Frabric, they won't be whitelisted if they're the KYC company
-    if (IFrabricWhitelist(erc20).whitelisted(msg.sender)) {
+    if (IWhitelist(erc20).whitelisted(msg.sender)) {
       _vote(id, proposal, VoteDirection.Yes);
     }
   }
@@ -166,7 +166,7 @@ abstract contract DAO is Initializable, Composable, IDAOSum {
     // Threads keep token balances until someone calls remove on them
     // This check prevents them from voting in the meantime, even though it could
     // eventually be handled by calling remove and cancelProposal when the time comes
-    if (!IFrabricWhitelist(erc20).whitelisted(msg.sender)) {
+    if (!IWhitelist(erc20).whitelisted(msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
 

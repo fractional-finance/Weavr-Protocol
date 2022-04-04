@@ -24,8 +24,8 @@ abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhiteli
   mapping(address => bool) internal _removed;
 
   function _setParentWhitelist(address parent) internal {
-    if ((parent != address(0)) && (!parent.supportsInterface(type(IFrabricWhitelist).interfaceId))) {
-      revert UnsupportedInterface(parent, type(IFrabricWhitelist).interfaceId);
+    if ((parent != address(0)) && (!parent.supportsInterface(type(IWhitelist).interfaceId))) {
+      revert UnsupportedInterface(parent, type(IWhitelist).interfaceId);
     }
 
     // Does still emit even if address 0 was changed to address 0
@@ -35,6 +35,7 @@ abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhiteli
   }
 
   function __FrabricWhitelist_init(address parent) internal onlyInitializing {
+    supportsInterface[type(IWhitelist).interfaceId] = true;
     supportsInterface[type(IFrabricWhitelist).interfaceId] = true;
     global = false;
     _setParentWhitelist(parent);
@@ -71,7 +72,7 @@ abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhiteli
   function whitelisted(address person) public view virtual override returns (bool) {
     return (
       // Check the parent whitelist (actually relevant check most of the time)
-      ((parentWhitelist != address(0)) && IFrabricWhitelist(parentWhitelist).whitelisted(person)) ||
+      ((parentWhitelist != address(0)) && IWhitelist(parentWhitelist).whitelisted(person)) ||
       // Global or explicitly whitelisted
       global || (info[person] != bytes32(0))
     );

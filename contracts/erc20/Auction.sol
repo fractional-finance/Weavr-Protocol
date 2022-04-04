@@ -107,13 +107,13 @@ contract Auction is Initializable, Composable, IAuctionSum {
   // won't pass as EIP165 compatible
   function notWhitelisted(address token, address person) internal view returns (bool) {
     return (
-      // If this contract doesn't support the IFrabricWhitelist interface,
+      // If this contract doesn't support the IWhitelist interface,
       // return false, meaning they're not not whitelisted (meaning they are,
       // as contracts without whitelists behave as if everyone is whitelisted)
-      token.supportsInterface(type(IFrabricWhitelist).interfaceId) &&
+      token.supportsInterface(type(IWhitelist).interfaceId) &&
       // If there is a whitelist and this person isn't whitelisted however,
       // return true so we can error
-      (!IFrabricWhitelist(token).whitelisted(person))
+      (!IWhitelist(token).whitelisted(person))
     );
   }
 

@@ -21,7 +21,7 @@ interface IFrabricERC20 {
   function unpause() external;
 }
 
-interface IFrabricERC20Sum is IDividendERC20Sum, IFrabricWhitelist, IIntegratedLimitOrderDEX, IFrabricERC20 {
+interface IFrabricERC20Sum is IDividendERC20Sum, IFrabricWhitelistSum, IIntegratedLimitOrderDEX, IFrabricERC20 {
   function initialize(
     string memory name,
     string memory symbol,

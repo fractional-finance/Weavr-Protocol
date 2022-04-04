@@ -125,7 +125,7 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
       revert ZeroAmount();
     }
 
-    if (!IFrabricWhitelist(whitelist).whitelisted(msg.sender)) {
+    if (!IWhitelist(whitelist).whitelisted(msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
 

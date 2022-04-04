@@ -4,6 +4,10 @@ pragma solidity >=0.8.9;
 import "../common/Errors.sol";
 import "../common/IComposable.sol";
 
+interface IWhitelist {
+  function whitelisted(address person) external view returns (bool);
+}
+
 interface IFrabricWhitelist {
   event ParentWhitelistChange(address oldParent, address newParent);
   // Info shouldn't be indexed when you consider it's unique per-person
@@ -16,13 +20,12 @@ interface IFrabricWhitelist {
   function parentWhitelist() external view returns (address);
   function info(address person) external view returns (bytes32);
 
-  function whitelisted(address person) external view returns (bool);
   function explicitlyWhitelisted(address person) external view returns (bool);
 
   function removed(address person) external view returns (bool);
 }
 
-interface IFrabricWhitelistSum is IComposable, IFrabricWhitelist {}
+interface IFrabricWhitelistSum is IComposable, IWhitelist, IFrabricWhitelist {}
 
 error NotWhitelisted(address person);
 error Whitelisted(address person);
