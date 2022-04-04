@@ -46,6 +46,7 @@ contract Auction is Initializable, Composable, IAuctionSum {
 
   function initialize() external initializer {
     __Composable_init("Auction", false);
+    supportsInterface[type(IAuctionCore).interfaceId] = true;
     supportsInterface[type(IAuction).interfaceId] = true;
   }
 

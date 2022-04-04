@@ -39,7 +39,7 @@ contract DEXRouter is Composable, IDEXRouterSum {
     // Doesn't bother checking the supported interfaces to minimize gas usage
     // If this function executes in its entirety, then the contract has all needed functions
 
-    IERC20 dexToken = IERC20(IIntegratedLimitOrderDEX(token).dexToken());
+    IERC20 dexToken = IERC20(IIntegratedLimitOrderDEXCore(token).dexToken());
 
     // Transfer only the specified of capital
     dexToken.safeTransferFrom(msg.sender, token, payment);

@@ -128,7 +128,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
         _transfer(person, auction, amount);
 
         // List the transferred tokens
-        IAuction(auction).listTransferred(
+        IAuctionCore(auction).listTransferred(
           address(this),
           dexToken,
           person,

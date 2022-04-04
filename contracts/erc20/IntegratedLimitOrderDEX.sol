@@ -47,6 +47,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
   function __IntegratedLimitOrderDEX_init(address _dexToken) internal onlyInitializing {
     __ReentrancyGuard_init();
+    supportsInterface[type(IIntegratedLimitOrderDEXCore).interfaceId] = true;
     supportsInterface[type(IIntegratedLimitOrderDEX).interfaceId] = true;
     dexToken = _dexToken;
   }
@@ -295,7 +296,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
           locked[order.trader] -= atomic(order.amount);
         }
 
-        emit DeletedOrder(order.trader, price, order.amount);
+        emit CancelledOrder(order.trader, price, order.amount);
 
         // If this is not the last order, shift the last order down
         if (i != (point.orders.length - 1)) {

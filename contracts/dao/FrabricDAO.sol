@@ -129,8 +129,8 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
       }
 
       // Ensure that we know how to sell this token
-      if (!token.supportsInterface(type(IIntegratedLimitOrderDEX).interfaceId)) {
-        revert UnsupportedInterface(token, type(IIntegratedLimitOrderDEX).interfaceId);
+      if (!token.supportsInterface(type(IIntegratedLimitOrderDEXCore).interfaceId)) {
+        revert UnsupportedInterface(token, type(IIntegratedLimitOrderDEXCore).interfaceId);
       }
 
       // Because this is an ILO DEX, amount here will be atomic yet the ILO DEX
@@ -178,7 +178,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
       } else if (pType == CommonProposalType.TokenAction) {
         TokenAction storage action = _tokenActions[id];
         if (action.amount == 0) {
-          IIntegratedLimitOrderDEX(action.token).cancelOrder(action.price);
+          IIntegratedLimitOrderDEXCore(action.token).cancelOrder(action.price);
         } else {
           if (action.mint) {
             IFrabricERC20(erc20).mint(action.target, action.amount);
@@ -192,7 +192,7 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
             // These orders cannot be cancelled at this time without the DAO wash trading
             // through the order, yet that may collide with others orders at the same price
             // point, so this isn't actually a viable method
-            IIntegratedLimitOrderDEX(action.token).sell(action.price, action.amount / 1e18);
+            IIntegratedLimitOrderDEXCore(action.token).sell(action.price, action.amount / 1e18);
 
           // Technically, TokenAction could not acknowledge Auction
           // By transferring the tokens to another contract, the Auction can be safely created
@@ -202,10 +202,10 @@ abstract contract FrabricDAO is DAO, IFrabricDAOSum {
           // (or achieving global ERC777 adoptance yet that would be incredibly problematic for several reasons)
           // The easiest solution is just to write a few lines into this contract to handle it.
           } else if (action.target == IFrabricERC20(erc20).auction()) {
-            IAuction(action.target).listTransferred(
+            IAuctionCore(action.target).listTransferred(
               action.token,
               // Use our ERC20's DEX token as the Auction token to receive
-              IIntegratedLimitOrderDEX(erc20).dexToken(),
+              IIntegratedLimitOrderDEXCore(erc20).dexToken(),
               address(this),
               uint64(block.timestamp),
               // A longer time period can be decided on and utilized via the above method

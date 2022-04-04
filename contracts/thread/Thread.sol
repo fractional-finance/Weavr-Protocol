@@ -110,7 +110,7 @@ contract Thread is FrabricDAO, IThreadSum {
       revert DifferentContract(IComposable(_frabric).contractName(), keccak256("Frabric"));
     }
 
-    // This Frabric technically only has to implement the DAO code
+    // This Frabric technically only has to implement IDAO
     // It's used for its erc20 (parent whitelist) and its voting period at this time
     // Technically, the erc20 must implement FrabricWhitelist
     // That is implied by this Frabric implementing IDAO and when this executes,
