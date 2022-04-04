@@ -11,16 +11,19 @@ interface IBond is IComposable {
   event Slash(address governor, uint256 amount);
 
   function usd() external view returns (address);
-  function token() external view returns (address);
+  function bondToken() external view returns (address);
 
   function bond(uint256 amount) external;
   function unbond(address bonder, uint256 amount) external;
   function slash(address bonder, uint256 amount) external;
+
+  function recover(address token) external;
 }
 
 interface IBondInitializable is IBond {
-  function initialize(address usd, address token) external;
+  function initialize(address usd, address bond) external;
 }
 
 error BondTransfer();
 error NotActiveGovernor(address governor, IFrabric.GovernorStatus status);
+error RecoveringBond();

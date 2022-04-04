@@ -27,7 +27,7 @@ interface ICrowdfund is IDividendERC20 {
 
   function token() external view returns (address);
   function target() external view returns (uint256);
-  function deposited() external view returns (uint256);
+  function outstanding() external view returns (uint256);
 
   function state() external view returns (State);
 

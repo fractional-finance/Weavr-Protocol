@@ -28,10 +28,10 @@ contract Crowdfund is DividendERC20, ICrowdfundInitializable {
   address public override token;
   uint256 public override target;
 
-  // Alias the total supply to the amount of funds deposited
-  // Technically defined as the amount of funds deposited AND outstanding, with
-  // no refund claimed nor Thread tokens issued
-  function deposited() public view returns (uint256) {
+  // Amount of tokens which have yet to be converted to Thread tokens
+  // Equivalent to the amount of funds deposited and not withdrawn if none have
+  // been burnt yet
+  function outstanding() public view returns (uint256) {
     return totalSupply();
   }
 
@@ -118,8 +118,8 @@ contract Crowdfund is DividendERC20, ICrowdfundInitializable {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
-    if (amount > (target - deposited())) {
-      amount = target - deposited();
+    if (amount > (target - outstanding())) {
+      amount = target - outstanding();
     }
     if (amount == 0) {
       revert ZeroAmount();
@@ -158,7 +158,7 @@ contract Crowdfund is DividendERC20, ICrowdfundInitializable {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
-    if (deposited() == target) {
+    if (outstanding() == target) {
       // Doesn't include target as it's not pertinent
       revert CrowdfundReached();
     }
@@ -189,7 +189,7 @@ contract Crowdfund is DividendERC20, ICrowdfundInitializable {
 
   // Transfer the funds from a Crowdfund to the agent for execution
   function execute() external {
-    if (deposited() != target) {
+    if (outstanding() != target) {
       revert CrowdfundNotReached();
     }
     if (state != State.Active) {
@@ -245,4 +245,8 @@ contract Crowdfund is DividendERC20, ICrowdfundInitializable {
     _burn(depositor, balance);
     IERC20(IDAO(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
   }
+
+  // While it would be nice to have a recovery function here, the integration with DividendERC20
+  // means that can't feasibly be done (without adding more tracking to DividendERC20 on expected balances)
+  // It's not worth the hassle at this time
 }
