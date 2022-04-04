@@ -8,8 +8,8 @@ import "../common/Errors.sol";
 import "../common/IComposable.sol";
 
 interface IDividendERC20 {
-  event Distributed(address indexed token, uint256 amount);
-  event Claimed(address indexed person, uint256 indexed id, uint256 amount);
+  event Distributed(uint256 indexed id, address indexed token, uint256 amount);
+  event Claimed(uint256 indexed id, address indexed person, uint256 amount);
 
   function claimedDistribution(address person, uint256 id) external view returns (bool);
 

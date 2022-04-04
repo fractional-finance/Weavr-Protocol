@@ -15,11 +15,16 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
   using SafeERC20 for IERC20;
 
   struct Distribution {
-    IERC20 token;
+    address token;
     uint64 block;
     uint256 amount;
   }
-  Distribution[] private _distributions;
+  // This could be an array yet gas testing on an isolate contract showed writing
+  // new structs was roughly 200 gas more expensive while reading to memory was
+  // roughly 2000 gas cheaper
+  // This was including the monotonic uint256 increment
+  uint256 private _nextID;
+  mapping(uint256 => Distribution) private _distributions;
   mapping(address => mapping(uint256 => bool)) public override claimedDistribution;
 
   function __DividendERC20_init(string memory name, string memory symbol) internal {
@@ -31,6 +36,8 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
     supportsInterface[type(IERC20PermitUpgradeable).interfaceId] = true;
     supportsInterface[type(IVotesUpgradeable).interfaceId] = true;
     supportsInterface[type(IDividendERC20).interfaceId] = true;
+
+    _nextID = 0;
   }
 
   // Disable delegation to enable dividends
@@ -53,8 +60,9 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
     if (from != address(this)) {
       IERC20(token).safeTransferFrom(from, address(this), amount);
     }
-    _distributions.push(Distribution(IERC20(token), uint64(block.number), amount));
-    emit Distributed(token, amount);
+    _distributions[_nextID] = Distribution(token, uint64(block.number), amount);
+    _nextID++;
+    emit Distributed(_nextID, token, amount);
   }
 
   function distribute(address token, uint256 amount) external override {
@@ -66,12 +74,14 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
       revert AlreadyClaimed(id);
     }
     claimedDistribution[person][id] = true;
-    uint256 blockNumber = _distributions[id].block;
-    uint256 amount = _distributions[id].amount * getPastVotes(person, blockNumber) / getPastTotalSupply(blockNumber);
+
+    Distribution storage distribution = _distributions[id];
+    uint256 amount = distribution.amount * getPastVotes(person, distribution.block) / getPastTotalSupply(distribution.block);
+    // Also verifies this is an actual distribution and not an unset ID
     if (amount == 0) {
       revert ZeroAmount();
     }
-    _distributions[id].token.safeTransfer(person, amount);
-    emit Claimed(person, id, amount);
+    IERC20(distribution.token).safeTransfer(person, amount);
+    emit Claimed(id, person, amount);
   }
 }
