@@ -3,7 +3,7 @@ pragma solidity >=0.8.9;
 
 import "../dao/IFrabricDAO.sol";
 
-interface IThread {
+interface IThread is IFrabricDAO {
   event AgentChangeProposed(uint256 indexed id, address indexed agent);
   event FrabricChangeProposed(uint256 indexed id, address indexed frabric);
   event DissolutionProposed(uint256 indexed id, address indexed purchaser, address indexed token, uint256 amount);
@@ -39,11 +39,11 @@ interface IThread {
   ) external returns (uint256);
 }
 
-interface IThreadSum is IFrabricDAOSum, IThread {
+interface IThreadInitializable is IThread {
   function initialize(
-    address _erc20,
-    address _agent,
-    address _frabric
+    address erc20,
+    address agent,
+    address frabric
   ) external;
 }
 

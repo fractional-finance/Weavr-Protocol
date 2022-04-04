@@ -3,7 +3,7 @@ pragma solidity >=0.8.9;
 
 import "../common/IComposable.sol";
 
-interface IDAO {
+interface IDAO is IComposable {
   enum ProposalState {
     Active,
     Queued,
@@ -39,8 +39,6 @@ interface IDAO {
   function proposalVotes(uint256 id) external view returns (int256);
   function proposalTotalVotes(uint256 id) external view returns (uint256);
 }
-
-interface IDAOSum is IComposable, IDAO {}
 
 error NotAuthorizedToPropose(address caller);
 error InactiveProposal(uint256 id);

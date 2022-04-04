@@ -17,7 +17,7 @@ import "../interfaces/frabric/IBond.sol";
 
 // Emits a DividendERC20 for dividend functionality (as expected) and so Governors have a reminder of their Bond quantity on Etherscan
 
-contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
+contract Bond is OwnableUpgradeable, DividendERC20, IBondInitializable {
   using SafeERC20 for IERC20;
 
   address public override usd;
@@ -25,7 +25,7 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
 
   bool private _burning;
 
-  function initialize(address _usd, address _token) external initializer {
+  function initialize(address _usd, address _token) external override initializer {
     __Ownable_init();
     __DividendERC20_init("Frabric Bond", "bFBRC");
 

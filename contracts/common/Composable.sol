@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import "../interfaces/common/IComposable.sol";
 
-abstract contract Composable is IComposableSum {
+abstract contract Composable is IComposable {
   // Doesn't use "name" due to IERC20 using "name"
   bytes32 public override contractName;
   // Version is global, and not per-interface, as interfaces aren't "DAO" and "FrabricDAO"

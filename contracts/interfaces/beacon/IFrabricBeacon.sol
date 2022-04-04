@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 
 import "../common/IComposable.sol";
 
-interface IFrabricBeacon {
+interface IFrabricBeacon is IBeacon, IComposable {
   event Upgrade(address indexed instance, address indexed code);
 
   // Name of the contract this beacon points to
@@ -25,8 +25,6 @@ interface IFrabricBeacon {
   // Upgrade to different code/forward to a different beacon
   function upgrade(address instance, address impl) external;
 }
-
-interface IFrabricBeaconSum is IBeacon, IComposableSum, IFrabricBeacon {}
 
 // Errors used by Beacon
 error InvalidCode(address code);

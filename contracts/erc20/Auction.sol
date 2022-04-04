@@ -14,7 +14,7 @@ import "../common/Composable.sol";
 
 import "../interfaces/erc20/IAuction.sol";
 
-contract Auction is Initializable, Composable, IAuctionSum {
+contract Auction is Initializable, Composable, IAuctionInitializable {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
@@ -44,7 +44,7 @@ contract Auction is Initializable, Composable, IAuctionSum {
 
   mapping(address => mapping(address => uint256)) public override balances;
 
-  function initialize() external initializer {
+  function initialize() external override initializer {
     __Composable_init("Auction", false);
     supportsInterface[type(IAuctionCore).interfaceId] = true;
     supportsInterface[type(IAuction).interfaceId] = true;

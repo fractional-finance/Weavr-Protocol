@@ -18,7 +18,7 @@ import "../interfaces/dao/IFrabricDAO.sol";
 // This offers smaller, more compartamentalized code, and directly integrating the two
 // doesn't actually offer any efficiency benefits. The new structs, the new variables, and
 // the new code are still needed, meaning it really just inlines _completeProposal
-abstract contract FrabricDAO is DAO, IFrabricDAOSum {
+abstract contract FrabricDAO is DAO, IFrabricDAO {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 

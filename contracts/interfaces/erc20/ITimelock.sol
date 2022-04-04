@@ -3,7 +3,7 @@ pragma solidity >=0.8.9;
 
 import "../common/IComposable.sol";
 
-interface ITimelock {
+interface ITimelock is IComposable {
   event Lock(address indexed token, uint8 indexed months);
   event Claim(address indexed token, uint256 amount);
 
@@ -13,8 +13,6 @@ interface ITimelock {
   function getLockNextTime(address token) external view returns (uint256);
   function getLockRemainingMonths(address token) external view returns (uint256);
 }
-
-interface ITimelockSum is IComposableSum, ITimelock {}
 
 error AlreadyLocked(address token);
 error Locked(address token, uint256 time, uint256 nextTime);

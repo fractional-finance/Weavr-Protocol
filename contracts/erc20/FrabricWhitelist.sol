@@ -10,7 +10,7 @@ import "../common/Composable.sol";
 import "../interfaces/erc20/IFrabricWhitelist.sol";
 
 // Whitelist which tracks a parent (if set), whitelists with KYC hashes instead of booleans, and can be disabled someday
-abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhitelistSum {
+abstract contract FrabricWhitelist is Initializable, Composable, IFrabricWhitelist {
   using ERC165Checker for address;
 
   // This is intended to be settable without an upgrade in the future, yet no path currently will

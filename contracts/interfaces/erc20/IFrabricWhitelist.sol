@@ -8,7 +8,7 @@ interface IWhitelist {
   function whitelisted(address person) external view returns (bool);
 }
 
-interface IFrabricWhitelist {
+interface IFrabricWhitelist is IComposable, IWhitelist {
   event ParentWhitelistChange(address oldParent, address newParent);
   // Info shouldn't be indexed when you consider it's unique per-person
   // Indexing it does allow retrieving the address of a person by their KYC however
@@ -24,8 +24,6 @@ interface IFrabricWhitelist {
 
   function removed(address person) external view returns (bool);
 }
-
-interface IFrabricWhitelistSum is IComposable, IWhitelist, IFrabricWhitelist {}
 
 error NotWhitelisted(address person);
 error Whitelisted(address person);

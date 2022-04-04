@@ -20,7 +20,7 @@ import "../common/Composable.sol";
 
 import "../interfaces/thread/IThreadDeployer.sol";
 
-contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
+contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitializable {
   using SafeERC20 for IERC20;
 
   address public override crowdfundProxy;
@@ -35,7 +35,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     address _threadBeacon,
     address _auction,
     address _timelock
-  ) external initializer {
+  ) external override initializer {
     __Ownable_init();
 
     __Composable_init("ThreadDeployer", false);
@@ -98,7 +98,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     address thread = address(new BeaconProxy(
       threadBeacon,
       abi.encodeWithSelector(
-        IThreadSum.initialize.selector,
+        IThreadInitializable.initialize.selector,
         erc20,
         agent,
         msg.sender
@@ -110,7 +110,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     address crowdfund = address(new BeaconProxy(
       crowdfundProxy,
       abi.encodeWithSelector(
-        ICrowdfundSum.initialize.selector,
+        ICrowdfundInitializable.initialize.selector,
         name,
         symbol,
         parentWhitelist,
@@ -129,7 +129,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
     // Add 6% on top for the Thread
     uint256 threadTokenSupply = threadBaseTokenSupply * 106 / 100;
-    IFrabricERC20Sum(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken, auction);
+    IFrabricERC20Initializable(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken, auction);
     if (decimals != IERC20Metadata(erc20).decimals()) {
       revert NonStaticDecimals(decimals, IERC20Metadata(erc20).decimals());
     }

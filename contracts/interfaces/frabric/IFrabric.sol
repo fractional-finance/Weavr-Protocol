@@ -102,7 +102,16 @@ interface IFrabric {
   ) external;
 }
 
-interface IFrabricSum is IFrabricDAOSum, IFrabric {}
+interface IFrabricInitializable is IFrabric {
+  function initialize(
+    address erc20,
+    address[] calldata genesis,
+    bytes32 genesisMerkle,
+    address bond,
+    address threadDeployer,
+    address kyc
+  ) external;
+}
 
 error ProposingNullParticipants();
 error ProposingGenesisParticipants();

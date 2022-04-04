@@ -24,7 +24,7 @@ interface IIntegratedLimitOrderDEXCore {
   function cancelOrder(uint256 price) external;
 }
 
-interface IIntegratedLimitOrderDEX {
+interface IIntegratedLimitOrderDEX is IComposable, IIntegratedLimitOrderDEXCore {
   function dexBalance() external view returns (uint256);
   function dexBalances(address trader) external view returns (uint256);
   function locked(address trader) external view returns (uint256);
@@ -42,8 +42,6 @@ interface IIntegratedLimitOrderDEX {
   function getOrderTrader(uint256 price, uint256 i) external view returns (address);
   function getOrderAmount(uint256 price, uint256 i) external view returns (uint256);
 }
-
-interface IIntegratedLimitOrderDEXSum is IComposable, IIntegratedLimitOrderDEXCore, IIntegratedLimitOrderDEX {}
 
 error LessThanMinimumAmount(uint256 amount, uint256 minimumAmount);
 error NotEnoughFunds(uint256 required, uint256 balance);

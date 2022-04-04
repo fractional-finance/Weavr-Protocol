@@ -21,7 +21,7 @@ import "../dao/FrabricDAO.sol";
 
 import "../interfaces/frabric/IFrabric.sol";
 
-contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
+contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricInitializable {
   using ERC165Checker for address;
 
   mapping(address => ParticipantType) public override participant;
@@ -74,7 +74,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     address _bond,
     address _threadDeployer,
     address _kyc
-  ) external initializer {
+  ) external override initializer {
     __EIP712_init("Frabric Protocol", "1");
     __FrabricDAO_init(_erc20, 2 weeks);
 
@@ -105,7 +105,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() Composable("Frabric") initializer {}
 
-  function canPropose() public view override(IDAO, DAO) returns (bool) {
+  function canPropose() public view override returns (bool) {
     return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);
   }
 

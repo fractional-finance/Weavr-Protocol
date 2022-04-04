@@ -16,7 +16,7 @@ import "../dao/FrabricDAO.sol";
 
 import "../interfaces/frabric/IInitialFrabric.sol";
 
-contract InitialFrabric is EIP712Upgradeable, FrabricDAO, IInitialFrabricSum {
+contract InitialFrabric is EIP712Upgradeable, FrabricDAO, IInitialFrabricInitializable {
   mapping(address => ParticipantType) public participant;
 
   // The erc20 is expected to be fully initialized via JS during deployment
@@ -24,7 +24,7 @@ contract InitialFrabric is EIP712Upgradeable, FrabricDAO, IInitialFrabricSum {
     address _erc20,
     address[] calldata genesis,
     bytes32 genesisMerkle
-  ) external initializer {
+  ) external override initializer {
     __EIP712_init("Frabric Protocol", "1");
     __FrabricDAO_init(_erc20, 2 weeks);
 

@@ -3,7 +3,7 @@ pragma solidity >=0.8.9;
 
 import "./IDAO.sol";
 
-interface IFrabricDAO {
+interface IFrabricDAO is IDAO {
   enum CommonProposalType {
     Paper,
     Upgrade,
@@ -40,8 +40,6 @@ interface IFrabricDAO {
     string calldata info
   ) external returns (uint256);
 }
-
-interface IFrabricDAOSum is IDAOSum, IFrabricDAO {}
 
 error ProposingUpgrade(address beacon, address instance, address code);
 error MintingDifferentToken(address specified, address token);

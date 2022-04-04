@@ -11,7 +11,7 @@ import "../common/Composable.sol";
 
 import "../interfaces/beacon/IFrabricBeacon.sol";
 
-contract Beacon is Ownable, Composable, IFrabricBeaconSum {
+contract Beacon is Ownable, Composable, IFrabricBeacon {
   using ERC165Checker for address;
 
   bytes32 public immutable override beaconName;

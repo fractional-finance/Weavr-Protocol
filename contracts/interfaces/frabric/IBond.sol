@@ -5,7 +5,7 @@ import "../frabric/IFrabric.sol";
 
 import "../common/IComposable.sol";
 
-interface IBond {
+interface IBond is IComposable {
   event Bond(address governor, uint256 amount);
   event Unbond(address governor, uint256 amount);
   event Slash(address governor, uint256 amount);
@@ -18,7 +18,9 @@ interface IBond {
   function slash(address bonder, uint256 amount) external;
 }
 
-interface IBondSum is IComposableSum, IBond {}
+interface IBondInitializable is IBond {
+  function initialize(address usd, address token) external;
+}
 
 error BondTransfer();
 error NotActiveGovernor(address governor, IFrabric.GovernorStatus status);

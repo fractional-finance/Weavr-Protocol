@@ -27,7 +27,7 @@ import "../interfaces/erc20/IDEXRouter.sol";
 // only to sell them or provide liquidity (a form of holding yet one requiring equal
 // capital lockup while providing a service others can take advantage of)
 
-contract DEXRouter is Composable, IDEXRouterSum {
+contract DEXRouter is Composable, IDEXRouter {
   using SafeERC20 for IERC20;
 
   constructor() Composable("DEXRouter") {

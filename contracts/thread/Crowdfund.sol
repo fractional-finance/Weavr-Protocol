@@ -12,7 +12,7 @@ import "../interfaces/thread/IThread.sol";
 import "../erc20/DividendERC20.sol";
 
 // Uses DividendERC20 for the distribution logic
-contract Crowdfund is DividendERC20, ICrowdfundSum {
+contract Crowdfund is DividendERC20, ICrowdfundInitializable {
   using SafeERC20 for IERC20;
 
   // Could be gas optimized using 1/2 instead of false/true
@@ -43,7 +43,7 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     address _thread,
     address _token,
     uint256 _target
-  ) external initializer {
+  ) external override initializer {
     __DividendERC20_init(
       string(abi.encodePacked("Crowdfund ", name)),
       string(abi.encodePacked("CF-", symbol))

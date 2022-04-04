@@ -11,7 +11,7 @@ import "../common/Composable.sol";
 import "../interfaces/erc20/IDividendERC20.sol";
 
 // ERC20 Votes expanded with dividend functionality
-abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendERC20Sum {
+abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendERC20 {
   using SafeERC20 for IERC20;
 
   struct Distribution {

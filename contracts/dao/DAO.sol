@@ -13,7 +13,7 @@ import "../common/Composable.sol";
 import "../interfaces/dao/IDAO.sol";
 
 // DAO around a FrabricERC20
-abstract contract DAO is Initializable, Composable, IDAOSum {
+abstract contract DAO is Initializable, Composable, IDAO {
   struct Proposal {
     // The following are embedded into easily accessible events
     address creator;

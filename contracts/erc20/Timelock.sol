@@ -17,7 +17,7 @@ import "../interfaces/erc20/ITimelock.sol";
 // Just as the Thread can upgrade to claw back tokens, the Frabric could theoretically
 // upgrade the ThreadDeployer to void its timelock. This non-upgradeable contract
 // enforces it
-contract Timelock is Ownable, Composable, ITimelockSum {
+contract Timelock is Ownable, Composable, ITimelock {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 

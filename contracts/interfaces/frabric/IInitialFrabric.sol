@@ -3,7 +3,7 @@ pragma solidity >=0.8.9;
 
 import "../dao/IFrabricDAO.sol";
 
-interface IInitialFrabric {
+interface IInitialFrabric is IFrabricDAO {
   enum FrabricProposalType {
     Participants
   }
@@ -24,4 +24,10 @@ interface IInitialFrabric {
   function participant(address participant) external view returns (ParticipantType);
 }
 
-interface IInitialFrabricSum is IFrabricDAOSum, IInitialFrabric {}
+interface IInitialFrabricInitializable is IInitialFrabric {
+  function initialize(
+    address erc20,
+    address[] calldata genesis,
+    bytes32 genesisMerkle
+  ) external;
+}

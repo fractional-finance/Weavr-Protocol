@@ -5,7 +5,7 @@ import "./IDividendERC20.sol";
 import "./IFrabricWhitelist.sol";
 import "./IIntegratedLimitOrderDEX.sol";
 
-interface IFrabricERC20 {
+interface IFrabricERC20 is IDividendERC20, IFrabricWhitelist, IIntegratedLimitOrderDEX {
   function mintable() external view returns (bool);
   function auction() external view returns (address);
 
@@ -21,7 +21,7 @@ interface IFrabricERC20 {
   function unpause() external;
 }
 
-interface IFrabricERC20Sum is IDividendERC20Sum, IFrabricWhitelistSum, IIntegratedLimitOrderDEXSum, IFrabricERC20 {
+interface IFrabricERC20Initializable is IFrabricERC20 {
   function initialize(
     string memory name,
     string memory symbol,

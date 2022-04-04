@@ -7,7 +7,7 @@ import "../common/IComposable.sol";
 // When someone is removed, each FrabricERC20 will list the removed party's tokens
 // for auction. This is done with the following listing API which is separated out
 // for greater flexibility in the future
-interface IAuctionCore {
+interface IAuctionCore is IComposable {
   // Indexes the ID as expected, the token so people can find auctions by the token being sold,
   // and the seller so someone can find their auctions which they need to complete
   event NewAuction(
@@ -24,7 +24,7 @@ interface IAuctionCore {
   function list(address token, address traded, uint256 amount, uint64 start, uint32 length) external;
 }
 
-interface IAuction {
+interface IAuction is IAuctionCore {
   event Bid(uint256 indexed id, address bidder, uint256 amount);
   event AuctionCompleted(uint256 indexed id);
 
@@ -40,7 +40,9 @@ interface IAuction {
   function getEndTime(uint256 id) external view returns (uint256);
 }
 
-interface IAuctionSum is IComposableSum, IAuctionCore, IAuction {}
+interface IAuctionInitializable is IAuction {
+  function initialize() external;
+}
 
 error AuctionPending(uint256 time, uint256 start);
 error AuctionOver(uint256 time, uint256 end);

@@ -8,7 +8,7 @@ import "../dao/FrabricDAO.sol";
 
 import "../interfaces/thread/IThread.sol";
 
-contract Thread is FrabricDAO, IThreadSum {
+contract Thread is FrabricDAO, IThreadInitializable {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
@@ -31,7 +31,7 @@ contract Thread is FrabricDAO, IThreadSum {
     address _erc20,
     address _agent,
     address _frabric
-  ) external initializer {
+  ) external override initializer {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades

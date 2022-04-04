@@ -11,7 +11,7 @@ import "../common/Composable.sol";
 import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
-abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composable, IIntegratedLimitOrderDEXSum {
+abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composable, IIntegratedLimitOrderDEX {
   using SafeERC20 for IERC20;
 
   // Token to trade against, presumably a USD stablecoin or WETH

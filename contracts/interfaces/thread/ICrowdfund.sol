@@ -6,7 +6,7 @@ import "../erc20/IIntegratedLimitOrderDEX.sol";
 
 import "../erc20/IDividendERC20.sol";
 
-interface ICrowdfund {
+interface ICrowdfund is IDividendERC20 {
   enum State {
     Active,
     Executing,
@@ -42,7 +42,7 @@ interface ICrowdfund {
   function burn(address depositor) external;
 }
 
-interface ICrowdfundSum is IDividendERC20Sum, ICrowdfund {
+interface ICrowdfundInitializable is ICrowdfund {
   function initialize(
     string memory name,
     string memory symbol,

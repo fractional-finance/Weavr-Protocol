@@ -15,7 +15,7 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 // FrabricERC20s are tokens with a built in limit order DEX, along with governance and dividend functionality
 // The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
-contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Sum {
+contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Initializable {
   bool public override mintable;
   address public override auction;
 
@@ -29,7 +29,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
     address parentWhitelist,
     address dexToken,
     address _auction
-  ) external initializer {
+  ) external override initializer {
     __Ownable_init();
     __Pausable_init();
     __DividendERC20_init(name, symbol);
