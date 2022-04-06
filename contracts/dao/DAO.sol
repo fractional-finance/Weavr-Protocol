@@ -52,6 +52,7 @@ abstract contract DAO is Composable, IDAO {
   uint256[100] private __gap;
 
   function __DAO_init(address _erc20, uint64 _votingPeriod) internal onlyInitializing {
+    supportsInterface[type(IDAOCore).interfaceId] = true;
     supportsInterface[type(IDAO).interfaceId] = true;
 
     erc20 = _erc20;

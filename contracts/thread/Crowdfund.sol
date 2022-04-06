@@ -243,7 +243,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
       revert ZeroAmount();
     }
     _burn(depositor, balance);
-    IERC20(IDAO(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
+    IERC20(IDAOCore(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
   }
 
   // While it would be nice to have a recovery function here, the integration with DistributionERC20

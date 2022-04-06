@@ -105,7 +105,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
       )
     ));
 
-    address parentWhitelist = IDAO(owner()).erc20();
+    address parentWhitelist = IDAOCore(owner()).erc20();
 
     address crowdfund = address(new BeaconProxy(
       crowdfundProxy,

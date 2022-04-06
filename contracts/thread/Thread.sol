@@ -116,8 +116,8 @@ contract Thread is FrabricDAO, IThreadInitializable {
     // That is implied by this Frabric implementing IDAO and when this executes,
     // setParentWhitelist is executed, confirming the FrabricWhitelist interface
     // is supported by it
-    if (!_frabric.supportsInterface(type(IDAO).interfaceId)) {
-      revert UnsupportedInterface(_frabric, type(IDAO).interfaceId);
+    if (!_frabric.supportsInterface(type(IDAOCore).interfaceId)) {
+      revert UnsupportedInterface(_frabric, type(IDAOCore).interfaceId);
     }
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
@@ -152,7 +152,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
       // to be perfect with time, enabling upgrades only enables Upgrade proposals to be created
       // That means there's an additional delay of the Thread's voting period (1 week)
       // while the actual Upgrade proposal occurs, granting that time
-      upgradesEnabled = block.timestamp + IDAO(frabric).votingPeriod() + (1 weeks);
+      upgradesEnabled = block.timestamp + IDAOCore(frabric).votingPeriod() + (1 weeks);
 
     } else if (pType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);
@@ -170,7 +170,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
       frabric = _frabrics[id];
       delete _frabrics[id];
       // Update our parent whitelist to the new Frabric's
-      IFrabricERC20(erc20).setParentWhitelist(IDAO(frabric).erc20());
+      IFrabricERC20(erc20).setParentWhitelist(IDAOCore(frabric).erc20());
 
     } else if (pType == ThreadProposalType.Dissolution) {
       // Prevent the Thread from being locked up in a Dissolution the agent won't honor for whatever reason
