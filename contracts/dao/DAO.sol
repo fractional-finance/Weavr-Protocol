@@ -119,6 +119,15 @@ abstract contract DAO is Composable, IDAO {
   }
 
   function _vote(uint256 id, Proposal storage proposal, int128 votes, int128 absVotes) private {
+    // Cap voting power per user at 10% of the total supply
+    // This will hopefully not be executed 99% of the time and then only for select Threads
+    // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
+    int128 tenPercent = int128(uint128(IERC20(erc20).totalSupply() / 10));
+    if (absVotes > tenPercent) {
+      votes = tenPercent * (votes / absVotes);
+      absVotes = tenPercent;
+    }
+
     // Remove old votes
     int128 standing = proposal.voters[msg.sender];
     if (standing != 0) {
