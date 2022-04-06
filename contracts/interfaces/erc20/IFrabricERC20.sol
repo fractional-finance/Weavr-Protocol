@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.9;
 
-import "./IDividendERC20.sol";
+import "./IDistributionERC20.sol";
 import "./IFrabricWhitelist.sol";
 import "./IIntegratedLimitOrderDEX.sol";
 
-interface IFrabricERC20 is IDividendERC20, IFrabricWhitelist, IIntegratedLimitOrderDEX {
+interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IIntegratedLimitOrderDEX {
   function mintable() external view returns (bool);
   function auction() external view returns (address);
 

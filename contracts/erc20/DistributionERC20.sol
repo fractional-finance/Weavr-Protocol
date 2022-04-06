@@ -8,10 +8,10 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpg
 
 import "../common/Composable.sol";
 
-import "../interfaces/erc20/IDividendERC20.sol";
+import "../interfaces/erc20/IDistributionERC20.sol";
 
-// ERC20 Votes expanded with dividend functionality
-abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendERC20 {
+// ERC20 Votes expanded with distribution functionality
+abstract contract DistributionERC20 is ERC20VotesUpgradeable, Composable, IDistributionERC20 {
   using SafeERC20 for IERC20;
 
   struct Distribution {
@@ -29,7 +29,7 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
 
   uint256[100] private __gap;
 
-  function __DividendERC20_init(string memory name, string memory symbol) internal {
+  function __DistributionERC20_init(string memory name, string memory symbol) internal {
     __ERC20_init(name, symbol);
     __ERC20Permit_init(name);
     __ERC20Votes_init();
@@ -37,12 +37,12 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
     supportsInterface[type(IERC20).interfaceId] = true;
     supportsInterface[type(IERC20PermitUpgradeable).interfaceId] = true;
     supportsInterface[type(IVotesUpgradeable).interfaceId] = true;
-    supportsInterface[type(IDividendERC20).interfaceId] = true;
+    supportsInterface[type(IDistributionERC20).interfaceId] = true;
 
     _nextID = 0;
   }
 
-  // Disable delegation to enable dividends
+  // Disable delegation to enable distributions
   // Removes the need to track both historical balances AND historical voting power
   // Also resolves legal liability which is currently not fully explored and may be a concern
   function delegate(address) public pure override(IVotesUpgradeable, ERC20VotesUpgradeable) {
@@ -54,20 +54,19 @@ abstract contract DividendERC20 is ERC20VotesUpgradeable, Composable, IDividendE
     revert Delegation();
   }
 
-  // Dividend implementation
-  function _distribute(address from, address token, uint256 amount) internal {
+  // Distribution implementation
+  function _distribute(address token, uint256 amount) internal {
     if (amount == 0) {
       revert ZeroAmount();
     }
-    if (from != address(this)) {
-      IERC20(token).safeTransferFrom(from, address(this), amount);
-    }
+
     _distributions[_nextID] = Distribution(token, uint64(block.number), amount);
     _nextID++;
     emit Distributed(_nextID, token, amount);
   }
 
-  function distribute(address token, uint256 amount) external override {
+  function distribute(address token, uint256 amount) public override {
+    IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     _distribute(msg.sender, token, amount);
   }
 

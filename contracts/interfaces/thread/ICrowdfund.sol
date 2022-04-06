@@ -4,9 +4,9 @@ pragma solidity >=0.8.9;
 // Imports the ILO DEX interface due to shared errors
 import "../erc20/IIntegratedLimitOrderDEX.sol";
 
-import "../erc20/IDividendERC20.sol";
+import "../erc20/IDistributionERC20.sol";
 
-interface ICrowdfund is IDividendERC20 {
+interface ICrowdfund is IDistributionERC20 {
   enum State {
     Active,
     Executing,

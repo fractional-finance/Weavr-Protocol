@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-import "./DividendERC20.sol";
+import "./DistributionERC20.sol";
 import "./FrabricWhitelist.sol";
 import "./IntegratedLimitOrderDEX.sol";
 
@@ -12,10 +12,10 @@ import "../interfaces/erc20/IAuction.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
 
-// FrabricERC20s are tokens with a built in limit order DEX, along with governance and dividend functionality
+// FrabricERC20s are tokens with a built in limit order DEX, along with governance and distribution functionality
 // The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
-contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Initializable {
+contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Initializable {
   bool public override mintable;
   address public override auction;
 
@@ -32,7 +32,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DividendERC20,
   ) external override initializer {
     __Ownable_init();
     __Pausable_init();
-    __DividendERC20_init(name, symbol);
+    __DistributionERC20_init(name, symbol);
     __FrabricWhitelist_init(parentWhitelist);
     __IntegratedLimitOrderDEX_init(tradedToken);
 

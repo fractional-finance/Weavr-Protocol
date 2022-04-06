@@ -9,10 +9,10 @@ import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/thread/ICrowdfund.sol";
 import "../interfaces/thread/IThread.sol";
 
-import "../erc20/DividendERC20.sol";
+import "../erc20/DistributionERC20.sol";
 
-// Uses DividendERC20 for the distribution logic
-contract Crowdfund is DividendERC20, ICrowdfundInitializable {
+// Uses DistributionERC20 for the distribution logic
+contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   using SafeERC20 for IERC20;
 
   // Could be gas optimized using 1/2 instead of false/true
@@ -44,7 +44,7 @@ contract Crowdfund is DividendERC20, ICrowdfundInitializable {
     address _token,
     uint256 _target
   ) external override initializer {
-    __DividendERC20_init(
+    __DistributionERC20_init(
       string(abi.encodePacked("Crowdfund ", name)),
       string(abi.encodePacked("CF-", symbol))
     );
@@ -183,7 +183,7 @@ contract Crowdfund is DividendERC20, ICrowdfundInitializable {
 
     // Set the State to refunding
     state = State.Refunding;
-    _distribute(address(this), token, IERC20(token).balanceOf(address(this)));
+    _distribute(token, IERC20(token).balanceOf(address(this)));
     emit StateChange(state);
   }
 
@@ -218,7 +218,7 @@ contract Crowdfund is DividendERC20, ICrowdfundInitializable {
     // Upon arbitration ruling the amount is too low, the agent could step in
     // and issue a new distribution
     if (amount != 0) {
-      _distribute(agent, token, amount);
+      distribute(token, amount);
     }
   }
 
@@ -246,7 +246,7 @@ contract Crowdfund is DividendERC20, ICrowdfundInitializable {
     IERC20(IDAO(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
   }
 
-  // While it would be nice to have a recovery function here, the integration with DividendERC20
-  // means that can't feasibly be done (without adding more tracking to DividendERC20 on expected balances)
+  // While it would be nice to have a recovery function here, the integration with DistributionERC20
+  // means that can't feasibly be done (without adding more tracking to DistributionERC20 on expected balances)
   // It's not worth the hassle at this time
 }

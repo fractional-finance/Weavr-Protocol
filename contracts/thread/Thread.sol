@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../interfaces/erc20/IDividendERC20.sol";
+import "../interfaces/erc20/IDistributionERC20.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../dao/FrabricDAO.sol";
@@ -185,8 +185,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.price);
       IFrabricERC20(erc20).pause();
       IERC20(dissolution.token).safeIncreaseAllowance(erc20, dissolution.price);
-      // See IFrabricERC20 for why that doesn't include IDividendERC20 despite FrabricERC20 being a DividendERC20
-      IDividendERC20(erc20).distribute(dissolution.token, dissolution.price);
+      IFrabricERC20(erc20).distribute(dissolution.token, dissolution.price);
       emit Dissolved(id);
       delete _dissolutions[id];
 

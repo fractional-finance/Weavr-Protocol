@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../erc20/DividendERC20.sol";
+import "../erc20/DistributionERC20.sol";
 import "../interfaces/frabric/IFrabric.sol";
 
 import "../interfaces/frabric/IBond.sol";
@@ -15,9 +15,10 @@ import "../interfaces/frabric/IBond.sol";
 // this could enable unbond to no longer be handled by the DAO yet automatically
 // allowed as long as a set collateralization ratio is maintained
 
-// Emits a DividendERC20 for dividend functionality (as expected) and so Governors have a reminder of their Bond quantity on Etherscan
+// Emits a DistributionERC20 for distribution functionality (as expected) and so
+// Governors have a reminder of their Bond's existence on Etherscan
 
-contract Bond is OwnableUpgradeable, DividendERC20, IBondInitializable {
+contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
   using SafeERC20 for IERC20;
 
   address public override usd;
@@ -27,7 +28,7 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBondInitializable {
 
   function initialize(address _usd, address _bondToken) external override initializer {
     __Ownable_init();
-    __DividendERC20_init("Frabric Bond", "bFBRC");
+    __DistributionERC20_init("Frabric Bond", "bFBRC");
 
     __Composable_init("Bond", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
