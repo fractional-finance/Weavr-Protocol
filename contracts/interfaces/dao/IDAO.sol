@@ -3,7 +3,9 @@ pragma solidity >=0.8.9;
 
 import "../common/IComposable.sol";
 
-interface IDAO is IComposable {
+// Only commit to a fraction of the DAO API at this time
+// Voting/the queue system may undergo significant changes in the future
+interface IDAOCore is IComposable {
   enum ProposalState {
     Active,
     Queued,
@@ -11,15 +13,8 @@ interface IDAO is IComposable {
     Cancelled
   }
 
-  enum VoteDirection {
-    None,
-    No,
-    Yes
-  }
-
   event NewProposal(uint256 indexed id, uint256 indexed proposalType, address indexed creator, string info);
   event ProposalStateChanged(uint256 indexed id, ProposalState indexed state);
-  event Vote(uint256 indexed id, VoteDirection indexed direction, address indexed voter, uint256 votes);
 
   function erc20() external view returns (address);
   function votingPeriod() external view returns (uint64);
@@ -28,11 +23,22 @@ interface IDAO is IComposable {
   function canPropose() external view returns (bool);
   function proposalActive(uint256 id) external view returns (bool);
 
+  function completeProposal(uint256 id) external;
+  function withdrawProposal(uint256 id) external;
+}
+
+interface IDAO is IDAOCore {
+  enum VoteDirection {
+    None,
+    No,
+    Yes
+  }
+
+  event Vote(uint256 indexed id, VoteDirection indexed direction, address indexed voter, uint256 votes);
+
   function vote(uint256[] calldata id, VoteDirection[] calldata direction) external;
   function queueProposal(uint256 id) external;
   function cancelProposal(uint256 id, address[] calldata voters) external;
-  function completeProposal(uint256 id) external;
-  function withdrawProposal(uint256 id) external;
 
   function proposalVoteBlock(uint256 id) external view returns (uint256);
   function proposalVoteDirection(uint256 id, address voter) external view returns (VoteDirection);

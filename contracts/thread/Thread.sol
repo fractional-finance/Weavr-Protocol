@@ -52,7 +52,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   // Allows proposing even when paused so TokenActions can be issued to recover funds
   // from this DAO. Also theoretically enables proposing an Upgrade to undo the pause
   // if that's desired for whatever reason
-  function canPropose() public view override(IDAO, DAO) returns (bool) {
+  function canPropose() public view override(DAO, IDAOCore) returns (bool) {
     return (
       // Whitelisted token holder
       (
