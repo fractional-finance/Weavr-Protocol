@@ -37,7 +37,7 @@ interface IAuction is IAuctionCore {
   function auctionActive(uint256 id) external view returns (bool);
   function getCurrentBidder(uint256 id) external view returns (address);
   function getCurrentBid(uint256 id) external view returns (uint256);
-  function getEndTime(uint256 id) external view returns (uint256);
+  function getEndTime(uint256 id) external view returns (uint64);
 }
 
 interface IAuctionInitializable is IAuction {

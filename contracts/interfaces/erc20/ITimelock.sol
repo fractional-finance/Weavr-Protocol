@@ -10,8 +10,8 @@ interface ITimelock is IComposable {
   function lock(address token, uint8 months) external;
   function claim(address token) external;
 
-  function getLockNextTime(address token) external view returns (uint256);
-  function getLockRemainingMonths(address token) external view returns (uint256);
+  function getLockNextTime(address token) external view returns (uint64);
+  function getLockRemainingMonths(address token) external view returns (uint8);
 }
 
 error AlreadyLocked(address token);

@@ -232,7 +232,7 @@ contract Auction is Composable, IAuctionInitializable {
   function getCurrentBid(uint256 id) external view override returns (uint256) {
     return _auctions[id].bid;
   }
-  function getEndTime(uint256 id) external view override returns (uint256) {
+  function getEndTime(uint256 id) external view override returns (uint64) {
     return _auctions[id].end;
   }
 }

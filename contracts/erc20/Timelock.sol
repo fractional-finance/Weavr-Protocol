@@ -81,10 +81,10 @@ contract Timelock is Ownable, Composable, ITimelock {
     IERC20(token).safeTransfer(owner(), amount);
   }
 
-  function getLockNextTime(address token) external view override returns (uint256) {
+  function getLockNextTime(address token) external view override returns (uint64) {
     return _locks[token].time;
   }
-  function getLockRemainingMonths(address token) external view override returns (uint256) {
+  function getLockRemainingMonths(address token) external view override returns (uint8) {
     return _locks[token].months;
   }
 }
