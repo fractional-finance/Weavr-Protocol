@@ -231,15 +231,22 @@ abstract contract DAO is Composable, IDAO {
     }
 
     int128 newVotes = proposal.votes;
+    uint160 prevVoter = 0;
     for (uint i = 0; i < voters.length; i++) {
+      address voter = voters[i];
+      if (uint160(voter) <= prevVoter) {
+        revert UnsortedVoter(voter);
+      }
+      prevVoter = uint160(voter);
+
       // If a voter who voted against this proposal (or abstained) is included,
       // whoever wrote JS to handle this has a broken script which isn't working as intended
-      int128 voted = proposal.voters[voters[i]];
+      int128 voted = proposal.voters[voter];
       if (voted <= 0) {
-        revert NotYesVote(id, voters[i]);
+        revert NotYesVote(id, voter);
       }
 
-      int128 votes = int128(uint128(IERC20(erc20).balanceOf(voters[i])));
+      int128 votes = int128(uint128(IERC20(erc20).balanceOf(voter)));
       // If they currently have enough votes to maintain their historical vote, continue
       // If we errored here, cancelProposal TXs could be vulnerable to frontrunning
       // designed to bork these cancellations
