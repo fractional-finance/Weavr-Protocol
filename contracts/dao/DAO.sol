@@ -30,7 +30,7 @@ abstract contract DAO is Composable, IDAO {
     // The following are exposed via getters
     // This won't be deleted yet this struct is used in _proposals which atomically increments keys
     // Therefore, this usage is safe
-    mapping(address => VoteDirection) voters;
+    mapping(address => int128) voters;
     // Safe due to the FrabricERC20 being uint112
     int128 votes;
     uint128 totalVotes;
@@ -111,56 +111,45 @@ abstract contract DAO is Composable, IDAO {
     emit NewProposal(id, proposalType, proposal.creator, info);
     emit ProposalStateChanged(id, proposal.state);
 
-    // Automatically vote Yes for the creator if they're whitelisted
-    // They may not be whitelisted, if, in the case of Threads, they're the agent/Frabric
-    // Both of these should be whitelisted yet Threads can change them at any time
-    // Doing so doesn't automatically whitelist them to hold tokens
-    // In the case of the Frabric, they won't be whitelisted if they're the KYC company
-    if (IWhitelist(erc20).whitelisted(msg.sender)) {
-      _vote(id, proposal, VoteDirection.Yes);
+    // Automatically vote in favor for the creator if they have votes and are actively whitelisted
+    int128 votes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
+    if ((votes != 0) && IWhitelist(erc20).whitelisted(msg.sender)) {
+      _vote(id, proposal, votes, votes);
     }
   }
 
-  function _vote(uint256 id, Proposal storage proposal, VoteDirection direction) internal {
-    VoteDirection voted = proposal.voters[msg.sender];
-    if (voted == direction) {
-      revert AlreadyVotedInDirection(id, msg.sender, direction);
-    }
-
-    int128 votes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
-    if (votes == 0) {
-      return;
-    }
+  function _vote(uint256 id, Proposal storage proposal, int128 votes, int128 absVotes) private {
     // Remove old votes
-    if (voted == VoteDirection.Yes) {
-      proposal.votes -= votes;
-    } else if (voted == VoteDirection.No) {
-      proposal.votes += votes;
+    int128 standing = proposal.voters[msg.sender];
+    if (standing != 0) {
+      proposal.votes -= standing;
     } else {
       // If they had previously abstained, increase the amount of total votes
-      proposal.totalVotes += uint128(votes);
+      proposal.totalVotes += uint128(absVotes);
     }
 
     // Set new votes
-    proposal.voters[msg.sender] = direction;
-    if (direction == VoteDirection.Yes) {
+    proposal.voters[msg.sender] = votes;
+    // Update the vote sums
+    VoteDirection direction;
+    if (votes != 0) {
       proposal.votes += votes;
-    } else if (direction == VoteDirection.No) {
-      proposal.votes -= votes;
+      direction = votes > 0 ? VoteDirection.Yes : VoteDirection.No;
     } else {
       // If they're now abstaining, decrease the amount of total votes
       // While abstaining could be considered valid as participation,
-      // it'd require an extra variable to track and requiring opinionation is fine
-      proposal.totalVotes -= uint128(votes);
+      // it'd require an extra variable to properly track and requiring opinionation is fine
+      proposal.totalVotes -= uint128(absVotes);
+      direction = VoteDirection.Abstain;
     }
 
-    emit Vote(id, direction, msg.sender, uint256(uint128(votes)));
+    emit Vote(id, direction, msg.sender, uint128(absVotes));
   }
 
   // While it's not expected for this to be called in batch due to UX complexities,
   // it's a very minor gas cost which does offer savings when multiple proposals
   // are voted on at the same time
-  function vote(uint256[] memory ids, VoteDirection[] memory directions) external override {
+  function vote(uint256[] memory ids, int128[] memory votes) external override {
     // Requires the caller to also be whitelisted. While the below NoVotes error
     // should prevent this from happening, when the Frabric removes someone,
     // Threads keep token balances until someone calls remove on them
@@ -171,10 +160,33 @@ abstract contract DAO is Composable, IDAO {
     }
 
     for (uint256 i = 0; i < ids.length; i++) {
-      // Since Solidity arrays are bounds checked, this will simply error if directions
+      Proposal storage proposal = activeProposal(ids[i]);
+      int128 actualVotes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
+      if (actualVotes == 0) {
+        return;
+      }
+
+      // Since Solidity arrays are bounds checked, this will simply error if votes
       // is too short. If it's too long, it ignores the extras, and the actually processed
       // data doesn't suffer from any mutability
-      _vote(ids[i], activeProposal(ids[i]), directions[i]);
+      int128 votesI = votes[i];
+
+      // If they're abstaining, don't check if they have enough votes
+      // 0 will be less than whatever amount they do have
+      int128 absVotes;
+      if (votesI == 0) {
+        absVotes = 0;
+      } else {
+        absVotes = votesI > 0 ? votesI : -votesI;
+        // If they're voting with more votes then they actually have, correct votes
+        // Also allows UIs to simply vote with type(int128).max
+        if (absVotes > actualVotes) {
+          // votesI / absVotes will return 1 or -1, representing the vote direction
+          votesI = actualVotes * (votesI / absVotes);
+        }
+      }
+
+      _vote(ids[i], proposal, votesI, absVotes);
     }
   }
 
@@ -208,30 +220,36 @@ abstract contract DAO is Composable, IDAO {
       revert NotQueued(id, proposal.state);
     }
 
+    int128 newVotes = proposal.votes;
     for (uint i = 0; i < voters.length; i++) {
-      if (proposal.voters[voters[i]] != VoteDirection.Yes) {
+      // If a voter who voted against this proposal (or abstained) is included,
+      // whoever wrote JS to handle this has a broken script which isn't working as intended
+      int128 voted = proposal.voters[voters[i]];
+      if (voted <= 0) {
         revert NotYesVote(id, voters[i]);
       }
-      int128 oldVotes = int128(uint128(IVotes(erc20).getPastVotes(voters[i], proposal.voteBlock)));
+
       int128 votes = int128(uint128(IERC20(erc20).balanceOf(voters[i])));
-      // If this voter's balance has actually increased in the time given,
-      // that'll be reflected here. While we could error, as it goes against the
-      // offchain calculation and intended action of this call, erroring guarantees
-      // this call will fail. By not erroring, we let the other voters have a chance
-      // at still having significant enough differences to warrant cancellation
-      // In the worst case, this will have increased gas cost before failing
-      // Writes directly to the votes field to update it to its (more) accurate value
-      proposal.votes -= int128(oldVotes - votes);
-    }
-    // If votes is 0, it would've failed queueProposal
-    // Fail it here as well
-    if (proposal.votes > 0) {
-      revert ProposalPassed(id, proposal.votes);
+      // If they currently have enough votes to maintain their historical vote, continue
+      // If we errored here, cancelProposal TXs could be vulnerable to frontrunning
+      // designed to bork these cancellations
+      // This will force those who sold their voting power to regain it and hold it
+      // for as long as cancelProposal can be issued
+      if (votes >= voted) {
+        continue;
+      }
+
+      newVotes -= voted - votes;
     }
 
-    proposal.state = ProposalState.Cancelled;
-    proposal.stateStartTime = uint64(block.timestamp);
-    emit ProposalStateChanged(id, proposal.state);
+    // If votes is 0, it would've failed queueProposal
+    // Fail it here as well
+    if (newVotes > 0) {
+      revert ProposalPassed(id, newVotes);
+    }
+
+    delete _proposals[id];
+    emit ProposalStateChanged(id, ProposalState.Cancelled);
   }
 
   function _completeProposal(uint256 id, uint256 proposalType) internal virtual;
@@ -280,16 +298,20 @@ abstract contract DAO is Composable, IDAO {
     emit ProposalStateChanged(id, ProposalState.Cancelled);
   }
 
-  function proposalVoteBlock(uint256 id) external view override returns (uint256) {
+  // Will only work with proposals which have yet to complete in some form
+  // After that, the sole information available onchain is passed and proposalVote
+  // as mappings aren't deleted
+  function proposalVoteBlock(uint256 id) external view override returns (uint64) {
     return _proposals[id].voteBlock;
   }
-  function proposalVoteDirection(uint256 id, address voter) external view override returns (VoteDirection) {
-    return _proposals[id].voters[voter];
-  }
-  function proposalVotes(uint256 id) external view override returns (int256) {
+  function proposalVotes(uint256 id) external view override returns (int128) {
     return _proposals[id].votes;
   }
-  function proposalTotalVotes(uint256 id) external view override returns (uint256) {
+  function proposalTotalVotes(uint256 id) external view override returns (uint128) {
     return _proposals[id].totalVotes;
+  }
+
+  function proposalVote(uint256 id, address voter) external view override returns (int128) {
+    return _proposals[id].voters[voter];
   }
 }

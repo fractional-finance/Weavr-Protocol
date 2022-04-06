@@ -28,27 +28,31 @@ interface IDAOCore is IComposable {
 }
 
 interface IDAO is IDAOCore {
+  // Solely used to provide indexing based on how people voted
+  // Actual voting uses a signed integer at this time
   enum VoteDirection {
-    None,
+    Abstain,
     No,
     Yes
   }
 
-  event Vote(uint256 indexed id, VoteDirection indexed direction, address indexed voter, uint256 votes);
+  event Vote(uint256 indexed id, VoteDirection indexed direction, address indexed voter, uint128 votes);
 
-  function vote(uint256[] calldata id, VoteDirection[] calldata direction) external;
+  function vote(uint256[] calldata id, int128[] calldata votes) external;
   function queueProposal(uint256 id) external;
   function cancelProposal(uint256 id, address[] calldata voters) external;
 
-  function proposalVoteBlock(uint256 id) external view returns (uint256);
-  function proposalVoteDirection(uint256 id, address voter) external view returns (VoteDirection);
-  function proposalVotes(uint256 id) external view returns (int256);
-  function proposalTotalVotes(uint256 id) external view returns (uint256);
+  // Will only work for proposals pre-finalization
+  function proposalVoteBlock(uint256 id) external view returns (uint64);
+  function proposalVotes(uint256 id) external view returns (int128);
+  function proposalTotalVotes(uint256 id) external view returns (uint128);
+
+  // Will work even with finalized proposals (cancelled/completed)
+  function proposalVote(uint256 id, address voter) external view returns (int128);
 }
 
 error NotAuthorizedToPropose(address caller);
 error InactiveProposal(uint256 id);
-error AlreadyVotedInDirection(uint256 id, address voter, IDAO.VoteDirection direction);
 error ActiveProposal(uint256 id, uint256 time, uint256 endTime);
 error ProposalFailed(uint256 id, int256 votes);
 error NotEnoughParticipation(uint256 id, uint256 totalVotes, uint256 required);
