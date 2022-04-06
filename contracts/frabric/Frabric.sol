@@ -195,7 +195,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     // data isn't validated to be technically correct as the UI is trusted to sanity check it
     // and present it accurately for humans to deliberate on
     bytes4 selector;
-    if ((_proposalType & commonProposalBit) == commonProposalBit) {
+    if (_isCommonProposal(_proposalType)) {
       if (!thread.supportsInterface(type(IFrabricDAO).interfaceId)) {
         revert UnsupportedInterface(thread, type(IFrabricDAO).interfaceId);
       }

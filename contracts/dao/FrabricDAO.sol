@@ -59,6 +59,11 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     supportsInterface[type(IFrabricDAO).interfaceId] = true;
   }
 
+  function _isCommonProposal(uint16 pType) internal pure returns (bool) {
+    // Uses a shift instead of a bit mask to ensure this is the only bit set
+    return (pType >> 8) == commonProposalBit;
+  }
+
   function proposePaper(string calldata info) external returns (uint256) {
     // No dedicated event as the DAO emits type and info
     return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, info);
@@ -222,8 +227,8 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
   // Re-entrancy isn't a concern due to completeProposal being safe from re-entrancy
   // That's the only thing which should call this
-  function _completeProposal(uint256 id, uint256 _pType) internal override {
-    if ((_pType & commonProposalBit) == commonProposalBit) {
+  function _completeProposal(uint256 id, uint16 _pType) internal override {
+    if (_isCommonProposal(_pType)) {
       CommonProposalType pType = CommonProposalType(_pType ^ commonProposalBit);
       if (pType == CommonProposalType.Paper) {
         // NOP as the DAO emits ProposalStateChanged which is all that's needed for this

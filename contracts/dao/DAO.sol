@@ -277,7 +277,7 @@ abstract contract DAO is Composable, IDAO {
     emit ProposalStateChanged(id, ProposalState.Cancelled);
   }
 
-  function _completeProposal(uint256 id, uint256 proposalType) internal virtual;
+  function _completeProposal(uint256 id, uint16 proposalType) internal virtual;
 
   // Does not require canonically ordering when executing proposals in case a proposal has invalid actions, halting everything
   function completeProposal(uint256 id) external {
@@ -290,7 +290,7 @@ abstract contract DAO is Composable, IDAO {
     // simultaneously, that should not be an issue
     Proposal storage proposal = _proposals[id];
     // Cheaper than copying the entire thing into memory
-    uint256 pType = proposal.pType;
+    uint16 pType = proposal.pType;
     if (proposal.state != ProposalState.Queued) {
       revert NotQueued(id, proposal.state);
     }
