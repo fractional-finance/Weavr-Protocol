@@ -6,11 +6,16 @@ import "./IFrabricWhitelist.sol";
 import "./IIntegratedLimitOrderDEX.sol";
 
 interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IIntegratedLimitOrderDEX {
+  event Freeze(address indexed person, uint64 until);
+  event Removal(address indexed person, uint256 balance);
+
   function mintable() external view returns (bool);
   function auction() external view returns (address);
+  function frozenUntil(address person) external view returns (uint64);
 
   function mint(address to, uint256 amount) external;
   function burn(uint256 amount) external;
+  function freeze(address person, uint64 until) external;
   function remove(address person) external;
 
   function setParentWhitelist(address whitelist) external;
@@ -35,5 +40,7 @@ interface IFrabricERC20Initializable is IFrabricERC20 {
 
 error SupplyExceedsUInt112(uint256 supply);
 error NotMintable();
+error Frozen(address person);
+// Not Paused due to an overlap with the event
 error CurrentlyPaused();
 error BalanceLocked(uint256 balanceAfterTransfer, uint256 lockedBalance);

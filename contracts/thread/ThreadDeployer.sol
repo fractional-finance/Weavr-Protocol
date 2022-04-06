@@ -99,6 +99,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
       threadBeacon,
       abi.encodeWithSelector(
         IThreadInitializable.initialize.selector,
+        name,
         erc20,
         agent,
         msg.sender

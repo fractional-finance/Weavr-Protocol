@@ -4,7 +4,7 @@ pragma solidity >=0.8.9;
 import "../common/IComposable.sol";
 
 // Only commit to a fraction of the DAO API at this time
-// Voting/the queue system may undergo significant changes in the future
+// Voting/cancellation/queueing may undergo significant changes in the future
 interface IDAOCore is IComposable {
   enum ProposalState {
     Active,
@@ -38,6 +38,9 @@ interface IDAO is IDAOCore {
 
   event Vote(uint256 indexed id, VoteDirection indexed direction, address indexed voter, uint128 votes);
 
+  function queuePeriod() external view returns (uint64);
+  function requiredParticipation() external view returns (uint128);
+
   function vote(uint256[] calldata id, int128[] calldata votes) external;
   function queueProposal(uint256 id) external;
   function cancelProposal(uint256 id, address[] calldata voters) external;
@@ -59,6 +62,7 @@ error NotEnoughParticipation(uint256 id, uint256 totalVotes, uint256 required);
 error NotQueued(uint256 id, IDAO.ProposalState state);
 // Doesn't include what they did vote as it's irrelevant
 error NotYesVote(uint256 id, address voter);
+error UnsortedVoter(address voter);
 error ProposalPassed(uint256 id, int256 votes);
 error StillQueued(uint256 id, uint256 time, uint256 queuedUntil);
 error AlreadyFinished(uint256 id, IDAO.ProposalState state);

@@ -19,6 +19,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   bool public override mintable;
   address public override auction;
 
+  mapping(address => uint64) public override frozenUntil;
   bool internal _removal;
 
   function initialize(
@@ -80,6 +81,11 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     return ERC20Upgradeable.decimals();
   }
 
+  // Also define frozen so the DEX can prevent further orders from being placed
+  function frozen(address person) public view override returns (bool) {
+    return block.timestamp <= frozenUntil[person];
+  }
+
   function mint(address to, uint256 amount) external override onlyOwner {
     if (!mintable) {
       revert NotMintable();
@@ -92,6 +98,11 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
   function burn(uint256 amount) external override {
     _burn(msg.sender, amount);
+  }
+
+  function freeze(address person, uint64 until) external override onlyOwner {
+    frozenUntil[person] = until;
+    emit Freeze(person, until);
   }
 
   function _remove(address person) internal override {
@@ -138,6 +149,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
       }
       _removal = false;
     }
+
+    emit Removal(person, balance);
   }
 
   function remove(address person) public override nonReentrant {
@@ -195,21 +208,32 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     super._beforeTokenTransfer(from, to, amount);
 
-    if (!_removal) {
+    if ((!_removal) && (!_inDEX)) {
       // Whitelisted from or minting
       // A non-whitelisted actor may have tokens if they were removed from the whitelist
-      // In that case, remove should be called
-      // whitelisted is an interaction, extensively discussed in IntegratedLimitOrderDEX
+      // and remove has yet to be called. That's why this code is inside `if !_removal`
+      // !_inDEX is simply an optimization as the DEX checks traders are whitelisted itself
+
+      // Technically, whitelisted is an interaction, as discussed in IntegratedLimitOrderDEX
       // As stated there, it's trusted to not be idiotic AND it's view, limiting potential
       if ((!whitelisted(from)) && (from != address(0))) {
         revert NotWhitelisted(from);
       }
 
-      // Placed here as a gas optimization
-      // The Auction contract transferred to during removals is whitelisted so it's
-      // not removable, and so it can then make its own transfer as needed to complete the auction
+      // Regarding !_removal, placed here as a gas optimization
+      // The Auction contract transferred to during removals is whitelisted so this
+      // could be outside this block without issue. If it wasn't whitelisted,
+      // anyone could call remove on it, which would be exceptionally problematic
+      // (and it couldn't transfer tokens to auction winners)
       if (!whitelisted(to)) {
         revert NotWhitelisted(to);
+      }
+
+      // If the person is being removed, or if the DEX is executing a standing order,
+      // this is disregarded. It's only if they're trying to transfer after being frozen
+      // that this should matter (and the DEX ensures they can't place new orders)
+      if (frozen(from)) {
+        revert Frozen(from);
       }
     }
 

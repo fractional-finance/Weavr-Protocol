@@ -1,22 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-// Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
-// EIP712 was created over 4 years ago and has undegone multiple versions since
-// Metamask supports multiple various versions of EIP712 and is committed to maintaing "v3" and "v4" support
-// The only distinction between the two is the support for arrays/structs in structs, which aren't used by this contract
-// Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
-
-import "../interfaces/frabric/IBond.sol";
-import "../interfaces/thread/IThreadDeployer.sol";
-import "../interfaces/thread/IThread.sol";
-
 import "../dao/FrabricDAO.sol";
 
 import "../interfaces/frabric/IInitialFrabric.sol";
 
-contract InitialFrabric is EIP712Upgradeable, FrabricDAO, IInitialFrabricInitializable {
+contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
   mapping(address => ParticipantType) public participant;
 
   // The erc20 is expected to be fully initialized via JS during deployment
@@ -25,8 +14,7 @@ contract InitialFrabric is EIP712Upgradeable, FrabricDAO, IInitialFrabricInitial
     address[] calldata genesis,
     bytes32 genesisMerkle
   ) external override initializer {
-    __EIP712_init("Frabric Protocol", "1");
-    __FrabricDAO_init(_erc20, 2 weeks);
+    __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks);
 
     __Composable_init("Frabric", false);
     supportsInterface[type(IInitialFrabric).interfaceId] = true;

@@ -1,17 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
-
-import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
-
-// Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
-// EIP712 was created over 4 years ago and has undegone multiple versions since
-// Metamask supports multiple various versions of EIP712 and is committed to maintaing "v3" and "v4" support
-// The only distinction between the two is the support for arrays/structs in structs, which aren't used by this contract
-// Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 
 import "../interfaces/frabric/IBond.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
@@ -21,7 +11,7 @@ import "../dao/FrabricDAO.sol";
 
 import "../interfaces/frabric/IFrabric.sol";
 
-contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricInitializable {
+contract Frabric is FrabricDAO, IFrabricInitializable {
   using ERC165Checker for address;
 
   mapping(address => ParticipantType) public override participant;
@@ -75,8 +65,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricInitializable {
     address _threadDeployer,
     address _kyc
   ) external override initializer {
-    __EIP712_init("Frabric Protocol", "1");
-    __FrabricDAO_init(_erc20, 2 weeks);
+    __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks);
 
     __Composable_init("Frabric", false);
     version++;

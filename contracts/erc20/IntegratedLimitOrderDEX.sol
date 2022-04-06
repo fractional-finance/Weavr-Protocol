@@ -8,7 +8,10 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 import "../common/Composable.sol";
 
+// Needed for errors
 import "../interfaces/erc20/IFrabricWhitelist.sol";
+import "../interfaces/erc20/IFrabricERC20.sol";
+
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
 abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composable, IIntegratedLimitOrderDEX {
@@ -37,12 +40,16 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   // Indexed by price
   mapping (uint256 => PricePoint) private _points;
 
+  // Used to flag when a transfer is triggered by the DEX, bypassing frozen
+  bool internal _inDEX;
+
   uint256[100] private __gap;
 
   function _transfer(address from, address to, uint256 amount) internal virtual;
   function balanceOf(address account) public virtual returns (uint256);
   function decimals() public virtual returns (uint8);
 
+  function frozen(address person) public view virtual returns (bool);
   function _remove(address person) internal virtual;
   function whitelisted(address person) public view virtual returns (bool);
   function removed(address person) public view virtual returns (bool);
@@ -88,6 +95,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     // Fill orders until there are either no orders or our order is filled
     uint256 filled = 0;
     uint256 h = point.orders.length - 1;
+    _inDEX = true;
     for (; amount != 0; h--) {
       // Trader was removed. Delete their order and move on
       // Technically this is an interaction, and check, in the middle of effects
@@ -142,6 +150,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
         break;
       }
     }
+    _inDEX = false;
 
     // Transfer the DEX token sum if selling
     if (!buying) {
@@ -165,6 +174,26 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     uint256 price,
     uint256 amount
   ) private returns (uint256 filled, uint256) {
+    // Ensure the trader is whitelisted
+    // If they're buying tokens, this would be a DoS if we didn't handle removed people above
+    // Since we do, it's just pointless
+    // If they're selling tokens, they shouldn't have any to sell, but they may
+    // if they were removed from the whitelist yet not this ERC20 yet
+    if (!whitelisted(trader)) {
+      revert NotWhitelisted(trader);
+    }
+
+    // If they're currently frozen, don't let them place new orders
+    // Their existing orders are allowed to stand however
+    // If they were put up for a low value, anyone can snipe them
+    // If they were put up for a high value, no one will bother buying them, and
+    // they'll be removed if the removal proposal passes
+    // If they were put up for their actual value, then this is them leaving the
+    // ecosystem and that's that
+    if (frozen(trader)) {
+      revert Frozen(trader);
+    }
+
     if (price == 0) {
       revert ZeroPrice();
     }
@@ -206,14 +235,6 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     uint256 price,
     uint256 minimumAmount
   ) external override nonReentrant returns (uint256, uint256) {
-    // Make sure they're whitelisted so trade execution won't fail
-    // This would be a DoS if it was allowed to place a standing order at this price point
-    // It would be allowed to as long as it didn't error before hand by filling an order
-    // No orders, no filling, no error
-    if (!whitelisted(trader)) {
-      revert NotWhitelisted(trader);
-    }
-
     // Determine the value sent
     // Not a pattern vulnerable to re-entrancy despite being a balance-based amount calculation
     uint256 balance = IERC20(tradedToken).balanceOf(address(this));
@@ -253,11 +274,6 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     uint256 price,
     uint256 amount
   ) external override nonReentrant returns (uint256 filled, uint256 id) {
-    // Non-whitelisted caller could have funds to sell if removed from the Frabric yet not the Thread yet
-    if (!whitelisted(msg.sender)) {
-      revert NotWhitelisted(msg.sender);
-    }
-
     locked[msg.sender] += atomic(amount);
     if (balanceOf(msg.sender) < locked[msg.sender]) {
       revert NotEnoughFunds(locked[msg.sender], balanceOf(msg.sender));

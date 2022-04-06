@@ -43,6 +43,7 @@ abstract contract DAO is Composable, IDAO {
 
   address public override erc20;
   uint64 public override votingPeriod;
+  uint64 public override queuePeriod;
 
   uint256 internal _nextProposalID;
   mapping(uint256 => Proposal) private _proposals;
@@ -57,6 +58,11 @@ abstract contract DAO is Composable, IDAO {
 
     erc20 = _erc20;
     votingPeriod = _votingPeriod;
+    queuePeriod = 48 hours;
+  }
+
+  function requiredParticipation() public view returns (uint128) {
+    return uint128(IERC20(erc20).totalSupply()) / 10;
   }
 
   function canPropose() public virtual view returns (bool);
@@ -123,6 +129,8 @@ abstract contract DAO is Composable, IDAO {
     // Cap voting power per user at 10% of the total supply
     // This will hopefully not be executed 99% of the time and then only for select Threads
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
+    // 10% isn't requiredParticipation, despite currently having the same value,
+    // yet rather a number with some legal consideration
     int128 tenPercent = int128(uint128(IERC20(erc20).totalSupply() / 10));
     if (absVotes > tenPercent) {
       votes = tenPercent * (votes / absVotes);
@@ -215,8 +223,8 @@ abstract contract DAO is Composable, IDAO {
       revert ProposalFailed(id, proposal.votes);
     }
     // Uses the current total supply instead of the historical total supply to represent the current community
-    if (proposal.totalVotes < (IERC20(erc20).totalSupply() / 10)) {
-      revert NotEnoughParticipation(id, proposal.totalVotes, IERC20(erc20).totalSupply() / 10);
+    if (proposal.totalVotes < requiredParticipation()) {
+      revert NotEnoughParticipation(id, proposal.totalVotes, requiredParticipation());
     }
     proposal.state = ProposalState.Queued;
     proposal.stateStartTime = uint64(block.timestamp);
@@ -286,8 +294,8 @@ abstract contract DAO is Composable, IDAO {
     if (proposal.state != ProposalState.Queued) {
       revert NotQueued(id, proposal.state);
     }
-    if (block.timestamp < (proposal.stateStartTime + (12 hours))) {
-      revert StillQueued(id, block.timestamp, proposal.stateStartTime + (12 hours));
+    if (block.timestamp < (proposal.stateStartTime + queuePeriod)) {
+      revert StillQueued(id, block.timestamp, proposal.stateStartTime + queuePeriod);
     }
     delete _proposals[id];
     // Solely used for getter functionality

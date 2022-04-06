@@ -4,6 +4,15 @@ pragma solidity ^0.8.9;
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
+import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+
+// Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
+// EIP712 was created over 4 years ago and has undegone multiple versions since
+// Metamask supports multiple various versions of EIP712 and is committed to maintaing "v3" and "v4" support
+// The only distinction between the two is the support for arrays/structs in structs, which aren't used by these contracts
+// Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
+
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 import "../interfaces/erc20/IAuction.sol";
 import "../interfaces/beacon/IFrabricBeacon.sol";
@@ -18,7 +27,7 @@ import "../interfaces/dao/IFrabricDAO.sol";
 // This offers smaller, more compartamentalized code, and directly integrating the two
 // doesn't actually offer any efficiency benefits. The new structs, the new variables, and
 // the new code are still needed, meaning it really just inlines _completeProposal
-abstract contract FrabricDAO is DAO, IFrabricDAO {
+abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
@@ -44,7 +53,8 @@ abstract contract FrabricDAO is DAO, IFrabricDAO {
 
   uint256[100] private __gap;
 
-  function __FrabricDAO_init(address _erc20, uint64 _votingPeriod) internal onlyInitializing {
+  function __FrabricDAO_init(string memory name, address _erc20, uint64 _votingPeriod) internal onlyInitializing {
+    __EIP712_init(name, "1");
     __DAO_init(_erc20, _votingPeriod);
     supportsInterface[type(IFrabricDAO).interfaceId] = true;
   }
@@ -152,8 +162,54 @@ abstract contract FrabricDAO is DAO, IFrabricDAO {
 
   function proposeParticipantRemoval(
     address participant,
-    string calldata info
+    string calldata info,
+    bytes[] calldata signatures
   ) external returns (uint256) {
+    // If signatures were provided, then the purpose is to freeze this participant's
+    // funds for the duration of the proposal. This will not affect any existing
+    // DEX orders yet will prevent further DEX orders from being placed. This prevents
+    // dumping (which already isn't incentivized as tokens will be put up for auction)
+    // and games of hot potato where they're transferred to friends/associates to
+    // prevent their re-distribution. While they can also buy their own tokens off
+    // the Auction contract, this is a step closer to being an optimal system
+
+    // If this is done maliciously, whoever proposed this should be removed themselves
+    if (signatures.length != 0) {
+      uint256 votes = 0;
+      uint160 prevSigner = 0;
+      for (uint256 i = 0; i < signatures.length; i++) {
+        // Recover the signer
+        address signer = ECDSA.recover(
+          _hashTypedDataV4(
+            keccak256(
+              abi.encode(keccak256("Removal(address participant)"), participant)
+            )
+          ),
+          signatures[i]
+        );
+
+        // Ensure they weren't duplicated by enforcing the signatures are sorted
+        if (uint160(signer) <= prevSigner) {
+          revert UnsortedVoter(signer);
+        }
+        prevSigner = uint160(signer);
+
+        // Increment the amount of votes being used to freeze these funds
+        votes += IERC20(erc20).balanceOf(signer);
+      }
+
+      // If the votes of these holders doesn't meet the required participation threshold, throw
+      if (votes < requiredParticipation()) {
+        // Uses an ID of type(uint256).max since this proposal doesn't have an ID yet
+        // We could also use 0 yet that would overlap with an actual proposal
+        revert NotEnoughParticipation(type(uint256).max, votes, requiredParticipation());
+      }
+
+      // Freeze the token until this proposal completes, with an extra 1 day buffer
+      // for someone to call completeProposal
+      IFrabricERC20(erc20).freeze(participant, uint64(block.timestamp) + votingPeriod + queuePeriod + uint64(1 days));
+    }
+
     _removals[_nextProposalID] = participant;
     emit RemovalProposed(_nextProposalID, participant);
     return _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);

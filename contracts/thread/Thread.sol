@@ -28,6 +28,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   mapping(uint256 => Dissolution) private _dissolutions;
 
   function initialize(
+    string calldata name,
     address _erc20,
     address _agent,
     address _frabric
@@ -35,7 +36,11 @@ contract Thread is FrabricDAO, IThreadInitializable {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
-    __FrabricDAO_init(_erc20, 1 weeks);
+    __FrabricDAO_init(
+      string(abi.encodePacked("Thread: ", name)),
+      _erc20,
+      1 weeks
+    );
 
     __Composable_init("Thread", false);
     supportsInterface[type(IThread).interfaceId] = true;

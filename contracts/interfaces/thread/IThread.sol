@@ -41,6 +41,7 @@ interface IThread is IFrabricDAO {
 
 interface IThreadInitializable is IThread {
   function initialize(
+    string memory name,
     address erc20,
     address agent,
     address frabric

@@ -24,10 +24,10 @@ module.exports = {
 
     const beacon = await module.exports.deployThreadBeacon();
     const Thread = await ethers.getContractFactory("Thread");
-    const thread = await upgrades.deployBeaconProxy(beacon, Thread, [erc20.address, agent, frabric.address]);
+    const thread = await upgrades.deployBeaconProxy(beacon, Thread, ["1 Main Street", erc20.address, agent, frabric.address]);
 
     await erc20.initialize(
-      "Test Thread Token",
+      "1 Main Street",
       "TTHR",
       "100000000000000000000",
       false,
