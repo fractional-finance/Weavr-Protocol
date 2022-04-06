@@ -67,7 +67,7 @@ abstract contract DistributionERC20 is ERC20VotesUpgradeable, Composable, IDistr
 
   function distribute(address token, uint256 amount) public override {
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-    _distribute(msg.sender, token, amount);
+    _distribute(token, amount);
   }
 
   function claim(address person, uint256 id) external override {
