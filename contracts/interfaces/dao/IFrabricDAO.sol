@@ -3,7 +3,7 @@ pragma solidity >=0.8.9;
 
 import "./IDAO.sol";
 
-interface IFrabricDAO {
+interface IFrabricDAO is IDAO {
   enum CommonProposalType {
     Paper,
     Upgrade,
@@ -22,7 +22,7 @@ interface IFrabricDAO {
   );
   event RemovalProposed(uint256 indexed id, address participant);
 
-  function commonProposalBit() external view returns (uint256);
+  function commonProposalBit() external view returns (uint16);
 
   function proposePaper(string calldata info) external returns (uint256);
   function proposeUpgrade(
@@ -41,9 +41,7 @@ interface IFrabricDAO {
   ) external returns (uint256);
 }
 
-interface IFrabricDAOSum is IDAOSum, IFrabricDAO {}
-
 error ProposingUpgrade(address beacon, address instance, address code);
 error MintingDifferentToken(address specified, address token);
-error SellingWithDifferentTarget(address target, address expected);
+error TargetMalleability(address target, address expected);
 error NotRoundAmount(uint256 amount);

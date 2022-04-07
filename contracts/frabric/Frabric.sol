@@ -1,17 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
-
-import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
-
-// Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
-// EIP712 was created over 4 years ago and has undegone multiple versions since
-// Metamask supports multiple various versions of EIP712 and is committed to maintaing "v3" and "v4" support
-// The only distinction between the two is the support for arrays/structs in structs, which aren't used by this contract
-// Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 
 import "../interfaces/frabric/IBond.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
@@ -21,7 +11,7 @@ import "../dao/FrabricDAO.sol";
 
 import "../interfaces/frabric/IFrabric.sol";
 
-contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
+contract Frabric is FrabricDAO, IFrabricInitializable {
   using ERC165Checker for address;
 
   mapping(address => ParticipantType) public override participant;
@@ -32,8 +22,8 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
 
   struct Participants {
     ParticipantType pType;
-    bytes32 participants;
     bool passed;
+    bytes32 participants;
   }
   // The proposal structs are private as their events are easily grabbed and contain the needed information
   mapping(uint256 => Participants) private _participants;
@@ -48,10 +38,10 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   mapping(uint256 => RemoveBondProposal) private _removeBonds;
 
   struct ThreadProposal {
-    uint256 variant;
+    uint8 variant;
     address agent;
-    string name;
     string symbol;
+    string name;
     bytes data;
   }
   mapping(uint256 => ThreadProposal) private _threads;
@@ -74,9 +64,8 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     address _bond,
     address _threadDeployer,
     address _kyc
-  ) external initializer {
-    __EIP712_init("Frabric Protocol", "1");
-    __FrabricDAO_init(_erc20, 2 weeks);
+  ) external override initializer {
+    __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks);
 
     __Composable_init("Frabric", false);
     version++;
@@ -84,7 +73,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
 
     // Simulate a full DAO proposal to add the genesis participants
     emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesisMerkle);
-    emit NewProposal(_nextProposalID, uint256(FrabricProposalType.Participants), address(0), "Genesis Participants");
+    emit NewProposal(_nextProposalID, uint16(FrabricProposalType.Participants), address(0), "Genesis Participants");
     emit ProposalStateChanged(_nextProposalID, ProposalState.Active);
     emit ProposalStateChanged(_nextProposalID, ProposalState.Queued);
     emit ProposalStateChanged(_nextProposalID, ProposalState.Executed);
@@ -105,7 +94,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() Composable("Frabric") initializer {}
 
-  function canPropose() public view override(IDAO, DAO) returns (bool) {
+  function canPropose() public view override returns (bool) {
     return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);
   }
 
@@ -121,21 +110,23 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       revert ProposingGenesisParticipants();
     }
 
-    // Validate this to be an address if this ParticipantType should only be a single address
-    if (
-      ((participantType == ParticipantType.KYC) || (participantType == ParticipantType.Governor)) &&
-      (bytes32(bytes20(participants)) != participants)
-    ) {
-      revert InvalidAddress(address(bytes20(participants)));
+
+    if ((participantType == ParticipantType.KYC) || (participantType == ParticipantType.Governor)) {
+      // Validate this to be an address if this ParticipantType should only be a single address
+      if (bytes32(bytes20(participants)) != participants) {
+        revert InvalidAddress(address(bytes20(participants)));
+      }
+
+      if (participant[address(bytes20(participants))] != ParticipantType.Null) {
+        revert ParticipantAlreadyApproved(address(bytes20(participants)));
+      }
     }
 
-    if ((participantType == ParticipantType.Governor) && (governor[address(bytes20(participants))] != GovernorStatus.Null)) {
-      revert ExistingGovernor(address(bytes20(participants)), governor[address(bytes20(participants))]);
-    }
-
-    _participants[_nextProposalID] = Participants(participantType, participants, false);
+    Participants storage pStruct = _participants[_nextProposalID];
+    pStruct.pType = participantType;
+    pStruct.participants = participants;
     emit ParticipantsProposed(_nextProposalID, participantType, participants);
-    return _createProposal(uint256(FrabricProposalType.Participants), info);
+    return _createProposal(uint16(FrabricProposalType.Participants), info);
   }
 
   function proposeRemoveBond(
@@ -152,11 +143,11 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
     emit RemoveBondProposed(_nextProposalID, _governor, slash, amount);
-    return _createProposal(uint256(FrabricProposalType.RemoveBond), info);
+    return _createProposal(uint16(FrabricProposalType.RemoveBond), info);
   }
 
   function proposeThread(
-    uint256 variant,
+    uint8 variant,
     address agent,
     string calldata name,
     string calldata symbol,
@@ -175,9 +166,14 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     // Threads a far more integral part of the system, ThreadProposal deals with an enum
     // for proposal type. This variant field is a uint256 which has a much larger impact scope
     IThreadDeployer(threadDeployer).validate(variant, data);
-    _threads[_nextProposalID] = ThreadProposal(variant, agent, name, symbol, data);
+    ThreadProposal storage proposal = _threads[_nextProposalID];
+    proposal.variant = variant;
+    proposal.agent = agent;
+    proposal.name = name;
+    proposal.symbol = symbol;
+    proposal.data = data;
     emit ThreadProposed(_nextProposalID, variant, agent, name, symbol, data);
-    return _createProposal(uint256(FrabricProposalType.Thread), info);
+    return _createProposal(uint16(FrabricProposalType.Thread), info);
   }
 
   // This does assume the Thread's API meets expectations compiled into the Frabric
@@ -185,7 +181,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
   // These are both valid behaviors intended to be accessible by Threads
   function proposeThreadProposal(
     address thread,
-    uint256 _proposalType,
+    uint16 _proposalType,
     bytes calldata data,
     string calldata info
   ) external returns (uint256) {
@@ -199,7 +195,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     // data isn't validated to be technically correct as the UI is trusted to sanity check it
     // and present it accurately for humans to deliberate on
     bytes4 selector;
-    if ((_proposalType & commonProposalBit) == commonProposalBit) {
+    if (_isCommonProposal(_proposalType)) {
       if (!thread.supportsInterface(type(IFrabricDAO).interfaceId)) {
         revert UnsupportedInterface(thread, type(IFrabricDAO).interfaceId);
       }
@@ -239,7 +235,7 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
 
     _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, data);
     emit ThreadProposalProposed(_nextProposalID, thread, _proposalType, info);
-    return _createProposal(uint256(FrabricProposalType.ThreadProposal), info);
+    return _createProposal(uint16(FrabricProposalType.ThreadProposal), info);
   }
 
   function _participantRemoval(address _participant) internal override {
@@ -253,27 +249,40 @@ contract Frabric is EIP712Upgradeable, FrabricDAO, IFrabricSum {
     FrabricProposalType pType = FrabricProposalType(_pType);
     if (pType == FrabricProposalType.Participants) {
       Participants storage participants = _participants[id];
+
       if (participants.pType == ParticipantType.KYC) {
         address newKYC = address(bytes20(participants.participants));
+        // This check also exists in proposeParticipants, yet that doesn't
+        // prevent the same participant from being proposed multiple times simultaneously
+        // This is an edge case which should never happen, yet handling it means
+        // checking here to ensure if they already exist, they're not overwritten
+        // While we could error here, we may as well delete the invalid proposal and move on with life
+        if (participant[newKYC] != ParticipantType.Null) {
+          delete _participants[id];
+          return;
+        }
+
         emit KYCChanged(kyc, newKYC);
         participant[kyc] = ParticipantType.Removed;
         kyc = newKYC;
         participant[kyc] = ParticipantType.KYC;
         // Delete for the gas savings
         delete _participants[id];
+
       } else {
-        // A similar check exists in proposeParticipants yet that doesn't
-        // prevent the same proposal from existing multiple times simultaneously.
-        // This is an edge case which should never happen, yet handling it means
-        // checking here to ensure if they already exist, they're not reset
-        // to Unverified. While we could error here, we may as well delete
-        // the invalid proposal and move on with life
-        if (
-          (participants.pType == ParticipantType.Governor) &&
-          (governor[address(bytes20(participants.participants))] != GovernorStatus.Null)
-        ) {
-          delete _participants[id];
-          return;
+        if (participants.pType == ParticipantType.Governor) {
+          if (
+            // Simultaneously proposed and became a different participant or approved governor
+            (participant[address(bytes20(participants.participants))] != ParticipantType.Null) ||
+            // Simultaneously proposed as a governor multiple times BUT solely Unverified
+            // Because of that, this isn't actually significant, as they'll be set to Unverified
+            // again and that's that. Best to clean up and move on though
+            (governor[address(bytes20(participants.participants))] != GovernorStatus.Null)
+          ) {
+            delete _participants[id];
+            return;
+          }
+          governor[address(bytes20(participants.participants))] = GovernorStatus.Unverified;
         }
 
         // Set this proposal as having passed so the KYC company can whitelist

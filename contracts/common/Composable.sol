@@ -3,13 +3,20 @@ pragma solidity ^0.8.9;
 
 import "../interfaces/common/IComposable.sol";
 
-abstract contract Composable is IComposableSum {
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+abstract contract Composable is Initializable, IComposable {
   // Doesn't use "name" due to IERC20 using "name"
   bytes32 public override contractName;
   // Version is global, and not per-interface, as interfaces aren't "DAO" and "FrabricDAO"
   // Any version which changes the API would change the interface ID and therefore break continuinity
   uint256 public override version;
   mapping(bytes4 => bool) public override supportsInterface;
+
+  // While this could probably get away with 5 variables, and other contracts
+  // with 20, the fact this is free (and a permanent decision) leads to using
+  // these large gaps
+  uint256[100] private __gap;
 
   // Code should set its name so Beacons can identify code
   // That said, code shouldn't declare support for interfaces or have any version
@@ -22,10 +29,7 @@ abstract contract Composable is IComposableSum {
     contractName = keccak256(bytes(name));
   }
 
-  // Doesn't have onlyInitializing as it's intended to be used by both upgradeable and non-upgradeable contracts
-  // Avoids needing non-upgradeable contracts to descend from Initializable when this should never be in an exposed path
-  // It should always be in an initializer or constructor which can only be called once anyways
-  function __Composable_init(string memory name, bool finalized) internal {
+  function __Composable_init(string memory name, bool finalized) internal onlyInitializing {
     contractName = keccak256(bytes(name));
     if (!finalized) {
       version = 1;

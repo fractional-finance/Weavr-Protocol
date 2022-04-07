@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../interfaces/erc20/IDividendERC20.sol";
+import "../interfaces/erc20/IDistributionERC20.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../dao/FrabricDAO.sol";
 
 import "../interfaces/thread/IThread.sol";
 
-contract Thread is FrabricDAO, IThreadSum {
+contract Thread is FrabricDAO, IThreadInitializable {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
@@ -28,14 +28,19 @@ contract Thread is FrabricDAO, IThreadSum {
   mapping(uint256 => Dissolution) private _dissolutions;
 
   function initialize(
+    string calldata name,
     address _erc20,
     address _agent,
     address _frabric
-  ) external initializer {
+  ) external override initializer {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
     // it needs a shorter window in order to explicitly upgrade to the existing code to prevent Frabric upgrades
-    __FrabricDAO_init(_erc20, 1 weeks);
+    __FrabricDAO_init(
+      string(abi.encodePacked("Thread: ", name)),
+      _erc20,
+      1 weeks
+    );
 
     __Composable_init("Thread", false);
     supportsInterface[type(IThread).interfaceId] = true;
@@ -52,11 +57,11 @@ contract Thread is FrabricDAO, IThreadSum {
   // Allows proposing even when paused so TokenActions can be issued to recover funds
   // from this DAO. Also theoretically enables proposing an Upgrade to undo the pause
   // if that's desired for whatever reason
-  function canPropose() public view override(IDAO, DAO) returns (bool) {
+  function canPropose() public view override(DAO, IDAOCore) returns (bool) {
     return (
       // Whitelisted token holder
       (
-        IFrabricWhitelist(erc20).whitelisted(msg.sender) &&
+        IWhitelist(erc20).whitelisted(msg.sender) &&
         (IERC20(erc20).balanceOf(msg.sender) != 0)
       ) ||
       // Both of these should also be whitelisted. It's not technically a requirement however
@@ -72,22 +77,22 @@ contract Thread is FrabricDAO, IThreadSum {
   function _canProposeUpgrade(
     address beacon,
     address instance,
-    address code
+    address impl
   ) internal view override returns (bool) {
     return (
       // If upgrades are enabled, all good
       (block.timestamp >= upgradesEnabled) ||
-      // Upgrades to the current code/release channels are always allowed
+      // Upgrades to the current impl/release channels are always allowed
       // This prevents the Frabric from forcing an update onto Threads and allows
       // switching between versions presumably published by the Frabric
-      (code == IFrabricBeacon(beacon).implementation(instance)) ||
-      (uint160(code) <= IFrabricBeacon(beacon).releaseChannels())
+      (impl == IFrabricBeacon(beacon).implementation(instance)) ||
+      (uint160(impl) <= IFrabricBeacon(beacon).releaseChannels())
     );
   }
 
   function proposeEnablingUpgrades(string calldata info) external returns (uint256) {
     // Doesn't emit a dedicated event for the same reason Paper proposals don't
-    return _createProposal(uint256(ThreadProposalType.EnableUpgrades), info);
+    return _createProposal(uint16(ThreadProposalType.EnableUpgrades), info);
   }
 
   function proposeAgentChange(
@@ -98,7 +103,7 @@ contract Thread is FrabricDAO, IThreadSum {
     // the Thread's choice to make
     _agents[_nextProposalID] = _agent;
     emit AgentChangeProposed(_nextProposalID, _agent);
-    return _createProposal(uint256(ThreadProposalType.AgentChange), info);
+    return _createProposal(uint16(ThreadProposalType.AgentChange), info);
   }
 
   function proposeFrabricChange(
@@ -110,18 +115,18 @@ contract Thread is FrabricDAO, IThreadSum {
       revert DifferentContract(IComposable(_frabric).contractName(), keccak256("Frabric"));
     }
 
-    // This Frabric technically only has to implement the DAO code
+    // This Frabric technically only has to implement IDAO
     // It's used for its erc20 (parent whitelist) and its voting period at this time
     // Technically, the erc20 must implement FrabricWhitelist
     // That is implied by this Frabric implementing IDAO and when this executes,
     // setParentWhitelist is executed, confirming the FrabricWhitelist interface
     // is supported by it
-    if (!_frabric.supportsInterface(type(IDAO).interfaceId)) {
-      revert UnsupportedInterface(_frabric, type(IDAO).interfaceId);
+    if (!_frabric.supportsInterface(type(IDAOCore).interfaceId)) {
+      revert UnsupportedInterface(_frabric, type(IDAOCore).interfaceId);
     }
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
-    return _createProposal(uint256(ThreadProposalType.FrabricChange), info);
+    return _createProposal(uint16(ThreadProposalType.FrabricChange), info);
   }
 
   function proposeDissolution(
@@ -134,7 +139,7 @@ contract Thread is FrabricDAO, IThreadSum {
     }
     _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, price);
     emit DissolutionProposed(_nextProposalID, msg.sender, token, price);
-    return _createProposal(uint256(ThreadProposalType.Dissolution), info);
+    return _createProposal(uint16(ThreadProposalType.Dissolution), info);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
@@ -152,7 +157,7 @@ contract Thread is FrabricDAO, IThreadSum {
       // to be perfect with time, enabling upgrades only enables Upgrade proposals to be created
       // That means there's an additional delay of the Thread's voting period (1 week)
       // while the actual Upgrade proposal occurs, granting that time
-      upgradesEnabled = block.timestamp + IDAO(frabric).votingPeriod() + (1 weeks);
+      upgradesEnabled = block.timestamp + IDAOCore(frabric).votingPeriod() + (1 weeks);
 
     } else if (pType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);
@@ -170,7 +175,7 @@ contract Thread is FrabricDAO, IThreadSum {
       frabric = _frabrics[id];
       delete _frabrics[id];
       // Update our parent whitelist to the new Frabric's
-      IFrabricERC20(erc20).setParentWhitelist(IDAO(frabric).erc20());
+      IFrabricERC20(erc20).setParentWhitelist(IDAOCore(frabric).erc20());
 
     } else if (pType == ThreadProposalType.Dissolution) {
       // Prevent the Thread from being locked up in a Dissolution the agent won't honor for whatever reason
@@ -185,8 +190,7 @@ contract Thread is FrabricDAO, IThreadSum {
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.price);
       IFrabricERC20(erc20).pause();
       IERC20(dissolution.token).safeIncreaseAllowance(erc20, dissolution.price);
-      // See IFrabricERC20 for why that doesn't include IDividendERC20 despite FrabricERC20 being a DividendERC20
-      IDividendERC20(erc20).distribute(dissolution.token, dissolution.price);
+      IFrabricERC20(erc20).distribute(dissolution.token, dissolution.price);
       emit Dissolved(id);
       delete _dissolutions[id];
 

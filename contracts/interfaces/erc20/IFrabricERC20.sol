@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.9;
 
-import "./IDividendERC20.sol";
+import "./IDistributionERC20.sol";
 import "./IFrabricWhitelist.sol";
 import "./IIntegratedLimitOrderDEX.sol";
 
-interface IFrabricERC20 {
+interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IIntegratedLimitOrderDEX {
+  event Freeze(address indexed person, uint64 until);
+  event Removal(address indexed person, uint256 balance);
+
   function mintable() external view returns (bool);
   function auction() external view returns (address);
+  function frozenUntil(address person) external view returns (uint64);
 
   function mint(address to, uint256 amount) external;
   function burn(uint256 amount) external;
+  function freeze(address person, uint64 until) external;
   function remove(address person) external;
 
   function setParentWhitelist(address whitelist) external;
@@ -21,20 +26,21 @@ interface IFrabricERC20 {
   function unpause() external;
 }
 
-interface IFrabricERC20Sum is IDividendERC20Sum, IFrabricWhitelist, IIntegratedLimitOrderDEX, IFrabricERC20 {
+interface IFrabricERC20Initializable is IFrabricERC20 {
   function initialize(
     string memory name,
     string memory symbol,
     uint256 supply,
     bool mintable,
     address parentWhitelist,
-    address dexToken,
+    address tradedToken,
     address auction
   ) external;
 }
 
 error SupplyExceedsUInt112(uint256 supply);
 error NotMintable();
-error Whitelisted(address person);
+error Frozen(address person);
+// Not Paused due to an overlap with the event
 error CurrentlyPaused();
 error BalanceLocked(uint256 balanceAfterTransfer, uint256 lockedBalance);

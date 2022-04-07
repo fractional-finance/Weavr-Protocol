@@ -9,10 +9,10 @@ import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/thread/ICrowdfund.sol";
 import "../interfaces/thread/IThread.sol";
 
-import "../erc20/DividendERC20.sol";
+import "../erc20/DistributionERC20.sol";
 
-// Uses DividendERC20 for the distribution logic
-contract Crowdfund is DividendERC20, ICrowdfundSum {
+// Uses DistributionERC20 for the distribution logic
+contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   using SafeERC20 for IERC20;
 
   // Could be gas optimized using 1/2 instead of false/true
@@ -28,10 +28,10 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
   address public override token;
   uint256 public override target;
 
-  // Alias the total supply to the amount of funds deposited
-  // Technically defined as the amount of funds deposited AND outstanding, with
-  // no refund claimed nor Thread tokens issued
-  function deposited() public view returns (uint256) {
+  // Amount of tokens which have yet to be converted to Thread tokens
+  // Equivalent to the amount of funds deposited and not withdrawn if none have
+  // been burnt yet
+  function outstanding() public view returns (uint256) {
     return totalSupply();
   }
 
@@ -43,8 +43,8 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     address _thread,
     address _token,
     uint256 _target
-  ) external initializer {
-    __DividendERC20_init(
+  ) external override initializer {
+    __DistributionERC20_init(
       string(abi.encodePacked("Crowdfund ", name)),
       string(abi.encodePacked("CF-", symbol))
     );
@@ -108,9 +108,9 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     }
   }
 
-  function burnInternal(address depositor, uint256 amount) private {
+  function _burn(address depositor, uint256 amount) internal override {
     transferAllowed = true;
-    _burn(depositor, amount);
+    super._burn(depositor, amount);
     transferAllowed = false;
   }
 
@@ -118,14 +118,14 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
-    if (amount > (target - deposited())) {
-      amount = target - deposited();
+    if (amount > (target - outstanding())) {
+      amount = target - outstanding();
     }
     if (amount == 0) {
       revert ZeroAmount();
     }
 
-    if (!IFrabricWhitelist(whitelist).whitelisted(msg.sender)) {
+    if (!IWhitelist(whitelist).whitelisted(msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
 
@@ -158,7 +158,7 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
-    if (deposited() == target) {
+    if (outstanding() == target) {
       // Doesn't include target as it's not pertinent
       revert CrowdfundReached();
     }
@@ -166,7 +166,7 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
       revert ZeroAmount();
     }
 
-    burnInternal(msg.sender, amount);
+    _burn(msg.sender, amount);
     emit Withdraw(msg.sender, amount);
 
     IERC20(token).safeTransfer(msg.sender, amount);
@@ -183,13 +183,13 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
 
     // Set the State to refunding
     state = State.Refunding;
-    _distribute(address(this), token, IERC20(token).balanceOf(address(this)));
+    _distribute(token, IERC20(token).balanceOf(address(this)));
     emit StateChange(state);
   }
 
   // Transfer the funds from a Crowdfund to the agent for execution
   function execute() external {
-    if (deposited() != target) {
+    if (outstanding() != target) {
       revert CrowdfundNotReached();
     }
     if (state != State.Active) {
@@ -218,7 +218,7 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     // Upon arbitration ruling the amount is too low, the agent could step in
     // and issue a new distribution
     if (amount != 0) {
-      _distribute(agent, token, amount);
+      distribute(token, amount);
     }
   }
 
@@ -242,7 +242,11 @@ contract Crowdfund is DividendERC20, ICrowdfundSum {
     if (balance == 0) {
       revert ZeroAmount();
     }
-    burnInternal(depositor, balance);
-    IERC20(IDAO(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
+    _burn(depositor, balance);
+    IERC20(IDAOCore(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));
   }
+
+  // While it would be nice to have a recovery function here, the integration with DistributionERC20
+  // means that can't feasibly be done (without adding more tracking to DistributionERC20 on expected balances)
+  // It's not worth the hassle at this time
 }

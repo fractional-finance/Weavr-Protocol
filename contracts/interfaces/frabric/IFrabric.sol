@@ -79,7 +79,7 @@ interface IFrabric {
     string calldata info
   ) external returns (uint256);
   function proposeThread(
-    uint256 variant,
+    uint8 variant,
     address agent,
     string calldata name,
     string calldata symbol,
@@ -88,7 +88,7 @@ interface IFrabric {
   ) external returns (uint256);
   function proposeThreadProposal(
     address thread,
-    uint256 proposalType,
+    uint16 proposalType,
     bytes calldata data,
     string calldata info
   ) external returns (uint256);
@@ -102,17 +102,25 @@ interface IFrabric {
   ) external;
 }
 
-interface IFrabricSum is IFrabricDAOSum, IFrabric {}
+interface IFrabricInitializable is IFrabric {
+  function initialize(
+    address erc20,
+    address[] calldata genesis,
+    bytes32 genesisMerkle,
+    address bond,
+    address threadDeployer,
+    address kyc
+  ) external;
+}
 
 error ProposingNullParticipants();
 error ProposingGenesisParticipants();
 error InvalidAddress(address invalid);
-error ExistingGovernor(address governor, IFrabric.GovernorStatus status);
+error ParticipantAlreadyApproved(address participant);
 error InvalidName(string name, string symbol);
 error ProposingParticipantRemovalOnThread();
 error ProposingFrabricChange();
 error ExternalCallFailed(address called, bytes4 selector, bytes error);
 error ParticipantsProposalNotPassed(uint256 id);
-error ParticipantAlreadyApproved(address participant);
 error InvalidKYCSignature(address signer, address kyc);
 error IncorrectParticipant(address participant, bytes32 participants, bytes32[] proof);

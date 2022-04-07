@@ -3,31 +3,32 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../erc20/DividendERC20.sol";
+import "../erc20/DistributionERC20.sol";
 import "../interfaces/frabric/IFrabric.sol";
 
 import "../interfaces/frabric/IBond.sol";
 
-// Enables bonding a Uniswap v2 LP token
+// Enables bonding a (presumably) Uniswap v2 LP token
 // Stablecoin - Utility token LP will promote a healthy market and enable trivially determining USD bond amount
 // In the future, this will allow on-chain bond value calculation
 // Combined with property prices (already partially on-chain thanks to Crowdfunds),
 // this could enable unbond to no longer be handled by the DAO yet automatically
 // allowed as long as a set collateralization ratio is maintained
 
-// Emits a DividendERC20 for dividend functionality (as expected) and so Governors have a reminder of their Bond quantity on Etherscan
+// Emits a DistributionERC20 for distribution functionality (as expected) and so
+// Governors have a reminder of their Bond's existence on Etherscan
 
-contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
+contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
   using SafeERC20 for IERC20;
 
   address public override usd;
-  address public override token;
+  address public override bondToken;
 
   bool private _burning;
 
-  function initialize(address _usd, address _token) external initializer {
+  function initialize(address _usd, address _bondToken) external override initializer {
     __Ownable_init();
-    __DividendERC20_init("Frabric Bond", "bFBRC");
+    __DistributionERC20_init("Frabric Bond", "bFBRC");
 
     __Composable_init("Bond", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
@@ -36,7 +37,7 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
     // Tracks USD now to enable bond value detection in the future without shifting storage
     // Minor forethought that doesn't really matter yet still advantageous
     usd = _usd;
-    token = _token;
+    bondToken = _bondToken;
 
     _burning = false;
   }
@@ -58,8 +59,8 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
     if (IFrabric(owner()).governor(msg.sender) != IFrabric.GovernorStatus.Active) {
       revert NotActiveGovernor(msg.sender, IFrabric(owner()).governor(msg.sender));
     }
-    // Safe usage since Uniswap v2 tokens aren't fee on transfer
-    IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+    // Safe usage since Uniswap v2 tokens aren't fee on transfer nor 777
+    IERC20(bondToken).safeTransferFrom(msg.sender, address(this), amount);
     _mint(msg.sender, amount);
     emit Bond(msg.sender, amount);
   }
@@ -76,12 +77,19 @@ contract Bond is OwnableUpgradeable, DividendERC20, IBondSum {
   function unbond(address governor, uint256 amount) external override onlyOwner {
     _burn(governor, amount);
     emit Unbond(governor, amount);
-    IERC20(token).safeTransfer(governor, amount);
+    IERC20(bondToken).safeTransfer(governor, amount);
   }
 
   function slash(address governor, uint256 amount) external override onlyOwner {
     _burn(governor, amount);
     emit Slash(governor, amount);
-    IERC20(token).safeTransfer(owner(),  amount);
+    IERC20(bondToken).safeTransfer(owner(), amount);
+  }
+
+  function recover(address token) external override {
+    if (token == bondToken) {
+      revert RecoveringBond();
+    }
+    IERC20(token).safeTransfer(owner(), IERC20(token).balanceOf(address(this)));
   }
 }

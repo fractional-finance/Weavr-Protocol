@@ -3,9 +3,9 @@ pragma solidity >=0.8.9;
 
 import "../common/IComposable.sol";
 
-interface IThreadDeployer {
+interface IThreadDeployer is IComposable {
   event Thread(
-    uint256 indexed variant,
+    uint8 indexed variant,
     address indexed agent,
     address indexed tradeToken,
     address erc20,
@@ -19,10 +19,10 @@ interface IThreadDeployer {
   function auction() external view returns (address);
   function timelock() external view returns (address);
 
-  function validate(uint256 varaint, bytes calldata data) external view;
+  function validate(uint8 variant, bytes calldata data) external view;
 
   function deploy(
-    uint256 varaint,
+    uint8 variant,
     address agent,
     string memory name,
     string memory symbol,
@@ -33,7 +33,15 @@ interface IThreadDeployer {
   function claimTimelock(address erc20) external;
 }
 
-interface IThreadDeployerSum is IComposableSum, IThreadDeployer {}
+interface IThreadDeployerInitializable is IThreadDeployer {
+  function initialize(
+    address crowdfundProxy,
+    address erc20Beacon,
+    address threadBeacon,
+    address auction,
+    address timelock
+  ) external;
+}
 
 error UnknownVariant(uint256 id);
 error NonStaticDecimals(uint8 beforeDecimals, uint8 afterDecimals);

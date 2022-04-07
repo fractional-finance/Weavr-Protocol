@@ -27,10 +27,10 @@ import "../interfaces/erc20/IDEXRouter.sol";
 // only to sell them or provide liquidity (a form of holding yet one requiring equal
 // capital lockup while providing a service others can take advantage of)
 
-contract DEXRouter is Composable, IDEXRouterSum {
+contract DEXRouter is Composable, IDEXRouter {
   using SafeERC20 for IERC20;
 
-  constructor() Composable("DEXRouter") {
+  constructor() Composable("DEXRouter") initializer {
     __Composable_init("DEXRouter", true);
     supportsInterface[type(IDEXRouter).interfaceId] = true;
   }
@@ -39,10 +39,10 @@ contract DEXRouter is Composable, IDEXRouterSum {
     // Doesn't bother checking the supported interfaces to minimize gas usage
     // If this function executes in its entirety, then the contract has all needed functions
 
-    IERC20 dexToken = IERC20(IIntegratedLimitOrderDEX(token).dexToken());
+    IERC20 tradedToken = IERC20(IIntegratedLimitOrderDEXCore(token).tradedToken());
 
     // Transfer only the specified of capital
-    dexToken.safeTransferFrom(msg.sender, token, payment);
+    tradedToken.safeTransferFrom(msg.sender, token, payment);
     IIntegratedLimitOrderDEX(token).buy(msg.sender, price, minimumAmount);
   }
 

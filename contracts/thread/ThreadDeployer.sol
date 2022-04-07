@@ -20,7 +20,7 @@ import "../common/Composable.sol";
 
 import "../interfaces/thread/IThreadDeployer.sol";
 
-contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
+contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitializable {
   using SafeERC20 for IERC20;
 
   address public override crowdfundProxy;
@@ -35,7 +35,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     address _threadBeacon,
     address _auction,
     address _timelock
-  ) external initializer {
+  ) external override initializer {
     __Ownable_init();
 
     __Composable_init("ThreadDeployer", false);
@@ -59,7 +59,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
   constructor() Composable("ThreadDeployer") initializer {}
 
   // Validates a variant and byte data
-  function validate(uint256 variant, bytes calldata data) external pure {
+  function validate(uint8 variant, bytes calldata data) external pure {
     if (variant == 0) {
       abi.decode(data, (address, uint256));
     } else {
@@ -73,14 +73,15 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
   function deploy(
     // Not an enum so the ThreadDeployer can be upgraded with more without requiring
     // the Frabric to also be upgraded
-    uint256 _variant,
+    // Is an uint8 so this contract can use it as an enum if desired in the future
+    uint8 _variant,
     address _agent,
     string memory _name,
     string memory _symbol,
     bytes calldata data
   ) external override onlyOwner {
     // Fixes stack too deep errors
-    uint256 variant = _variant;
+    uint8 variant = _variant;
     address agent = _agent;
     string memory name = _name;
     string memory symbol = _symbol;
@@ -97,19 +98,20 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     address thread = address(new BeaconProxy(
       threadBeacon,
       abi.encodeWithSelector(
-        IThreadSum.initialize.selector,
+        IThreadInitializable.initialize.selector,
+        name,
         erc20,
         agent,
         msg.sender
       )
     ));
 
-    address parentWhitelist = IDAO(owner()).erc20();
+    address parentWhitelist = IDAOCore(owner()).erc20();
 
     address crowdfund = address(new BeaconProxy(
       crowdfundProxy,
       abi.encodeWithSelector(
-        ICrowdfundSum.initialize.selector,
+        ICrowdfundInitializable.initialize.selector,
         name,
         symbol,
         parentWhitelist,
@@ -128,7 +130,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
     // Add 6% on top for the Thread
     uint256 threadTokenSupply = threadBaseTokenSupply * 106 / 100;
-    IFrabricERC20Sum(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken, auction);
+    IFrabricERC20Initializable(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken, auction);
     if (decimals != IERC20Metadata(erc20).decimals()) {
       revert NonStaticDecimals(decimals, IERC20Metadata(erc20).decimals());
     }
@@ -143,7 +145,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerSum {
     IFrabricERC20(erc20).setWhitelisted(timelock, keccak256("Timelock"));
 
     // Create the lock and transfer the additional tokens to it
-    ITimelock(timelock).lock(erc20, 180 days);
+    ITimelock(timelock).lock(erc20, 6);
     IERC20(erc20).safeTransfer(timelock, threadTokenSupply - threadBaseTokenSupply);
 
     // Remove ourself from the token's whitelist

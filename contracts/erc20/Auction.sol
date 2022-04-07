@@ -5,8 +5,6 @@ import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 import "../interfaces/erc20/IFrabricWhitelist.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
@@ -14,7 +12,7 @@ import "../common/Composable.sol";
 
 import "../interfaces/erc20/IAuction.sol";
 
-contract Auction is Initializable, Composable, IAuctionSum {
+contract Auction is Composable, IAuctionInitializable {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
@@ -22,22 +20,31 @@ contract Auction is Initializable, Composable, IAuctionSum {
 
   uint256 private _nextID;
   struct AuctionStruct {
+    // These fields look horrible yet this is perfectly packed
     address token;
+    uint64 start;
+    uint32 length;
+    // 4 bytes left open in this slot
     address traded;
+    uint64 end;
+
+    // uint96 amounts would be perfectly packed here and support 70 billion 1e18
+    // That would be more than acceptable for all ERC20s worth more than 1 US cent
+    // (or if they're worth less, with appropriately shifted decimals)
+    // It's also a bit of a micro-optimization that reduces compatibility
+    // and could set an unfair, semi-hidden, bid value ceiling
     address seller;
     uint256 amount;
     address bidder;
     uint256 bid;
-    uint256 start;
-    uint256 length;
-    uint256 end;
   }
   mapping(uint256 => AuctionStruct) private _auctions;
 
   mapping(address => mapping(address => uint256)) public override balances;
 
-  function initialize() external initializer {
+  function initialize() external override initializer {
     __Composable_init("Auction", false);
+    supportsInterface[type(IAuctionCore).interfaceId] = true;
     supportsInterface[type(IAuction).interfaceId] = true;
   }
 
@@ -54,37 +61,59 @@ contract Auction is Initializable, Composable, IAuctionSum {
     _tokenBalances[token] = balance;
   }
 
-  function listTransferred(address token, address traded, address seller, uint256 start, uint256 length) public override {
+  function listTransferred(address token, address traded, address seller, uint64 start, uint32 length) public override {
     uint256 amount = getTransferred(token);
     if (amount == 0) {
       revert ZeroAmount();
     }
 
-    // This is only intended to be used with Thread tokens, yet technically its
-    // only Thread token reliance is on the whitelist function, as it needs to verify
-    // bidders can actually receive the auction's tokens
-
-    // If listTransferred was used, and this check fails, someone sent tokens to a contract
-    // when they shouldn't have and now they're trapped. They technically can be recovered
-    // with a fake auction using them as a bid, or we could add a recovery function,
-    // yet any recovery function would be voided via the above fake auction strategy
-    // That makes it pointless
-    if (!token.supportsInterface(type(IFrabricWhitelist).interfaceId)) {
-      revert UnsupportedInterface(token, type(IFrabricWhitelist).interfaceId);
-    }
-
-    _auctions[_nextID] = AuctionStruct(token, traded, seller, amount, address(0), 0, start, length, start + length);
-    emit NewAuction(_nextID, token, seller, traded, amount, start);
+    AuctionStruct storage auction = _auctions[_nextID];
+    auction.token = token;
+    auction.traded = traded;
+    auction.seller = seller;
+    auction.amount = amount;
+    auction.start = start;
+    auction.length = length;
+    auction.end = start + length;
+    emit NewAuction(_nextID, token, seller, traded, amount, start, length);
     _nextID++;
   }
 
-  function list(address token, address traded, uint256 amount, uint256 start, uint256 length) external override {
+  function list(address token, address traded, uint256 amount, uint64 start, uint32 length) external override {
     // Could re-enter here, yet the final call (which executes first) to list (or bid)
     // will be executed with sum(transferred) while every other instance will execute with 0
     // (or whatever value was transferred on top, yet that would be legitimately and newly transferred)
     // Not exploitable
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     listTransferred(token, traded, msg.sender, start, length);
+  }
+
+  // If for some reason there's a contract with a screwed up fallback function,
+  // or a non-EIP165-compliant supportsInterface function, this may claim no one is ever whitelisted
+  // That will prevent all bids and have the auction default, triggering burn to be called
+  // This Auction contract therefore defines its scope to only work with ERC20s which:
+  // A) Support EIP165
+  // B) Don't support EIP165 and don't have a fallback function
+  // C) Don't support EIP165 and do have a fallback function which doesn't pass as EIP165 compatible
+  // D) Don't support EIP165, do have a fallback function passing as EIP165 compatible, and claim everyone is whitelisted
+  // In practice, D should never be hit due to how archaic it is. EIP165 ensures fallback
+  // functions which always return true aren't EIP165 compatible as it explicitly tests
+  // an invalid interface isn't supported. If they always return false, they also won't be
+  // EIP165 compatible
+  // If the contract doesn't implement EIP165 and errors here, the ERC165Checker library
+  // will return false, preventing the need for a try/catch
+  // WETH notably does have a fallback function yet it returns nothing, which means it
+  // won't pass as EIP165 compatible
+  function notWhitelisted(address token, address person) internal view returns (bool) {
+    return (
+      // If this contract doesn't support the IWhitelist interface,
+      // return false, meaning they're not not whitelisted (meaning they are,
+      // as contracts without whitelists behave as if everyone is whitelisted)
+      token.supportsInterface(type(IWhitelist).interfaceId) &&
+      // If there is a whitelist and this person isn't whitelisted however,
+      // return true so we can error
+      (!IWhitelist(token).whitelisted(person))
+    );
   }
 
   function bid(uint256 id, uint256 bidAmount) external override {
@@ -118,7 +147,7 @@ contract Auction is Initializable, Composable, IAuctionSum {
     }
 
     // Make sure they're whitelisted and can actually receive the funds if they win the auction
-    if (!IFrabricWhitelist(auction.token).whitelisted(msg.sender)) {
+    if (notWhitelisted(auction.token, msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
 
@@ -131,8 +160,8 @@ contract Auction is Initializable, Composable, IAuctionSum {
     // Only extend it until twice the auction length to prevent DoS attacks however
     // While this would be mutual (auctioneer doesn't get paid, bidder traps their funds),
     // there may still be sufficient incentive to do so
-    uint256 newEnd = block.timestamp + (1 days);
-    uint256 maxEnd = auction.start + (auction.length * 2);
+    uint64 newEnd = uint64(block.timestamp) + (1 days);
+    uint64 maxEnd = auction.start + (auction.length * 2);
     if (newEnd > maxEnd) {
       newEnd = maxEnd;
     }
@@ -162,7 +191,7 @@ contract Auction is Initializable, Composable, IAuctionSum {
     // If this auction was the result of a removal, this'll fail because they're not whitelisted
     // Burn their tokens in this case
     if (auction.bidder == address(0)) {
-      if (!IFrabricWhitelist(auction.token).whitelisted(auction.seller)) {
+      if (notWhitelisted(auction.token, auction.seller)) {
         // In a try/catch to ensure this auction completes no matter what
         // This is the only external call in this function
         try IFrabricERC20(auction.token).burn(auction.amount) {} catch {}
@@ -203,7 +232,7 @@ contract Auction is Initializable, Composable, IAuctionSum {
   function getCurrentBid(uint256 id) external view override returns (uint256) {
     return _auctions[id].bid;
   }
-  function getEndTime(uint256 id) external view override returns (uint256) {
+  function getEndTime(uint256 id) external view override returns (uint64) {
     return _auctions[id].end;
   }
 }

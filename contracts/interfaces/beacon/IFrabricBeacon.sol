@@ -5,24 +5,26 @@ import "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 
 import "../common/IComposable.sol";
 
-interface IFrabricBeacon {
+interface IFrabricBeacon is IBeacon, IComposable {
   event Upgrade(address indexed instance, address indexed code);
-  event BeaconRegistered(address indexed beacon);
+
+  // Name of the contract this beacon points to
+  function beaconName() external view returns (bytes32);
 
   // Amount of release channels
   function releaseChannels() external view returns (uint8);
-  // Name of contract this beacon points to
-  function beaconName() external view returns (bytes32);
-  // Raw address mapping
+
+  // Raw address mapping. This does not perform resolution
   function implementations(address code) external view returns (address);
 
   // Implementation resolver for a given address
+  // IBeacon has an implementation function defined yet it doesn't take an argument
+  // as OZ beacons only expect to handle a single implementation address
   function implementation(address instance) external view returns (address);
-  // Upgrade to different code/a different beacon
-  function upgrade(address instance, address code) external;
-}
 
-interface IFrabricBeaconSum is IBeacon, IComposableSum, IFrabricBeacon {}
+  // Upgrade to different code/forward to a different beacon
+  function upgrade(address instance, address impl) external;
+}
 
 // Errors used by Beacon
 error InvalidCode(address code);
