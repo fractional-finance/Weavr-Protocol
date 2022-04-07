@@ -22,7 +22,7 @@ contract TestFrabric is FrabricWhitelist {
 
   function threadDeployDeployer(
     address threadDeployer, 
-    uint256 _variant,
+    uint8 _variant,
     address _agent,
     string memory _name,
     string memory _symbol,
