@@ -71,6 +71,8 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
 
   function whitelisted(address person) public view virtual override returns (bool) {
     return (
+      // Was never removed
+      (!_removed[person]) &&
       // Check the parent whitelist (actually relevant check most of the time)
       ((parentWhitelist != address(0)) && IWhitelist(parentWhitelist).whitelisted(person)) ||
       // Global or explicitly whitelisted
