@@ -90,14 +90,14 @@ contract Thread is FrabricDAO, IThreadInitializable {
     );
   }
 
-  function proposeEnablingUpgrades(string calldata info) external returns (uint256) {
+  function proposeEnablingUpgrades(bytes32 info) external returns (uint256) {
     // Doesn't emit a dedicated event for the same reason Paper proposals don't
     return _createProposal(uint16(ThreadProposalType.EnableUpgrades), info);
   }
 
   function proposeAgentChange(
     address _agent,
-    string calldata info
+    bytes32 info
   ) external override returns (uint256) {
     // We could validate this agent is a valid governor at this time yet it's
     // the Thread's choice to make
@@ -108,7 +108,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
   function proposeFrabricChange(
     address _frabric,
-    string calldata info
+    bytes32 info
   ) external override returns (uint256) {
     // Technically not needed, healthy to have
     if (IComposable(_frabric).contractName() != keccak256("Frabric")) {
@@ -132,7 +132,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function proposeDissolution(
     address token,
     uint256 price,
-    string calldata info
+    bytes32 info
   ) external override returns (uint256) {
     if (price == 0) {
       revert ZeroPrice();

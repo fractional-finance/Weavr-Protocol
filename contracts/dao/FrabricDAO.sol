@@ -64,7 +64,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     return (pType >> 8) == commonProposalBit;
   }
 
-  function proposePaper(string calldata info) external returns (uint256) {
+  function proposePaper(bytes32 info) external returns (uint256) {
     // No dedicated event as the DAO emits type and info
     return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, info);
   }
@@ -90,7 +90,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     address beacon,
     address instance,
     address impl,
-    string calldata info
+    bytes32 info
   ) external returns (uint256) {
     if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
       revert UnsupportedInterface(beacon, type(IFrabricBeacon).interfaceId);
@@ -127,7 +127,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     bool mint,
     uint256 price,
     uint256 amount,
-    string calldata info
+    bytes32 info
   ) external returns (uint256) {
     if (mint) {
       if (token != erc20) {
@@ -167,7 +167,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
   function proposeParticipantRemoval(
     address participant,
-    string calldata info,
+    bytes32 info,
     bytes[] calldata signatures
   ) external returns (uint256) {
     // If signatures were provided, then the purpose is to freeze this participant's

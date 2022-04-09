@@ -23,19 +23,19 @@ interface IThread is IFrabricDAO {
   function frabric() external view returns (address);
   function upgradesEnabled() external view returns (uint256);
 
-  function proposeEnablingUpgrades(string calldata info) external returns (uint256);
+  function proposeEnablingUpgrades(bytes32 info) external returns (uint256);
   function proposeAgentChange(
     address _agent,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
   function proposeFrabricChange(
     address _frabric,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
   function proposeDissolution(
     address token,
     uint256 purchaseAmount,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
 }
 

@@ -24,12 +24,12 @@ interface IFrabricDAO is IDAO {
 
   function commonProposalBit() external view returns (uint16);
 
-  function proposePaper(string calldata info) external returns (uint256);
+  function proposePaper(bytes32 info) external returns (uint256);
   function proposeUpgrade(
     address beacon,
     address instance,
     address code,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
   function proposeTokenAction(
     address token,
@@ -37,7 +37,7 @@ interface IFrabricDAO is IDAO {
     bool mint,
     uint256 price,
     uint256 amount,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
 }
 

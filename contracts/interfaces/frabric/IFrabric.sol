@@ -54,7 +54,7 @@ interface IFrabric {
     uint256 indexed id,
     address indexed thread,
     uint256 indexed proposalType,
-    string info
+    bytes32 info
   );
 
   event KYCChanged(address indexed oldKYC, address indexed newKYC);
@@ -70,13 +70,13 @@ interface IFrabric {
   function proposeParticipants(
     ParticipantType participantType,
     bytes32 participants,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
   function proposeRemoveBond(
     address governor,
     bool slash,
     uint256 amount,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
   function proposeThread(
     uint8 variant,
@@ -84,13 +84,13 @@ interface IFrabric {
     string calldata name,
     string calldata symbol,
     bytes calldata data,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
   function proposeThreadProposal(
     address thread,
     uint16 proposalType,
     bytes calldata data,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
 
   function approve(

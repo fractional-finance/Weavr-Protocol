@@ -99,7 +99,7 @@ abstract contract DAO is Composable, IDAO {
     }
   }
 
-  function _createProposal(uint16 proposalType, string calldata info) internal beforeProposal() returns (uint256 id) {
+  function _createProposal(uint16 proposalType, bytes32 info) internal beforeProposal() returns (uint256 id) {
     id = _nextProposalID;
     _nextProposalID++;
 

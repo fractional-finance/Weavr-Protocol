@@ -101,7 +101,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
   function proposeParticipants(
     ParticipantType participantType,
     bytes32 participants,
-    string calldata info
+    bytes32 info
   ) external override returns (uint256) {
     if (participantType == ParticipantType.Null) {
       // CommonProposalType.ParticipantRemoval should be used
@@ -133,7 +133,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     address _governor,
     bool slash,
     uint256 amount,
-    string calldata info
+    bytes32 info
   ) external override returns (uint256) {
     _removeBonds[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
     if (governor[_governor] < GovernorStatus.Active) {
@@ -152,7 +152,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     string calldata name,
     string calldata symbol,
     bytes calldata data,
-    string calldata info
+    bytes32 info
   ) external override returns (uint256) {
     if (governor[agent] != GovernorStatus.Active) {
       revert NotActiveGovernor(agent, governor[agent]);
@@ -183,7 +183,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     address thread,
     uint16 _proposalType,
     bytes calldata data,
-    string calldata info
+    bytes32 info
   ) external returns (uint256) {
     // Technically not needed given we check for interface support, yet a healthy check to have
     if (IComposable(thread).contractName() != keccak256("Thread")) {
