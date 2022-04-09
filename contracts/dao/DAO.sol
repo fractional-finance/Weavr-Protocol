@@ -121,11 +121,11 @@ abstract contract DAO is Composable, IDAO {
     // Automatically vote in favor for the creator if they have votes and are actively whitelisted
     int128 votes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
     if ((votes != 0) && IWhitelist(erc20).whitelisted(msg.sender)) {
-      _vote(id, proposal, votes, votes);
+      _vote(msg.sender, id, proposal, votes, votes);
     }
   }
 
-  function _vote(uint256 id, Proposal storage proposal, int128 votes, int128 absVotes) private {
+  function _vote(address voter, uint256 id, Proposal storage proposal, int128 votes, int128 absVotes) private {
     // Cap voting power per user at 10% of the total supply
     // This will hopefully not be executed 99% of the time and then only for select Threads
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
@@ -138,7 +138,7 @@ abstract contract DAO is Composable, IDAO {
     }
 
     // Remove old votes
-    int128 standing = proposal.voters[msg.sender];
+    int128 standing = proposal.voters[voter];
     if (standing != 0) {
       proposal.votes -= standing;
     } else {
@@ -147,7 +147,7 @@ abstract contract DAO is Composable, IDAO {
     }
 
     // Set new votes
-    proposal.voters[msg.sender] = votes;
+    proposal.voters[voter] = votes;
     // Update the vote sums
     VoteDirection direction;
     if (votes != 0) {
@@ -161,7 +161,15 @@ abstract contract DAO is Composable, IDAO {
       direction = VoteDirection.Abstain;
     }
 
-    emit Vote(id, direction, msg.sender, uint128(absVotes));
+    emit Vote(id, direction, voter, uint128(absVotes));
+  }
+
+  function _vote(uint256 id, address voter) internal {
+    Proposal storage proposal = _proposals[id];
+    int128 votes = int128(uint128(IVotes(erc20).getPastVotes(voter, proposal.voteBlock)));
+    if ((votes != 0) && IWhitelist(erc20).whitelisted(voter)) {
+      _vote(voter, id, proposal, votes, votes);
+    }
   }
 
   // While it's not expected for this to be called in batch due to UX complexities,
@@ -204,7 +212,7 @@ abstract contract DAO is Composable, IDAO {
         }
       }
 
-      _vote(ids[i], proposal, votesI, absVotes);
+      _vote(msg.sender, ids[i], proposal, votesI, absVotes);
     }
   }
 
@@ -329,7 +337,7 @@ abstract contract DAO is Composable, IDAO {
   function proposalVoteBlock(uint256 id) external view override returns (uint64) {
     return _proposals[id].voteBlock;
   }
-  function proposalVotes(uint256 id) external view override returns (int128) {
+  function proposalVotes(uint256 id) public view override returns (int128) {
     return _proposals[id].votes;
   }
   function proposalTotalVotes(uint256 id) external view override returns (uint128) {

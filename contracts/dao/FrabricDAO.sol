@@ -170,44 +170,45 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     bytes32 info,
     bytes[] calldata signatures
   ) external returns (uint256) {
+    _removals[_nextProposalID] = participant;
+    emit RemovalProposed(_nextProposalID, participant);
+    uint256 id =  _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
+
     // If signatures were provided, then the purpose is to freeze this participant's
     // funds for the duration of the proposal. This will not affect any existing
     // DEX orders yet will prevent further DEX orders from being placed. This prevents
     // dumping (which already isn't incentivized as tokens will be put up for auction)
     // and games of hot potato where they're transferred to friends/associates to
     // prevent their re-distribution. While they can also buy their own tokens off
-    // the Auction contract, this is a step closer to being an optimal system
+    // the Auction contract (with an alt), this is a step closer to being an optimal
+    // system
 
     // If this is done maliciously, whoever proposed this should be removed themselves
     if (signatures.length != 0) {
-      uint256 votes = 0;
-      uint160 prevSigner = 0;
       for (uint256 i = 0; i < signatures.length; i++) {
-        // Recover the signer
-        address signer = ECDSA.recover(
-          _hashTypedDataV4(
-            keccak256(
-              abi.encode(keccak256("Removal(address participant)"), participant)
-            )
-          ),
-          signatures[i]
+        // Vote with the recovered signer. This will tell us how many votes they
+        // have in the end, and if these people are voting to freeze their funds,
+        // they believe they should be removed. They can change their mind later
+        _vote(
+          id,
+          ECDSA.recover(
+            _hashTypedDataV4(
+              keccak256(
+                abi.encode(keccak256("Removal(address participant)"), participant)
+              )
+            ),
+            signatures[i]
+          )
         );
-
-        // Ensure they weren't duplicated by enforcing the signatures are sorted
-        if (uint160(signer) <= prevSigner) {
-          revert UnsortedVoter(signer);
-        }
-        prevSigner = uint160(signer);
-
-        // Increment the amount of votes being used to freeze these funds
-        votes += IERC20(erc20).balanceOf(signer);
       }
 
       // If the votes of these holders doesn't meet the required participation threshold, throw
-      if (votes < requiredParticipation()) {
+      // Guaranteed to be positive as all votes have been for so far
+      if (uint128(proposalVotes(id)) < requiredParticipation()) {
         // Uses an ID of type(uint256).max since this proposal doesn't have an ID yet
+        // While we have an id variable, if this transaction reverts, it'll no longer be valid
         // We could also use 0 yet that would overlap with an actual proposal
-        revert NotEnoughParticipation(type(uint256).max, votes, requiredParticipation());
+        revert NotEnoughParticipation(type(uint256).max, uint128(proposalVotes(id)), requiredParticipation());
       }
 
       // Freeze the token until this proposal completes, with an extra 1 day buffer
@@ -215,9 +216,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       IFrabricERC20(erc20).freeze(participant, uint64(block.timestamp) + votingPeriod + queuePeriod + uint64(1 days));
     }
 
-    _removals[_nextProposalID] = participant;
-    emit RemovalProposed(_nextProposalID, participant);
-    return _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
+    return id;
   }
 
   // Has an empty body as it doesn't have to be overriden
