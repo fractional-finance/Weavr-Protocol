@@ -12,9 +12,12 @@ contract Thread is FrabricDAO, IThreadInitializable {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
+  uint256 public override upgradesEnabled;
+
+  bytes32 public override descriptor;
+
   address public override agent;
   address public override frabric;
-  uint256 public override upgradesEnabled;
 
   struct Dissolution {
     address purchaser;
@@ -23,6 +26,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   }
 
   // Private as all this info is available via events
+  mapping(uint256 => bytes32) private _descriptors;
   mapping(uint256 => address) private _agents;
   mapping(uint256 => address) private _frabrics;
   mapping(uint256 => Dissolution) private _dissolutions;
@@ -30,6 +34,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function initialize(
     string calldata name,
     address _erc20,
+    bytes32 _descriptor,
     address _agent,
     address _frabric
   ) external override initializer {
@@ -45,6 +50,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     __Composable_init("Thread", false);
     supportsInterface[type(IThread).interfaceId] = true;
 
+    descriptor = _descriptor;
     agent = _agent;
     frabric = _frabric;
     emit AgentChanged(address(0), agent);
@@ -93,6 +99,15 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function proposeEnablingUpgrades(bytes32 info) external returns (uint256) {
     // Doesn't emit a dedicated event for the same reason Paper proposals don't
     return _createProposal(uint16(ThreadProposalType.EnableUpgrades), info);
+  }
+
+  function proposeDescriptorChange(
+    bytes32 _descriptor,
+    bytes32 info
+  ) external override returns (uint256) {
+    _descriptors[_nextProposalID] = _descriptor;
+    emit DescriptorChangeProposed(_nextProposalID, _descriptor);
+    return _createProposal(uint16(ThreadProposalType.DescriptorChange), info);
   }
 
   function proposeAgentChange(
@@ -158,6 +173,11 @@ contract Thread is FrabricDAO, IThreadInitializable {
       // That means there's an additional delay of the Thread's voting period (1 week)
       // while the actual Upgrade proposal occurs, granting that time
       upgradesEnabled = block.timestamp + IDAOCore(frabric).votingPeriod() + (1 weeks);
+
+    } else if (pType == ThreadProposalType.DescriptorChange) {
+      emit DescriptorChanged(descriptor, _descriptors[id]);
+      descriptor = _descriptors[id];
+      delete _descriptors[id];
 
     } else if (pType == ThreadProposalType.AgentChange) {
       emit AgentChanged(agent, _agents[id]);

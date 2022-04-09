@@ -23,9 +23,10 @@ interface IThreadDeployer is IComposable {
 
   function deploy(
     uint8 variant,
-    address agent,
     string memory name,
     string memory symbol,
+    bytes32 descriptor,
+    address agent,
     bytes calldata data
   ) external;
 

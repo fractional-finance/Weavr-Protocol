@@ -75,9 +75,10 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     // the Frabric to also be upgraded
     // Is an uint8 so this contract can use it as an enum if desired in the future
     uint8 _variant,
-    address _agent,
     string memory _name,
     string memory _symbol,
+    bytes32 descriptor,
+    address _agent,
     bytes calldata data
   ) external override onlyOwner {
     // Fixes stack too deep errors
@@ -101,6 +102,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
         IThreadInitializable.initialize.selector,
         name,
         erc20,
+        descriptor,
         agent,
         msg.sender
       )

@@ -48,6 +48,7 @@ interface IFrabric {
     address indexed agent,
     string name,
     string symbol,
+    bytes32 descriptor,
     bytes data
   );
   event ThreadProposalProposed(
@@ -80,9 +81,10 @@ interface IFrabric {
   ) external returns (uint256);
   function proposeThread(
     uint8 variant,
-    address agent,
     string calldata name,
     string calldata symbol,
+    bytes32 descriptor,
+    address agent,
     bytes calldata data,
     bytes32 info
   ) external returns (uint256);

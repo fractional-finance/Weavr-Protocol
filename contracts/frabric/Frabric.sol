@@ -40,7 +40,9 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
   struct ThreadProposal {
     uint8 variant;
     address agent;
+    // This may not actually pack yet it's small enough to theoretically
     string symbol;
+    bytes32 descriptor;
     string name;
     bytes data;
   }
@@ -148,9 +150,10 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
 
   function proposeThread(
     uint8 variant,
-    address agent,
     string calldata name,
     string calldata symbol,
+    bytes32 descriptor,
+    address agent,
     bytes calldata data,
     bytes32 info
   ) external override returns (uint256) {
@@ -168,11 +171,12 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     IThreadDeployer(threadDeployer).validate(variant, data);
     ThreadProposal storage proposal = _threads[_nextProposalID];
     proposal.variant = variant;
-    proposal.agent = agent;
     proposal.name = name;
     proposal.symbol = symbol;
+    proposal.descriptor = descriptor;
+    proposal.agent = agent;
     proposal.data = data;
-    emit ThreadProposed(_nextProposalID, variant, agent, name, symbol, data);
+    emit ThreadProposed(_nextProposalID, variant, agent, name, symbol, descriptor, data);
     return _createProposal(uint16(FrabricProposalType.Thread), info);
   }
 
@@ -301,7 +305,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     } else if (pType == FrabricProposalType.Thread) {
       ThreadProposal storage proposal = _threads[id];
       IThreadDeployer(threadDeployer).deploy(
-        proposal.variant, proposal.agent, proposal.name, proposal.symbol, proposal.data
+        proposal.variant, proposal.name, proposal.symbol, proposal.descriptor, proposal.agent, proposal.data
       );
       delete _threads[id];
 
