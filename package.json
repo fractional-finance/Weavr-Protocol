@@ -4,7 +4,7 @@
   "description": "Blockchain components of the Frabric platform.",
   "dependencies": {
     "@openzeppelin/contracts": "^4.5.0",
-    "@openzeppelin/contracts-upgradeable": "^4.5.1"
+    "@openzeppelin/contracts-upgradeable": "^4.5.2"
   },
   "scripts": {
     "test": "npx hardhat test"
