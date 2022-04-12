@@ -6,6 +6,8 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../dao/FrabricDAO.sol";
 
+import "../interfaces/frabric/IBond.sol";
+import "../interfaces/frabric/IFrabric.sol";
 import "../interfaces/thread/IThread.sol";
 
 contract Thread is FrabricDAO, IThreadInitializable {
@@ -31,12 +33,55 @@ contract Thread is FrabricDAO, IThreadInitializable {
   mapping(uint256 => address) private _frabrics;
   mapping(uint256 => Dissolution) private _dissolutions;
 
+  modifier viableFrabric(address _frabric) {
+    // Technically not needed, healthy to have
+    if (IComposable(_frabric).contractName() != keccak256("Frabric")) {
+      revert DifferentContract(IComposable(_frabric).contractName(), keccak256("Frabric"));
+    }
+
+    // Technically, the erc20 of this DAO must implement FrabricWhitelist
+    // That is implied by this Frabric implementing IDAO and when this executes,
+    // setParentWhitelist is executed, confirming the FrabricWhitelist interface
+    // is supported by it
+    if (!_frabric.supportsInterface(type(IDAOCore).interfaceId)) {
+      revert UnsupportedInterface(_frabric, type(IDAOCore).interfaceId);
+    }
+
+    if (!_frabric.supportsInterface(type(IFrabricCore).interfaceId)) {
+      revert UnsupportedInterface(_frabric, type(IFrabricCore).interfaceId);
+    }
+
+    _;
+  }
+
+  function _setFrabric(address _frabric) private viableFrabric(_frabric) {
+    emit FrabricChanged(frabric, _frabric);
+    frabric = _frabric;
+    // Update the parent whitelist as well, if we're not still initializing
+    if (IFrabricWhitelist(erc20).parentWhitelist() != address(0)) {
+      IFrabricERC20(erc20).setParentWhitelist(IDAO(frabric).erc20());
+    }
+  }
+
+  modifier viableAgent(address _agent) {
+    if (IFrabricCore(frabric).governor(_agent) != IFrabricCore.GovernorStatus.Active) {
+      revert NotActiveGovernor(_agent, IFrabricCore(frabric).governor(_agent));
+    }
+
+    _;
+  }
+
+  function _setAgent(address _agent) private viableAgent(_agent) {
+    emit AgentChanged(agent, _agent);
+    agent = _agent;
+  }
+
   function initialize(
     string calldata name,
     address _erc20,
     bytes32 _descriptor,
-    address _agent,
-    address _frabric
+    address _frabric,
+    address _agent
   ) external override initializer {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
@@ -51,10 +96,8 @@ contract Thread is FrabricDAO, IThreadInitializable {
     supportsInterface[type(IThread).interfaceId] = true;
 
     descriptor = _descriptor;
-    agent = _agent;
-    frabric = _frabric;
-    emit AgentChanged(address(0), agent);
-    emit FrabricChanged(address(0), frabric);
+    _setFrabric(_frabric);
+    _setAgent(_agent);
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -113,7 +156,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function proposeAgentChange(
     address _agent,
     bytes32 info
-  ) external override returns (uint256) {
+  ) external override viableAgent(_agent) returns (uint256) {
     // We could validate this agent is a valid governor at this time yet it's
     // the Thread's choice to make
     _agents[_nextProposalID] = _agent;
@@ -124,21 +167,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function proposeFrabricChange(
     address _frabric,
     bytes32 info
-  ) external override returns (uint256) {
-    // Technically not needed, healthy to have
-    if (IComposable(_frabric).contractName() != keccak256("Frabric")) {
-      revert DifferentContract(IComposable(_frabric).contractName(), keccak256("Frabric"));
-    }
-
-    // This Frabric technically only has to implement IDAO
-    // It's used for its erc20 (parent whitelist) and its voting period at this time
-    // Technically, the erc20 must implement FrabricWhitelist
-    // That is implied by this Frabric implementing IDAO and when this executes,
-    // setParentWhitelist is executed, confirming the FrabricWhitelist interface
-    // is supported by it
-    if (!_frabric.supportsInterface(type(IDAOCore).interfaceId)) {
-      revert UnsupportedInterface(_frabric, type(IDAOCore).interfaceId);
-    }
+  ) external override viableFrabric(_frabric) returns (uint256) {
     _frabrics[_nextProposalID] = _frabric;
     emit FrabricChangeProposed(_nextProposalID, _frabric);
     return _createProposal(uint16(ThreadProposalType.FrabricChange), info);

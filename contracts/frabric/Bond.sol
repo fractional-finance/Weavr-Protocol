@@ -56,8 +56,8 @@ contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
   }
 
   function bond(uint256 amount) external override {
-    if (IFrabric(owner()).governor(msg.sender) != IFrabric.GovernorStatus.Active) {
-      revert NotActiveGovernor(msg.sender, IFrabric(owner()).governor(msg.sender));
+    if (IFrabricCore(owner()).governor(msg.sender) != IFrabricCore.GovernorStatus.Active) {
+      revert NotActiveGovernor(msg.sender, IFrabricCore(owner()).governor(msg.sender));
     }
     // Safe usage since Uniswap v2 tokens aren't fee on transfer nor 777
     IERC20(bondToken).safeTransferFrom(msg.sender, address(this), amount);

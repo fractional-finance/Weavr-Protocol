@@ -96,7 +96,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() Composable("Frabric") initializer {}
 
-  function canPropose() public view override returns (bool) {
+  function canPropose() public view override(DAO, IDAOCore) returns (bool) {
     return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);
   }
 
@@ -304,6 +304,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
 
     } else if (pType == FrabricProposalType.Thread) {
       ThreadProposal storage proposal = _threads[id];
+      // This governor may no longer be viable for usage yet the Thread will check
       IThreadDeployer(threadDeployer).deploy(
         proposal.variant, proposal.name, proposal.symbol, proposal.descriptor, proposal.agent, proposal.data
       );

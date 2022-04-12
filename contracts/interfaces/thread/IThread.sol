@@ -52,8 +52,8 @@ interface IThreadInitializable is IThread {
     string memory name,
     address erc20,
     bytes32 descriptor,
-    address agent,
-    address frabric
+    address frabric,
+    address agent
   ) external;
 }
 

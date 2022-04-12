@@ -103,8 +103,8 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
         name,
         erc20,
         descriptor,
-        agent,
-        msg.sender
+        msg.sender,
+        agent
       )
     ));
 

@@ -21,13 +21,14 @@ module.exports = {
 
     const TestFrabric = await ethers.getContractFactory("TestFrabric");
     const frabric = await TestFrabric.deploy();
+    await frabric.setGovernor(agent, 2);
 
     const beacon = await module.exports.deployBeacon();
     const Thread = await ethers.getContractFactory("Thread");
     const thread = await upgrades.deployBeaconProxy(
       beacon,
       Thread,
-      ["1 Main Street", erc20.address, "0x0000000000000000000000000000000000000000000000000000000000000000", agent, frabric.address]
+      ["1 Main Street", erc20.address, "0x0000000000000000000000000000000000000000000000000000000000000000", frabric.address, agent]
     );
 
     await erc20.initialize(

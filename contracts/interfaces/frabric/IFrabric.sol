@@ -3,7 +3,20 @@ pragma solidity >=0.8.9;
 
 import "../dao/IFrabricDAO.sol";
 
-interface IFrabric {
+interface IFrabricCore is IFrabricDAO {
+  enum GovernorStatus {
+    Null,
+    Unverified, // Proposed and elected, yet hasn't gone through KYC
+    Active,
+    // Removed is last as GovernorStatus is written as a linear series of transitions
+    // > Unverified will work to find any Governor which was ever active
+    Removed
+  }
+
+  function governor(address governor) external view returns (GovernorStatus);
+}
+
+interface IFrabric is IFrabricCore {
   enum FrabricProposalType {
     Participants,
     RemoveBond,
@@ -20,15 +33,6 @@ interface IFrabric {
     Governor,
     Individual,
     Corporation
-  }
-
-  enum GovernorStatus {
-    Null,
-    Unverified, // Proposed and elected, yet hasn't gone through KYC
-    Active,
-    // Removed is last as GovernorStatus is written as a linear series of transitions
-    // > Unverified will work to find any Governor which was ever active
-    Removed
   }
 
   event ParticipantsProposed(
@@ -65,8 +69,6 @@ interface IFrabric {
   function bond() external view returns (address);
   function threadDeployer() external view returns (address);
   function kyc() external view returns (address);
-
-  function governor(address governor) external view returns (GovernorStatus);
 
   function proposeParticipants(
     ParticipantType participantType,
