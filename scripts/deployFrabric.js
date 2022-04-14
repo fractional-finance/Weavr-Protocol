@@ -102,19 +102,19 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
 
   const root = (
     new MerkleTree(
-      genesisList.map(
-        leaf => (leaf.substr(0, 2) + "000000000000000000000000" + leaf.substr(2))
-      ),
-      ethers.utils.keccak256
+      genesisList,
+      ethers.utils.keccak256,
+      { hashLeaves: true, sortPairs: true }
     )
-  ).getRoot().toString("hex");
+  ).getHexRoot();
+
   const frabric = await upgrades.deployBeaconProxy(
     proxy,
     await ethers.getContractFactory("Frabric"),
     [
       frbc.address,
       genesisList,
-      root ? ("0x" + root) : "0x0000000000000000000000000000000000000000000000000000000000000000",
+      root.substr(2) ? root : "0x0000000000000000000000000000000000000000000000000000000000000000",
       bond.address,
       threadDeployer.address,
       kyc

@@ -112,7 +112,6 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
       revert ProposingGenesisParticipants();
     }
 
-
     if ((participantType == ParticipantType.KYC) || (participantType == ParticipantType.Governor)) {
       // Validate this to be an address if this ParticipantType should only be a single address
       if (bytes32(bytes20(participants)) != participants) {
@@ -365,7 +364,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
 
     // Verify the address was actually part of this proposal
     // Directly use the address as a leaf. Since it's a RipeMD-160 hash of a 32-byte value, this shouldn't be an issue
-    if (!MerkleProofUpgradeable.verify(proof, participants.participants, bytes32(bytes20(approving)))) {
+    if (!MerkleProofUpgradeable.verify(proof, participants.participants, keccak256(abi.encodePacked(approving)))) {
       revert IncorrectParticipant(approving, participants.participants, proof);
     }
 
