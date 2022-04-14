@@ -133,7 +133,7 @@ abstract contract DAO is Composable, IDAO {
     // yet rather a number with some legal consideration
     // We could grab the historic total supply yet it's not worth the gas given cancelProposal
     // will successfully handling different proposal results due to this edge case
-    int128 tenPercent = int128(uint128(IERC20(erc20).totalSupply() / 10));
+    int128 tenPercent = int128(uint128(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
     if (absVotes > tenPercent) {
       votes = tenPercent * (votes / absVotes);
       absVotes = tenPercent;
@@ -265,7 +265,7 @@ abstract contract DAO is Composable, IDAO {
       }
 
       int128 votes = int128(uint128(IERC20(erc20).balanceOf(voter)));
-      int128 tenPercent = int128(uint128(IERC20(erc20).totalSupply() / 10));
+      int128 tenPercent = int128(uint128(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
       if (votes > tenPercent) {
         votes = tenPercent;
       }
