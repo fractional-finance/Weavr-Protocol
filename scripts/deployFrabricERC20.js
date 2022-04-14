@@ -17,7 +17,7 @@ module.exports = {
     const auction = await deployAuction();
     const FrabricERC20 = await ethers.getContractFactory("FrabricERC20");
     const erc20 = await upgrades.deployBeaconProxy(
-      beacon,
+      beacon.address,
       FrabricERC20,
       args == null ? [] : [...args, auction.auction.address],
       args == null ? { initializer: false } : {}

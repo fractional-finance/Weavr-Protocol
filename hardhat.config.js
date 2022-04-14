@@ -15,10 +15,14 @@ module.exports = {
     }
   },
 
-  networks: {
-    rinkeby: {
-      url: process.env.RINKEBY,
-      accounts: [process.env.PRIVATE_KEY]
-    }
-  }
+  networks: {}
 };
+
+if (process.env.RINKEBY) {
+  module.exports.networks.rinkeby = {
+    url: process.env.RINKEBY,
+    accounts: [
+      process.env.PRIVATE_KEY
+    ]
+  };
+}

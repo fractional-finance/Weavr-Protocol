@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { ethers, upgrades } = hre;
+const { ethers, upgrades, waffle } = hre;
 
 const { MerkleTree } = require("merkletreejs");
 
@@ -40,7 +40,22 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
   let genesisList = [];
   for (const person in genesis) {
     await frbc.setWhitelisted(person, ethers.utils.id(genesis[person].info));
-    await frbc.mint(person, genesis[person].amount);
+    // Delay code from Beacon used to resolve consistent timing issues that make little sense
+    if ((await waffle.provider.getNetwork()).chainId != 31337) {
+      let block = await waffle.provider.getBlockNumber();
+      while ((block + 2) > (await waffle.provider.getBlockNumber())) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    await frbc.mint(person, genesis[person].amount, { gasLimit: 300000 });
+    if ((await waffle.provider.getNetwork()).chainId != 31337) {
+      let block = await waffle.provider.getBlockNumber();
+      while ((block + 2) > (await waffle.provider.getBlockNumber())) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
     genesisList.push(person);
   }
 
@@ -109,7 +124,7 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
   ).getHexRoot();
 
   const frabric = await upgrades.deployBeaconProxy(
-    proxy,
+    proxy.address,
     await ethers.getContractFactory("Frabric"),
     [
       frbc.address,

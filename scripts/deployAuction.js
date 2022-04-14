@@ -21,7 +21,7 @@ module.exports = async () => {
     await ethers.getContractFactory("SingleBeacon")
   );
 
-  const auction = await upgrades.deployBeaconProxy(proxy, Auction);
+  const auction = await upgrades.deployBeaconProxy(proxy.address, Auction);
 
   return { proxy, auction };
 };

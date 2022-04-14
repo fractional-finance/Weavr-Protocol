@@ -15,7 +15,7 @@ module.exports = async (usdc, bondToken) => {
   );
 
   const bond = await upgrades.deployBeaconProxy(
-    proxy,
+    proxy.address,
     Bond,
     [usdc, bondToken]
   );
