@@ -126,11 +126,13 @@ abstract contract DAO is Composable, IDAO {
   }
 
   function _vote(address voter, uint256 id, Proposal storage proposal, int128 votes, int128 absVotes) private {
-    // Cap voting power per user at 10% of the total supply
+    // Cap voting power per user at 10% of the current total supply
     // This will hopefully not be executed 99% of the time and then only for select Threads
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
     // 10% isn't requiredParticipation, despite currently having the same value,
     // yet rather a number with some legal consideration
+    // We could grab the historic total supply yet it's not worth the gas given cancelProposal
+    // will successfully handling different proposal results due to this edge case
     int128 tenPercent = int128(uint128(IERC20(erc20).totalSupply() / 10));
     if (absVotes > tenPercent) {
       votes = tenPercent * (votes / absVotes);
@@ -263,6 +265,11 @@ abstract contract DAO is Composable, IDAO {
       }
 
       int128 votes = int128(uint128(IERC20(erc20).balanceOf(voter)));
+      int128 tenPercent = int128(uint128(IERC20(erc20).totalSupply() / 10));
+      if (votes > tenPercent) {
+        votes = tenPercent;
+      }
+
       // If they currently have enough votes to maintain their historical vote, continue
       // If we errored here, cancelProposal TXs could be vulnerable to frontrunning
       // designed to bork these cancellations
