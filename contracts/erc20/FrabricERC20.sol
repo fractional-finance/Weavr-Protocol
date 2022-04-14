@@ -70,7 +70,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
   // Redefine ERC20 functions so the DEX can pick them up as overrides and call them
   function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {
-    ERC20Upgradeable._transfer(from, to, amount);
+    super._transfer(from, to, amount);
   }
   function balanceOf(
     address account
