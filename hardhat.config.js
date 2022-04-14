@@ -1,3 +1,5 @@
+// require("dotenv").config();
+
 require("@nomiclabs/hardhat-waffle");
 require("@openzeppelin/hardhat-upgrades");
 require("solidity-coverage");
@@ -10,6 +12,13 @@ module.exports = {
         enabled: true,
         runs: 200
       }
+    }
+  },
+
+  networks: {
+    rinkeby: {
+      url: process.env.RINKEBY,
+      accounts: [process.env.PRIVATE_KEY]
     }
   }
 };

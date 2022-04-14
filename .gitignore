@@ -1,7 +1,11 @@
+.env
+
 node_modules
+
 artifacts
 cache
 .openzeppelin
+
 coverage
 coverage.json
 

@@ -100,7 +100,6 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
     await ethers.getContractFactory("SingleBeacon")
   );
 
-  const Frabric = await ethers.getContractFactory("Frabric");
   const root = (
     new MerkleTree(
       genesisList.map(
@@ -111,7 +110,7 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
   ).getRoot().toString("hex");
   const frabric = await upgrades.deployBeaconProxy(
     proxy,
-    Frabric,
+    await ethers.getContractFactory("Frabric"),
     [
       frbc.address,
       genesisList,
@@ -162,6 +161,7 @@ if (require.main === module) {
   (async () => {
     let usdc = process.env.USDC;
     let uniswap = process.env.UNISWAP;
+    let genesis;
     let kyc = process.env.KYC;
 
     // Use test values if no environment variables were specified
@@ -175,14 +175,18 @@ if (require.main === module) {
 
       uniswap = (await require("./deployUniswap.js")()).router.address;
 
+      genesis = {};
+
       kyc = (await ethers.getSigners())[0].address;
     // If only some variables were specified, error accordingly
     } else if (variables != 3) {
       console.error("Only some environment variables were provide. Provide USDC, the Uniswap v2 Router, and KYC or none.");
       process.exit(1);
+    } else {
+      genesis = require("../genesis.json");
     }
 
-    const contracts = await module.exports(usdc, uniswap, {}, kyc);
+    const contracts = await module.exports(usdc, uniswap, genesis, kyc);
     console.log("Auction:           " + contracts.auction.address);
     console.log("FRBC:              " + contracts.frbc.address);
     console.log("Pair (Bond Token): " + contracts.pair);

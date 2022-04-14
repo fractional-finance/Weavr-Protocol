@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const { ethers } = hre;
 
 // Solely used for testing
-module.exports = async (beacon, args) => {
+module.exports = async () => {
   const signer = (await ethers.getSigners())[0];
 
   const Factory = await ethers.ContractFactory.fromSolidity(
