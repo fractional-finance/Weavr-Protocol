@@ -49,6 +49,7 @@ async function init(){
   await testFrabric.setGovernor(agent.address, 2);
 
 
+
   const res = await testFrabric.threadDeployDeployer(
       threadDeployer.threadDeployer.address,
       0,
@@ -59,8 +60,7 @@ async function init(){
       data
   );
   const add = (await threadDeployer.threadDeployer.queryFilter(threadDeployer.threadDeployer.filters.Thread()))[0].args.thread;
-  const Thread = await ethers.getContractFactory("Thread");
-  thread = Thread.attach(add);
+  let thread = Thread.deployTestThread(agent)
 }
 
 describe("Thread Happy-Path", async () => {
@@ -68,7 +68,6 @@ describe("Thread Happy-Path", async () => {
     await init();
   });
   it("Should initialize a Thread changing emitting AgentChanged and FrabricChanged", async () => {
-    
     expect(threadDeployer.threadDeployer).to.emit(Thread, "AgentChanged");
     expect(threadDeployer.threadDeployer).to.emit(Thread, "FrabricChanged");
     

@@ -38,8 +38,6 @@ describe("Frabric Positive Test Cases", accounts => {
         signers[2]
     );
     let block = await waffle.provider.getBlockNumber()-1;
-    console.log(signers[2].address);
-    console.log(await frbc.getPastVotes(signers[2].address, block));
     await frabric.proposeParticipants(5, merkle.getHexRoot(), ethers.utils.id("Proposing new participants"));
 
     // Advance the clock 2 weeks

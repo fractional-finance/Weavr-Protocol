@@ -68,7 +68,6 @@ module.exports = async () => {
     ethers.utils.id("Upgrade to the Frabric")
   );
   await completeProposal(frabric, 1);
-  console.log(signers[2].address);
   frabric = new ethers.Contract(
     frabric.address,
     require("../artifacts/contracts/frabric/Frabric.sol/Frabric.json").abi,
