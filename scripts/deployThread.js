@@ -28,7 +28,14 @@ module.exports = {
     const thread = await upgrades.deployBeaconProxy(
       beacon.address,
       Thread,
-      ["1 Main Street", erc20.address, "0x0000000000000000000000000000000000000000000000000000000000000000", frabric.address, agent]
+      [
+        "1 Main Street",
+        erc20.address,
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        frabric.address,
+        agent,
+        [frabric.address]
+      ]
     );
 
     await erc20.initialize(

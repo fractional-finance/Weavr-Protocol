@@ -26,6 +26,7 @@ interface IThread is IFrabricDAO {
   function descriptor() external view returns (bytes32);
   function governor() external view returns (address);
   function frabric() external view returns (address);
+  function irremovable(address participant) external view returns (bool);
 
   function proposeEnablingUpgrades(bytes32 info) external returns (uint256);
   function proposeDescriptorChange(
@@ -53,7 +54,8 @@ interface IThreadInitializable is IThread {
     address erc20,
     bytes32 descriptor,
     address frabric,
-    address governor
+    address governor,
+    address[] calldata irremovable
   ) external;
 }
 

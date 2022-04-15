@@ -21,6 +21,9 @@ contract Thread is FrabricDAO, IThreadInitializable {
   address public override governor;
   address public override frabric;
 
+  // Irremovable ecosystem contracts which hold Thread tokens
+  mapping(address => bool) public override irremovable;
+
   struct Dissolution {
     address purchaser;
     address token;
@@ -58,6 +61,8 @@ contract Thread is FrabricDAO, IThreadInitializable {
     emit FrabricChanged(frabric, _frabric);
     frabric = _frabric;
     // Update the parent whitelist as well, if we're not still initializing
+    // If we are, the this erc20 hasn't had init called yet, and the ThreadDeployer
+    // will set the parentWhitelist when it calls init
     if (IFrabricWhitelist(erc20).parentWhitelist() != address(0)) {
       IFrabricERC20(erc20).setParentWhitelist(IDAO(frabric).erc20());
     }
@@ -81,7 +86,8 @@ contract Thread is FrabricDAO, IThreadInitializable {
     address _erc20,
     bytes32 _descriptor,
     address _frabric,
-    address _governor
+    address _governor,
+    address[] calldata _irremovable
   ) external override initializer {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
@@ -94,6 +100,10 @@ contract Thread is FrabricDAO, IThreadInitializable {
     descriptor = _descriptor;
     _setFrabric(_frabric);
     _setGovernor(_governor);
+
+    for (uint256 i = 0; i < _irremovable.length; i++) {
+      irremovable[_irremovable[i]] = true;
+    }
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -130,6 +140,10 @@ contract Thread is FrabricDAO, IThreadInitializable {
       (impl == IFrabricBeacon(beacon).implementation(instance)) ||
       (uint160(impl) <= IFrabricBeacon(beacon).releaseChannels())
     );
+  }
+
+  function _canProposeRemoval(address participant) internal view override returns (bool) {
+    return !irremovable[participant];
   }
 
   function proposeEnablingUpgrades(bytes32 info) external returns (uint256) {

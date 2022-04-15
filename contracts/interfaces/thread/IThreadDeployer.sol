@@ -13,6 +13,7 @@ interface IThreadDeployer is IComposable {
     address crowdfund
   );
 
+  function percentage() external view returns (uint8);
   function crowdfundProxy() external view returns (address);
   function erc20Beacon() external view returns (address);
   function threadBeacon() external view returns (address);

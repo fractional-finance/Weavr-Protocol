@@ -85,14 +85,18 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, info);
   }
 
-  // Allowed to be overriden (see Thread for why)
-  // Isn't required to be overriden and assumes Upgrade proposals are valid like
-  // any other proposal unless overriden
+  // These are allowed to be overriden (see Thread for why)
+  // They aren't required to be overriden and proposals are assumed to be valid
+  // like any other proposal if they aren't
   function _canProposeUpgrade(
     address /*beacon*/,
     address /*instance*/,
     address /*impl*/
   ) internal view virtual returns (bool) {
+    return true;
+  }
+
+  function _canProposeRemoval(address /*participant*/) internal view virtual returns (bool) {
     return true;
   }
 
@@ -187,12 +191,16 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     bytes[] calldata signatures,
     bytes32 info
   ) external override returns (uint256) {
+    if (!_canProposeRemoval(participant)) {
+      revert ProposingParticipantRemoval(participant);
+    }
+
     if (removalFee > maxRemovalFee) {
       revert InvalidRemovalFee(removalFee, maxRemovalFee);
     }
+
     _removals[_nextProposalID] = Removal(participant, removalFee);
     emit RemovalProposed(_nextProposalID, participant, removalFee);
-
     uint256 id =  _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
 
     // If signatures were provided, then the purpose is to freeze this participant's
