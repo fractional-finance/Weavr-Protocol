@@ -156,6 +156,15 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       if (!IFrabricERC20(erc20).mintable()) {
         revert NotMintable();
       }
+
+      // All of this mint code should work and will be reviewed by auditors to confirm that
+      // That said, at this time, we are not launching with any form of minting enabled
+      // FRBC's mintable property being set to true is a byproduct of the setup
+      // and a bit of laid groundwork, just as all this code is
+
+      // This could be placed earlier to save on gas yet this is more readable and
+      // this should never be called anyways
+      revert NotMintable();
     }
 
     if (price != 0) {
