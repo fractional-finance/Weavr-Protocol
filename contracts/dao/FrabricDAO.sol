@@ -210,7 +210,9 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
         // Vote with the recovered signer. This will tell us how many votes they
         // have in the end, and if these people are voting to freeze their funds,
         // they believe they should be removed. They can change their mind later
-        _vote(
+
+        // Safe usage as this proposal is guaranteed to be active
+        _voteUnsafe(
           id,
           ECDSA.recover(
             _hashTypedDataV4(

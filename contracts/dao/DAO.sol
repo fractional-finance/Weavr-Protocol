@@ -121,11 +121,13 @@ abstract contract DAO is Composable, IDAO {
     // Automatically vote in favor for the creator if they have votes and are actively whitelisted
     int128 votes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
     if ((votes != 0) && IWhitelist(erc20).whitelisted(msg.sender)) {
-      _vote(msg.sender, id, proposal, votes, votes);
+      _voteUnsafe(msg.sender, id, proposal, votes, votes);
     }
   }
 
-  function _vote(address voter, uint256 id, Proposal storage proposal, int128 votes, int128 absVotes) private {
+  // Labelled unsafe due to its split checks with the various callers and lack of guarantees
+  // on what checks it'll perform. This can only be used in a carefully designed, cohesive ecosystemm
+  function _voteUnsafe(address voter, uint256 id, Proposal storage proposal, int128 votes, int128 absVotes) private {
     // Cap voting power per user at 10% of the current total supply
     // This will hopefully not be executed 99% of the time and then only for select Threads
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
@@ -166,11 +168,11 @@ abstract contract DAO is Composable, IDAO {
     emit Vote(id, direction, voter, uint128(absVotes));
   }
 
-  function _vote(uint256 id, address voter) internal {
+  function _voteUnsafe(uint256 id, address voter) internal {
     Proposal storage proposal = _proposals[id];
     int128 votes = int128(uint128(IVotes(erc20).getPastVotes(voter, proposal.voteBlock)));
     if ((votes != 0) && IWhitelist(erc20).whitelisted(voter)) {
-      _vote(voter, id, proposal, votes, votes);
+      _voteUnsafe(voter, id, proposal, votes, votes);
     }
   }
 
@@ -214,7 +216,7 @@ abstract contract DAO is Composable, IDAO {
         }
       }
 
-      _vote(msg.sender, ids[i], proposal, votesI, absVotes);
+      _voteUnsafe(msg.sender, ids[i], proposal, votesI, absVotes);
     }
   }
 
