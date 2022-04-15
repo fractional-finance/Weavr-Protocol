@@ -151,7 +151,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     IERC20(erc20).safeTransfer(timelock, threadTokenSupply - threadBaseTokenSupply);
 
     // Remove ourself from the token's whitelist
-    IFrabricERC20(erc20).setWhitelisted(address(this), bytes32(0));
+    IFrabricERC20(erc20).remove(address(this), 0);
 
     // Transfer token ownership to the Thread
     OwnableUpgradeable(erc20).transferOwnership(thread);

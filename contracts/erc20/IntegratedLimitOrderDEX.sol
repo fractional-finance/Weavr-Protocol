@@ -50,7 +50,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   function decimals() public virtual returns (uint8);
 
   function frozen(address person) public view virtual returns (bool);
-  function _remove(address person) internal virtual;
+  function _removeUnsafe(address person, uint8 fee) internal virtual;
   function whitelisted(address person) public view virtual returns (bool);
   function removed(address person) public view virtual returns (bool);
 
@@ -104,7 +104,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
       // This function is trusted code, and here it is trusted to not be idiotic
       Order storage order = point.orders[h];
       while (!whitelisted(order.trader)) {
-        _remove(order.trader);
+        _removeUnsafe(order.trader, 0);
 
         // If we're iterating over buy orders, return the removed trader's DEX tokens
         if (!buying) {
@@ -293,7 +293,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
       // If they are no longer whitelisted, remove them
       if (!whitelisted(order.trader)) {
-        _remove(order.trader);
+        _removeUnsafe(order.trader, 0);
       }
 
       if (

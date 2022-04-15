@@ -99,7 +99,7 @@ module.exports = async (usdc, uniswap, genesis, kyc) => {
   // Remove self from the FRBC whitelist
   // While we have no powers over the Frabric, we can hold tokens
   // This is a mismatched state when we shouldn't have any powers except as needed to deploy
-  frbc.setWhitelisted(signer.address, "0x0000000000000000000000000000000000000000000000000000000000000000");
+  frbc.remove(signer.address, 0);
 
   const { proxy: bondProxy, bond } = await deployBond(usdc, pair);
   const {

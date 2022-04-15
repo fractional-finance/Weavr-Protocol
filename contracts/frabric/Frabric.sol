@@ -67,7 +67,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     address _threadDeployer,
     address _kyc
   ) external override initializer {
-    __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks);
+    __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks, 100);
 
     __Composable_init("Frabric", false);
     version++;

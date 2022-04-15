@@ -33,6 +33,8 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
   uint16 constant public override commonProposalBit = 1 << 8;
 
+  uint8 public override maxRemovalFee;
+
   struct Upgrade {
     address beacon;
     address instance;
@@ -49,14 +51,28 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   }
   mapping(uint256 => TokenAction) internal _tokenActions;
 
-  mapping(uint256 => address) internal _removals;
+  struct Removal {
+    address participant;
+    uint8 fee;
+  }
+  mapping(uint256 => Removal) internal _removals;
 
   uint256[100] private __gap;
 
-  function __FrabricDAO_init(string memory name, address _erc20, uint64 _votingPeriod) internal onlyInitializing {
+  function __FrabricDAO_init(
+    string memory name,
+    address _erc20,
+    uint64 _votingPeriod,
+    uint8 _maxRemovalFee
+  ) internal onlyInitializing {
     __EIP712_init(name, "1");
     __DAO_init(_erc20, _votingPeriod);
     supportsInterface[type(IFrabricDAO).interfaceId] = true;
+
+    if (_maxRemovalFee > 100) {
+      revert InvalidRemovalFee(_maxRemovalFee, 100);
+    }
+    maxRemovalFee = _maxRemovalFee;
   }
 
   function _isCommonProposal(uint16 pType) internal pure returns (bool) {
@@ -167,11 +183,16 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
   function proposeParticipantRemoval(
     address participant,
-    bytes32 info,
-    bytes[] calldata signatures
-  ) external returns (uint256) {
-    _removals[_nextProposalID] = participant;
-    emit RemovalProposed(_nextProposalID, participant);
+    uint8 removalFee,
+    bytes[] calldata signatures,
+    bytes32 info
+  ) external override returns (uint256) {
+    if (removalFee > maxRemovalFee) {
+      revert InvalidRemovalFee(removalFee, maxRemovalFee);
+    }
+    _removals[_nextProposalID] = Removal(participant, removalFee);
+    emit RemovalProposed(_nextProposalID, participant, removalFee);
+
     uint256 id =  _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
 
     // If signatures were provided, then the purpose is to freeze this participant's
@@ -271,17 +292,18 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
               address(this),
               uint64(block.timestamp),
               // A longer time period can be decided on and utilized via the above method
-              1 weeks
+              1 weeks,
+              0
             );
           }
         }
         delete _tokenActions[id];
 
       } else if (pType == CommonProposalType.ParticipantRemoval) {
-        address removed = _removals[id];
+        Removal storage removal = _removals[id];
+        IFrabricERC20(erc20).remove(removal.participant, removal.fee);
+        _participantRemoval(removal.participant);
         delete _removals[id];
-        IFrabricERC20(erc20).setWhitelisted(removed, bytes32(0));
-        _participantRemoval(removed);
 
       } else {
         revert UnhandledEnumCase("FrabricDAO _completeProposal CommonProposal", _pType);
