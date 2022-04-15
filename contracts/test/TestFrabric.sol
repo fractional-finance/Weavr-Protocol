@@ -29,10 +29,11 @@ contract TestFrabric is FrabricWhitelist {
     address threadDeployer, 
     uint8 _variant,
     address _agent,
+    bytes32 _ipfsHash,
     string memory _name,
     string memory _symbol,
     bytes calldata data) external {
-      IThreadDeployer(threadDeployer).deploy(_variant, _agent, _name, _symbol, data);
+      IThreadDeployer(threadDeployer).deploy(_variant, _name, _symbol, _ipfsHash, _agent, data);
     }
 
   function setGovernor(address person, IFrabricCore.GovernorStatus status) external {

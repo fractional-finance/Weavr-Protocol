@@ -1,4 +1,3 @@
-.002222222
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const FrabricERC20 = require("../scripts/deployFrabricERC20.js");
@@ -18,6 +17,7 @@ let threadDeployer;
 let auction = {
   address: "0x0000000000000000000000000000000000000000"
 };
+let ipfsTag ="0x" + (new Buffer("ipfs").toString("hex")).repeat(8);
 
 let stateCounter;
 
@@ -25,7 +25,6 @@ async function init(){
   const Erc20 = await ethers.getContractFactory("TestERC20");
   erc20 = await Erc20.deploy("Test", "T");
   await erc20.deployed();
-
   let erc20Beacon = await FrabricERC20.deployBeacon();
   threadDeployer = await ThreadDeployer(erc20Beacon.address, auction.address);
 
@@ -45,16 +44,19 @@ async function init(){
   await testFrabric.setWhitelisted(user2.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
   await testFrabric.setWhitelisted(user3.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
   await testFrabric.setWhitelisted(agent.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
-  
   await threadDeployer.threadDeployer.transferOwnership(testFrabric.address);
-  
+
+  await testFrabric.setGovernor(agent.address, 2);
+
+
   const res = await testFrabric.threadDeployDeployer(
-    threadDeployer.threadDeployer.address,
-    0,
-    agent.address,
-    "TestThread",
-    "TT",
-    data
+      threadDeployer.threadDeployer.address,
+      0,
+      agent.address,
+      ipfsTag,
+      "TestThread",
+      "TT",
+      data
   );
   const add = (await threadDeployer.threadDeployer.queryFilter(threadDeployer.threadDeployer.filters.Thread()))[0].args.thread;
   const Thread = await ethers.getContractFactory("Thread");

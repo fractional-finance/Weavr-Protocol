@@ -24,6 +24,7 @@ let threadDeployer;
 let auction = {
   address: "0x0000000000000000000000000000000000000000"
 };
+let ipfsTag ="0x" + (new Buffer("ipfs").toString("hex")).repeat(8);
 
 let stateCounter;
 
@@ -53,14 +54,17 @@ async function init(){
   await testFrabric.setWhitelisted(agent.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
   
   await threadDeployer.threadDeployer.transferOwnership(testFrabric.address);
-  
+
+  await testFrabric.setGovernor(agent.address, 2);
+
   const res = await testFrabric.threadDeployDeployer(
-    threadDeployer.threadDeployer.address,
-    0,
-    agent.address,
-    "TestThread",
-    "TT",
-    data
+      threadDeployer.threadDeployer.address,
+      0,
+      agent.address,
+      ipfsTag,
+      "TestThread",
+      "TT",
+      data
   );
   const add = (await threadDeployer.threadDeployer.queryFilter(threadDeployer.threadDeployer.filters.Thread()))[0].args.crowdfund;
   const Crowdfund = await ethers.getContractFactory("Crowdfund");

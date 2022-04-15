@@ -53,8 +53,8 @@ module.exports = {
 };
 
 if (require.main === module) {
-  module.exports.deployBeacon()
-    .then(beacon => console.log("Thread Beacon: " + beacon.address))
+  module.exports.deployTestThread("0x0000000000000000000000000000000000000000")
+    .then(beacon => console.log("Thread Beacon: " + beacon.thread.address))
     .catch(error => {
       console.error(error);
       process.exit(1);
