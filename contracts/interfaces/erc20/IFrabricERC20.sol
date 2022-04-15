@@ -16,7 +16,6 @@ interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IRemovalFee, I
   function mintable() external view returns (bool);
   function auction() external view returns (address);
   function frozenUntil(address person) external view returns (uint64);
-  function removalFee(address person) external view returns (uint8);
 
   function mint(address to, uint256 amount) external;
   function burn(uint256 amount) external;

@@ -26,6 +26,6 @@ interface IFrabricWhitelist is IComposable, IWhitelist {
 }
 
 error WhitelistingWithZero(address person);
+error Removed(address person);
 error NotWhitelisted(address person);
 error Whitelisted(address person);
-error Removed(address person);
