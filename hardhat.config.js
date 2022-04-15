@@ -1,4 +1,4 @@
-// require("dotenv").config();
+require("dotenv").config();
 
 require("@nomiclabs/hardhat-waffle");
 require("@openzeppelin/hardhat-upgrades");

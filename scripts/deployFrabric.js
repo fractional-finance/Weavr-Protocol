@@ -179,9 +179,8 @@ if (require.main === module) {
     let genesis;
     let kyc = process.env.KYC;
 
-    // Use test values if no environment variables were specified
-    const variables = (usdc ? 1 : 0) + (uniswap ? 1 : 0) + (kyc ? 1 : 0);
-    if (!variables) {
+    // Use test values if this is the hardhat test network
+    if ((await waffle.provider.getNetwork()).chainId == 31337) {
       process.hhCompiled ? null : await hre.run("compile");
       process.hhCompiled = true;
 
@@ -193,11 +192,13 @@ if (require.main === module) {
       genesis = {};
 
       kyc = (await ethers.getSigners())[0].address;
-    // If only some variables were specified, error accordingly
-    } else if (variables != 3) {
-      console.error("Only some environment variables were provide. Provide USDC, the Uniswap v2 Router, and KYC or none.");
-      process.exit(1);
     } else {
+      // If only some variables were specified, error accordingly
+      const variables = (usdc ? 1 : 0) + (uniswap ? 1 : 0) + (kyc ? 1 : 0);
+      if (variables != 3) {
+        console.error("Only some environment variables were provide. Provide USDC, the Uniswap v2 Router, and KYC or none.");
+        process.exit(1);
+      }
       genesis = require("../genesis.json");
     }
 
