@@ -24,12 +24,9 @@ contract Auction is Composable, IAuctionInitializable {
     address token;
     uint64 start;
     uint32 length;
-    // 3 bytes left open in this slot
+    // 4 bytes left open in this slot
     address traded;
     uint64 end;
-    uint8 fee;
-
-    address creator;
 
     // uint96 amounts would be perfectly packed here and support 70 billion 1e18
     // That would be more than acceptable for all ERC20s worth more than 1 US cent
@@ -64,37 +61,31 @@ contract Auction is Composable, IAuctionInitializable {
     _tokenBalances[token] = balance;
   }
 
-  function listTransferred(address token, address traded, address seller, uint64 start, uint32 length, uint8 fee) public override {
+  function listTransferred(address token, address traded, address seller, uint64 start, uint32 length) public override {
     uint256 amount = getTransferred(token);
     if (amount == 0) {
       revert ZeroAmount();
     }
 
-    if (fee > 100) {
-      revert FeeTooHigh(fee, 100);
-    }
-
     AuctionStruct storage auction = _auctions[_nextID];
     auction.token = token;
     auction.traded = traded;
-    auction.creator = msg.sender;
     auction.seller = seller;
     auction.amount = amount;
     auction.start = start;
     auction.length = length;
     auction.end = start + length;
-    auction.fee = fee;
-    emit NewAuction(_nextID, token, seller, traded, amount, start, length, fee);
+    emit NewAuction(_nextID, token, seller, traded, amount, start, length);
     _nextID++;
   }
 
-  function list(address token, address traded, uint256 amount, uint64 start, uint32 length, uint8 fee) external override {
+  function list(address token, address traded, uint256 amount, uint64 start, uint32 length) external override {
     // Could re-enter here, yet the final call (which executes first) to list (or bid)
     // will be executed with sum(transferred) while every other instance will execute with 0
     // (or whatever value was transferred on top, yet that would be legitimately and newly transferred)
     // Not exploitable
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-    listTransferred(token, traded, msg.sender, start, length, fee);
+    listTransferred(token, traded, msg.sender, start, length);
   }
 
   // If for some reason there's a contract with a screwed up fallback function,
@@ -212,12 +203,7 @@ contract Auction is Composable, IAuctionInitializable {
 
     // Else, transfer to the bidder
     balances[auction.token][auction.bidder] += auction.amount;
-
-    // Calculate the bid, sans fees
-    uint256 bidAmount = auction.bid;
-    uint256 fee = bidAmount * auction.fee / 100;
-    balances[auction.traded][auction.seller] += bidAmount - fee;
-    balances[auction.traded][auction.creator] += fee;
+    balances[auction.traded][auction.seller] += auction.bid;
 
     emit AuctionCompleted(id);
   }

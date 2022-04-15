@@ -39,6 +39,8 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     address beacon;
     address instance;
     address impl;
+    uint256 version;
+    bytes data;
   }
   mapping(uint256 => Upgrade) internal _upgrades;
 
@@ -109,7 +111,9 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   function proposeUpgrade(
     address beacon,
     address instance,
+    uint256 version,
     address impl,
+    bytes calldata data,
     bytes32 info
   ) external override returns (uint256 id) {
     if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
@@ -140,13 +144,13 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     }
 
     id = _createProposal(uint16(CommonProposalType.Upgrade) | commonProposalBit, true, info);
-    _upgrades[id] = Upgrade(beacon, instance, impl);
+    _upgrades[id] = Upgrade(beacon, instance, impl, version, data);
     // Doesn't index impl as parsing the Beacon's logs for its indexed impl argument
     // will return every time a contract upgraded to it
     // This combination of options should be competent for almost all use cases
     // The only missing indexing case is when it's proposed to upgrade, yet that never passes/executes
     // This should be minimally considerable and coverable by outside solutions if truly needed
-    emit UpgradeProposed(id, beacon, instance, impl);
+    emit UpgradeProposed(id, beacon, instance, version, impl, data);
   }
 
   function proposeTokenAction(
@@ -285,7 +289,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
       } else if (pType == CommonProposalType.Upgrade) {
         Upgrade storage upgrade = _upgrades[id];
-        IFrabricBeacon(upgrade.beacon).upgrade(upgrade.instance, upgrade.impl);
+        IFrabricBeacon(upgrade.beacon).upgrade(upgrade.instance, upgrade.impl, upgrade.version, upgrade.data);
         delete _upgrades[id];
 
       } else if (pType == CommonProposalType.TokenAction) {
@@ -322,8 +326,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
               address(this),
               uint64(block.timestamp),
               // A longer time period can be decided on and utilized via the above method
-              1 weeks,
-              0
+              1 weeks
             );
           }
         }

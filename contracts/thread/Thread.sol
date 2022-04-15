@@ -44,7 +44,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
     // Technically, the erc20 of this DAO must implement FrabricWhitelist
     // That is implied by this Frabric implementing IDAO and when this executes,
-    // setParentWhitelist is executed, confirming the FrabricWhitelist interface
+    // setParent is executed, confirming the FrabricWhitelist interface
     // is supported by it
     if (!_frabric.supportsInterface(type(IDAOCore).interfaceId)) {
       revert UnsupportedInterface(_frabric, type(IDAOCore).interfaceId);
@@ -53,6 +53,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     // Converts to IComposable before calling supportsInterface again to save on gas
     // EIP165Checker's supportsInterface function does multiple checks to ensure
     // EIP165 validity. Since we've already performed these, now we can safely use
+    // this boolean value
     if (!IComposable(_frabric).supportsInterface(type(IFrabricCore).interfaceId)) {
       revert UnsupportedInterface(_frabric, type(IFrabricCore).interfaceId);
     }
@@ -65,9 +66,9 @@ contract Thread is FrabricDAO, IThreadInitializable {
     frabric = _frabric;
     // Update the parent whitelist as well, if we're not still initializing
     // If we are, the this erc20 hasn't had init called yet, and the ThreadDeployer
-    // will set the parentWhitelist when it calls init
-    if (IFrabricWhitelist(erc20).parentWhitelist() != address(0)) {
-      IFrabricERC20(erc20).setParentWhitelist(IDAO(frabric).erc20());
+    // will set the parent when it calls init
+    if (IFrabricWhitelist(erc20).parent() != address(0)) {
+      IFrabricERC20(erc20).setParent(IDAO(frabric).erc20());
     }
   }
 

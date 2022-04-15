@@ -64,17 +64,25 @@ module.exports = async () => {
   await frabric.proposeUpgrade(
     proxy,
     "0x0000000000000000000000000000000000000000",
+    2,
     upgrade.frabricCode,
+    (new ethers.utils.AbiCoder()).encode(["address", "address"], [upgrade.bond, upgrade.threadDeployer]),
     ethers.utils.id("Upgrade to the Frabric")
   );
   await completeProposal(frabric, 1);
+
+  proxy = new ethers.Contract(
+    proxy,
+    require("../artifacts/contracts/beacon/SingleBeacon.sol/SingleBeacon.json").abi,
+    signers[0]
+  )
+  await proxy.triggerUpgrade(frabric.address, 2);
+
   frabric = new ethers.Contract(
     frabric.address,
     require("../artifacts/contracts/frabric/Frabric.sol/Frabric.json").abi,
     signers[2]
   );
-
-  frabric.upgrade(contracts.bond, contracts.threadDeployer);
 
   await frabric.proposeParticipants(
     3,

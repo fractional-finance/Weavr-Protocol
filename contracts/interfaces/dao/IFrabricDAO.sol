@@ -11,7 +11,14 @@ interface IFrabricDAO is IDAO {
     ParticipantRemoval
   }
 
-  event UpgradeProposed(uint256 indexed id, address indexed beacon, address indexed instance, address code);
+  event UpgradeProposed(
+    uint256 indexed id,
+    address indexed beacon,
+    address indexed instance,
+    uint256 version,
+    address code,
+    bytes data
+  );
   event TokenActionProposed(
     uint256 indexed id,
     address indexed token,
@@ -29,7 +36,9 @@ interface IFrabricDAO is IDAO {
   function proposeUpgrade(
     address beacon,
     address instance,
+    uint256 version,
     address code,
+    bytes calldata data,
     bytes32 info
   ) external returns (uint256);
   function proposeTokenAction(

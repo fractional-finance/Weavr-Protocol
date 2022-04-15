@@ -10,10 +10,15 @@ import "./Beacon.sol";
 contract SingleBeacon is Beacon {
   constructor(bytes32 beaconName) Beacon(beaconName, 1) {}
 
-  function upgrade(address instance, address code) public override {
+  function upgrade(
+    address instance,
+    address impl,
+    uint256 version,
+    bytes calldata data
+  ) public override {
     if (instance != address(0)) {
       revert UpgradingInstance(instance);
     }
-    super.upgrade(instance, code);
+    super.upgrade(instance, impl, version, data);
   }
 }
