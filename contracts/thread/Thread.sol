@@ -24,16 +24,16 @@ contract Thread is FrabricDAO, IThreadInitializable {
   // Irremovable ecosystem contracts which hold Thread tokens
   mapping(address => bool) public override irremovable;
 
+  // Private as all this info is available via events
+  mapping(uint256 => bytes32) private _descriptors;
+  mapping(uint256 => address) private _frabrics;
+  mapping(uint256 => address) private _governors;
+
   struct Dissolution {
     address purchaser;
     address token;
     uint256 price;
   }
-
-  // Private as all this info is available via events
-  mapping(uint256 => bytes32) private _descriptors;
-  mapping(uint256 => address) private _governors;
-  mapping(uint256 => address) private _frabrics;
   mapping(uint256 => Dissolution) private _dissolutions;
 
   modifier viableFrabric(address _frabric) {
@@ -77,6 +77,11 @@ contract Thread is FrabricDAO, IThreadInitializable {
   }
 
   function _setGovernor(address _governor) private viableGovernor(_governor) {
+    // If we're not being initialized, have the new governor trigger this to signify consent
+    if ((governor != address(0)) && (msg.sender != _governor)) {
+      revert NotGovernor(msg.sender, _governor);
+    }
+
     emit GovernorChanged(governor, _governor);
     governor = _governor;
   }
@@ -146,11 +151,6 @@ contract Thread is FrabricDAO, IThreadInitializable {
     return !irremovable[participant];
   }
 
-  function proposeEnablingUpgrades(bytes32 info) external returns (uint256) {
-    // Doesn't emit a dedicated event for the same reason Paper proposals don't
-    return _createProposal(uint16(ThreadProposalType.EnableUpgrades), info);
-  }
-
   function proposeDescriptorChange(
     bytes32 _descriptor,
     bytes32 info
@@ -158,6 +158,18 @@ contract Thread is FrabricDAO, IThreadInitializable {
     _descriptors[_nextProposalID] = _descriptor;
     emit DescriptorChangeProposed(_nextProposalID, _descriptor);
     return _createProposal(uint16(ThreadProposalType.DescriptorChange), info);
+  }
+
+  function proposeFrabricChange(
+    address _frabric,
+    address _governor,
+    bytes32 info
+  ) external override viableFrabric(_frabric) returns (uint256) {
+    // This could use a struct yet this is straightforward and simple
+    _frabrics[_nextProposalID] = _frabric;
+    _governors[_nextProposalID] = _governor;
+    emit FrabricChangeProposed(_nextProposalID, _frabric, _governor);
+    return _createProposal(uint16(ThreadProposalType.FrabricChange), info);
   }
 
   function proposeGovernorChange(
@@ -169,13 +181,34 @@ contract Thread is FrabricDAO, IThreadInitializable {
     return _createProposal(uint16(ThreadProposalType.GovernorChange), info);
   }
 
-  function proposeFrabricChange(
+  // Leave the ecosystem, setting a new Frabric and governor, while also enabling upgrades
+  // The Frabric can already be changed and the code locked down to the existing version without this
+  // This explicitly enables upgrades, and with that level of self-determination which the Frabric
+  // will no longer be able to be responsible for, forces them to change their Frabric
+  // Used to solely be called proposeEnablingUpgrades, now this much more verbose name
+  // to communicate its effects in full
+  function proposeEcosystemLeaveWithUpgrades(
     address _frabric,
+    address _governor,
     bytes32 info
-  ) external override viableFrabric(_frabric) returns (uint256) {
+  ) external returns (uint256) {
+    // A Thread could do proposeFrabricChange, to change their Frabric,
+    // and then proposeEcosystemLeaveWithUpgrades to enable upgrades while claiming
+    // the Frabric as theirs
+
+    // With upgrades, any checks we add would be defeated immediately anyways,
+    // so this basic check (forcing at some point this Thread specifies a different Frabric) +
+    // the name "EcosystemLeave" is judged as acceptable
+    if (frabric == _frabric) {
+      // This is redundant as hell given they're the same yet should help understand
+      // what this error means
+      revert NotLeaving(frabric, _frabric);
+    }
+
     _frabrics[_nextProposalID] = _frabric;
-    emit FrabricChangeProposed(_nextProposalID, _frabric);
-    return _createProposal(uint16(ThreadProposalType.FrabricChange), info);
+    _governors[_nextProposalID] = _governor;
+    emit EcosystemLeaveWithUpgradesProposed(_nextProposalID, _frabric, _governor);
+    return _createProposal(uint16(ThreadProposalType.EcosystemLeaveWithUpgrades), info);
   }
 
   function proposeDissolution(
@@ -193,7 +226,29 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
     ThreadProposalType pType = ThreadProposalType(_pType);
-    if (pType == ThreadProposalType.EnableUpgrades) {
+    if (pType == ThreadProposalType.DescriptorChange) {
+      emit DescriptorChanged(descriptor, _descriptors[id]);
+      descriptor = _descriptors[id];
+      delete _descriptors[id];
+
+    } else if (pType == ThreadProposalType.FrabricChange) {
+      _setFrabric(_frabrics[id]);
+      delete _frabrics[id];
+      _setGovernor(_governors[id]);
+      delete _governors[id];
+
+    } else if (pType == ThreadProposalType.GovernorChange) {
+      _setGovernor(_governors[id]);
+      delete _governors[id];
+
+    } else if (pType == ThreadProposalType.EcosystemLeaveWithUpgrades) {
+      // Ecosystem leave
+      emit LeftEcosystemWithUpgrades(id);
+      _setFrabric(_frabrics[id]);
+      delete _frabrics[id];
+      _setGovernor(_governors[id]);
+      delete _governors[id];
+
       // Enable upgrades after the Frabric's voting period + 1 week
 
       // There is an attack where a Thread upgrades and claws back timelocked tokens
@@ -208,29 +263,6 @@ contract Thread is FrabricDAO, IThreadInitializable {
       // while the actual Upgrade proposal occurs, granting that time
       upgradesEnabled = block.timestamp + IDAOCore(frabric).votingPeriod() + (1 weeks);
 
-    } else if (pType == ThreadProposalType.DescriptorChange) {
-      emit DescriptorChanged(descriptor, _descriptors[id]);
-      descriptor = _descriptors[id];
-      delete _descriptors[id];
-
-    } else if (pType == ThreadProposalType.GovernorChange) {
-      emit GovernorChanged(governor, _governors[id]);
-      governor = _governors[id];
-      delete _governors[id];
-
-      // Have the governor themselves complete this proposal to signify their consent
-      // to becoming the governor for this Thread
-      if (msg.sender != governor) {
-        revert NotGovernor(msg.sender, governor);
-      }
-
-    } else if (pType == ThreadProposalType.FrabricChange) {
-      emit FrabricChanged(frabric, _frabrics[id]);
-      frabric = _frabrics[id];
-      delete _frabrics[id];
-      // Update our parent whitelist to the new Frabric's
-      IFrabricERC20(erc20).setParentWhitelist(IDAOCore(frabric).erc20());
-
     } else if (pType == ThreadProposalType.Dissolution) {
       // Prevent the Thread from being locked up in a Dissolution the governor won't honor for whatever reason
       // This will issue payment and then the governor will be obligated to transfer property or have bond slashed
@@ -240,6 +272,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
       if (msg.sender != governor) {
         revert NotGovernor(msg.sender, governor);
       }
+
       Dissolution storage dissolution = _dissolutions[id];
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.price);
       IFrabricERC20(erc20).pause();

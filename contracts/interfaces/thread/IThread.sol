@@ -5,20 +5,24 @@ import "../dao/IFrabricDAO.sol";
 
 interface IThread is IFrabricDAO {
   event DescriptorChangeProposed(uint256 id, bytes32 indexed descriptor);
+  event FrabricChangeProposed(uint256 indexed id, address indexed frabric, address indexed governor);
   event GovernorChangeProposed(uint256 indexed id, address indexed governor);
-  event FrabricChangeProposed(uint256 indexed id, address indexed frabric);
+  event EcosystemLeaveWithUpgradesProposed(uint256 indexed id, address indexed frabric, address indexed governor);
   event DissolutionProposed(uint256 indexed id, address indexed purchaser, address indexed token, uint256 amount);
 
   event DescriptorChanged(bytes32 indexed oldDescriptor, bytes32 indexed newDescriptor);
-  event GovernorChanged(address indexed oldGovernor, address indexed newGovernor);
   event FrabricChanged(address indexed oldGovernor, address indexed newGovernor);
+  event GovernorChanged(address indexed oldGovernor, address indexed newGovernor);
+  // Includes IDs to point to the original proposals since these have nothing worth putting in them
+  // They emit other events as relevant
+  event LeftEcosystemWithUpgrades(uint256 indexed id);
   event Dissolved(uint256 indexed id);
 
   enum ThreadProposalType {
-    EnableUpgrades,
     DescriptorChange,
-    GovernorChange,
     FrabricChange,
+    GovernorChange,
+    EcosystemLeaveWithUpgrades,
     Dissolution
   }
 
@@ -28,17 +32,22 @@ interface IThread is IFrabricDAO {
   function frabric() external view returns (address);
   function irremovable(address participant) external view returns (bool);
 
-  function proposeEnablingUpgrades(bytes32 info) external returns (uint256);
   function proposeDescriptorChange(
     bytes32 _descriptor,
+    bytes32 info
+  ) external returns (uint256);
+  function proposeFrabricChange(
+    address _frabric,
+    address _governor,
     bytes32 info
   ) external returns (uint256);
   function proposeGovernorChange(
     address _governor,
     bytes32 info
   ) external returns (uint256);
-  function proposeFrabricChange(
-    address _frabric,
+  function proposeEcosystemLeaveWithUpgrades(
+    address newFrabric,
+    address newGovernor,
     bytes32 info
   ) external returns (uint256);
   function proposeDissolution(
@@ -60,3 +69,4 @@ interface IThreadInitializable is IThread {
 }
 
 error NotGovernor(address caller, address governor);
+error NotLeaving(address frabric, address newFrabric);
