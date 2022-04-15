@@ -106,16 +106,14 @@ interface IFrabric is IFrabricCore {
   ) external;
 }
 
-interface IFrabricInitializable is IFrabric {
-  function initialize(
-    address erc20,
-    address[] calldata genesis,
-    bytes32 genesisMerkle,
-    address bond,
-    address threadDeployer,
-    address kyc
-  ) external;
+interface IFrabricUpgradeable is IFrabric {
+  // This will be replaced with
+  //function upgrade(address _bond, address _threadDeployer) external;
+  // when actually deployed. See Frabric.sol for more info
+  function upgrade(address _bond, address _threadDeployer) external;
 }
+
+error InsecureUpgradeFunction();
 
 error ProposingNullParticipants();
 error ProposingGenesisParticipants();

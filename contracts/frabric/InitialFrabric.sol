@@ -13,7 +13,7 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
     address _erc20,
     address[] calldata genesis,
     bytes32 genesisMerkle
-  ) external override initializer {    
+  ) external override initializer {
     __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks, 100);
 
     __Composable_init("Frabric", false);

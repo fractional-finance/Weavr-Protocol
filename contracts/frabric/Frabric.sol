@@ -9,9 +9,10 @@ import "../interfaces/thread/IThread.sol";
 
 import "../dao/FrabricDAO.sol";
 
+import "../interfaces/frabric/IInitialFrabric.sol";
 import "../interfaces/frabric/IFrabric.sol";
 
-contract Frabric is FrabricDAO, IFrabricInitializable {
+contract Frabric is FrabricDAO, IFrabricUpgradeable {
   using ERC165Checker for address;
 
   mapping(address => ParticipantType) public override participant;
@@ -55,38 +56,45 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
   }
   mapping(uint256 => ThreadProposalProposal) private _threadProposals;
 
-  // The erc20 is expected to be fully initialized via JS during deployment
-  // Given in practice, the InitialFrabric will upgrade to this, there's no reason
-  // for this to be here other than testing. While the upgrade should set
-  // bond/threadDeployer, KYC should be voted on via governance
-  function initialize(
-    address _erc20,
-    address[] calldata genesis,
-    bytes32 genesisMerkle,
-    address _bond,
-    address _threadDeployer,
-    address _kyc
-  ) external override initializer {
-    __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks, 100);
+  // Since SingleBeacon utilizes release channels, when the Frabric triggers an
+  // upgrade on itself, the beacon can't then call upgrade with runtime determined
+  // arguments since the beacon doesn't actually know the address of the instance
+  // Even if it did, some SingleBeacons are used for multiple instances, which
+  // couldn't all be called at once, making that an incomplete solution
+  // The easiest solution is therefore just to bake in arguments
 
-    __Composable_init("Frabric", false);
+  //function upgrade() external override {
+  //  address _bond = 0x0000000000000000000000000000000000000000;
+  //  address _threadDeployer = 0x0000000000000000000000000000000000000000;
+
+  // These arguments are solely here for testing purposes and are incredibly insecure
+  // The above lines of code will be used instead of this block in any actual deployment
+  // The chain ID error check further guarantees this property as even if someone
+  // does deploy this, they won't be able to successfully call it
+  function upgrade(address _bond, address _threadDeployer) external override {
+    if (block.chainid != 31337) {
+      revert InsecureUpgradeFunction();
+    }
+
+    // Increment the version after verifying it
+    if (version != 1) {
+      revert AlreadyUpgraded();
+    }
     version++;
+
+    // Drop support for IInitialFrabric
+    // While we do still match it, and it shouldn't hurt to keep it around,
+    // we never want to encourage its usage, nor do we want to forget about it
+    // if we ever do introduce an incompatibility
+    supportsInterface[type(IInitialFrabric).interfaceId] = false;
+
+    // Add support for the new Frabric interfaces
     supportsInterface[type(IFrabricCore).interfaceId] = true;
     supportsInterface[type(IFrabric).interfaceId] = true;
 
-    // Simulate a full DAO proposal to add the genesis participants
-    uint256 id = _fakeProposal(uint16(FrabricProposalType.Participants), keccak256("Genesis Participants"));
-    emit ParticipantsProposed(id, ParticipantType.Genesis, genesisMerkle);
-    // Actually add the genesis participants
-    for (uint256 i = 0; i < genesis.length; i++) {
-      participant[genesis[i]] = ParticipantType.Genesis;
-    }
-
+    // Set bond and threadDeployer
     bond = _bond;
     threadDeployer = _threadDeployer;
-
-    kyc = _kyc;
-    participant[kyc] = ParticipantType.KYC;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
