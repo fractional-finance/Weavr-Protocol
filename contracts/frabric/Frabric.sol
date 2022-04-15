@@ -39,7 +39,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
 
   struct ThreadProposal {
     uint8 variant;
-    address agent;
+    address governor;
     // This may not actually pack yet it's small enough to theoretically
     string symbol;
     bytes32 descriptor;
@@ -152,12 +152,12 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     string calldata name,
     string calldata symbol,
     bytes32 descriptor,
-    address agent,
+    address _governor,
     bytes calldata data,
     bytes32 info
   ) external override returns (uint256) {
-    if (governor[agent] != GovernorStatus.Active) {
-      revert NotActiveGovernor(agent, governor[agent]);
+    if (governor[_governor] != GovernorStatus.Active) {
+      revert NotActiveGovernor(_governor, governor[_governor]);
     }
     // Doesn't check for being alphanumeric due to iteration costs
     if ((bytes(name).length < 3) || (bytes(name).length > 50) || (bytes(symbol).length < 2) || (bytes(symbol).length > 5)) {
@@ -173,9 +173,9 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     proposal.name = name;
     proposal.symbol = symbol;
     proposal.descriptor = descriptor;
-    proposal.agent = agent;
+    proposal.governor = _governor;
     proposal.data = data;
-    emit ThreadProposed(_nextProposalID, variant, agent, name, symbol, descriptor, data);
+    emit ThreadProposed(_nextProposalID, variant, _governor, name, symbol, descriptor, data);
     return _createProposal(uint16(FrabricProposalType.Thread), info);
   }
 
@@ -222,8 +222,8 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
       }
 
       IThread.ThreadProposalType pType = IThread.ThreadProposalType(_proposalType);
-      if (pType == IThread.ThreadProposalType.AgentChange) {
-        selector = IThread.proposeAgentChange.selector;
+      if (pType == IThread.ThreadProposalType.GovernorChange) {
+        selector = IThread.proposeGovernorChange.selector;
       } else if (pType == IThread.ThreadProposalType.FrabricChange) {
         // Doesn't use UnhandledEnumCase as that suggests a development-level failure to handle cases
         // While that already isn't guaranteed in this function, as _proposalType is user input,
@@ -305,7 +305,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
       ThreadProposal storage proposal = _threads[id];
       // This governor may no longer be viable for usage yet the Thread will check
       IThreadDeployer(threadDeployer).deploy(
-        proposal.variant, proposal.name, proposal.symbol, proposal.descriptor, proposal.agent, proposal.data
+        proposal.variant, proposal.name, proposal.symbol, proposal.descriptor, proposal.governor, proposal.data
       );
       delete _threads[id];
 

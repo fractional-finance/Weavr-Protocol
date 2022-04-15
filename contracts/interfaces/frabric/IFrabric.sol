@@ -49,7 +49,7 @@ interface IFrabric is IFrabricCore {
   event ThreadProposed(
     uint256 indexed id,
     uint256 indexed variant,
-    address indexed agent,
+    address indexed governor,
     string name,
     string symbol,
     bytes32 descriptor,
@@ -86,7 +86,7 @@ interface IFrabric is IFrabricCore {
     string calldata name,
     string calldata symbol,
     bytes32 descriptor,
-    address agent,
+    address governor,
     bytes calldata data,
     bytes32 info
   ) external returns (uint256);

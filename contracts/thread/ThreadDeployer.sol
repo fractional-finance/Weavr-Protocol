@@ -78,12 +78,12 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     string memory _name,
     string memory _symbol,
     bytes32 descriptor,
-    address _agent,
+    address _governor,
     bytes calldata data
   ) external override onlyOwner {
     // Fixes stack too deep errors
     uint8 variant = _variant;
-    address agent = _agent;
+    address governor = _governor;
     string memory name = _name;
     string memory symbol = _symbol;
 
@@ -104,7 +104,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
         erc20,
         descriptor,
         msg.sender,
-        agent
+        governor
       )
     ));
 
@@ -117,7 +117,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
         name,
         symbol,
         parentWhitelist,
-        agent,
+        governor,
         thread,
         tradeToken,
         target
@@ -156,7 +156,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     // Transfer token ownership to the Thread
     OwnableUpgradeable(erc20).transferOwnership(thread);
 
-    emit Thread(variant, agent, tradeToken, erc20, thread, crowdfund);
+    emit Thread(variant, governor, tradeToken, erc20, thread, crowdfund);
   }
 
   // Recover tokens sent here

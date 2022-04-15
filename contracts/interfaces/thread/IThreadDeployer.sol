@@ -6,7 +6,7 @@ import "../common/IComposable.sol";
 interface IThreadDeployer is IComposable {
   event Thread(
     uint8 indexed variant,
-    address indexed agent,
+    address indexed governor,
     address indexed tradeToken,
     address erc20,
     address thread,
@@ -26,7 +26,7 @@ interface IThreadDeployer is IComposable {
     string memory name,
     string memory symbol,
     bytes32 descriptor,
-    address agent,
+    address governor,
     bytes calldata data
   ) external;
 

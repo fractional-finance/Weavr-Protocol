@@ -18,7 +18,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
   bytes32 public override descriptor;
 
-  address public override agent;
+  address public override governor;
   address public override frabric;
 
   struct Dissolution {
@@ -29,7 +29,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
   // Private as all this info is available via events
   mapping(uint256 => bytes32) private _descriptors;
-  mapping(uint256 => address) private _agents;
+  mapping(uint256 => address) private _governors;
   mapping(uint256 => address) private _frabrics;
   mapping(uint256 => Dissolution) private _dissolutions;
 
@@ -63,17 +63,17 @@ contract Thread is FrabricDAO, IThreadInitializable {
     }
   }
 
-  modifier viableAgent(address _agent) {
-    if (IFrabricCore(frabric).governor(_agent) != IFrabricCore.GovernorStatus.Active) {
-      revert NotActiveGovernor(_agent, IFrabricCore(frabric).governor(_agent));
+  modifier viableGovernor(address _governor) {
+    if (IFrabricCore(frabric).governor(_governor) != IFrabricCore.GovernorStatus.Active) {
+      revert NotActiveGovernor(_governor, IFrabricCore(frabric).governor(_governor));
     }
 
     _;
   }
 
-  function _setAgent(address _agent) private viableAgent(_agent) {
-    emit AgentChanged(agent, _agent);
-    agent = _agent;
+  function _setGovernor(address _governor) private viableGovernor(_governor) {
+    emit GovernorChanged(governor, _governor);
+    governor = _governor;
   }
 
   function initialize(
@@ -81,7 +81,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     address _erc20,
     bytes32 _descriptor,
     address _frabric,
-    address _agent
+    address _governor
   ) external override initializer {
     // The Frabric uses a 2 week voting period. If it wants to upgrade every Thread on the Frabric's code,
     // then it will be able to push an update in 2 weeks. If a Thread sees the new code and wants out,
@@ -93,7 +93,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
     descriptor = _descriptor;
     _setFrabric(_frabric);
-    _setAgent(_agent);
+    _setGovernor(_governor);
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -109,11 +109,8 @@ contract Thread is FrabricDAO, IThreadInitializable {
         IWhitelist(erc20).whitelisted(msg.sender) &&
         (IERC20(erc20).balanceOf(msg.sender) != 0)
       ) ||
-      // Both of these should also be whitelisted. It's not technically a requirement however
-      // The Thread is allowed to specify whoever they want for either, and if they are splitting off,
-      // they should successfully manage their own whitelist, yet there's no reason to force it here
-      // Agent
-      (msg.sender == address(agent)) ||
+      // Governor
+      (msg.sender == address(governor)) ||
       // Frabric
       (msg.sender == address(frabric))
     );
@@ -149,15 +146,13 @@ contract Thread is FrabricDAO, IThreadInitializable {
     return _createProposal(uint16(ThreadProposalType.DescriptorChange), info);
   }
 
-  function proposeAgentChange(
-    address _agent,
+  function proposeGovernorChange(
+    address _governor,
     bytes32 info
-  ) external override viableAgent(_agent) returns (uint256) {
-    // We could validate this agent is a valid governor at this time yet it's
-    // the Thread's choice to make
-    _agents[_nextProposalID] = _agent;
-    emit AgentChangeProposed(_nextProposalID, _agent);
-    return _createProposal(uint16(ThreadProposalType.AgentChange), info);
+  ) external override viableGovernor(_governor) returns (uint256) {
+    _governors[_nextProposalID] = _governor;
+    emit GovernorChangeProposed(_nextProposalID, _governor);
+    return _createProposal(uint16(ThreadProposalType.GovernorChange), info);
   }
 
   function proposeFrabricChange(
@@ -204,15 +199,15 @@ contract Thread is FrabricDAO, IThreadInitializable {
       descriptor = _descriptors[id];
       delete _descriptors[id];
 
-    } else if (pType == ThreadProposalType.AgentChange) {
-      emit AgentChanged(agent, _agents[id]);
-      agent = _agents[id];
-      delete _agents[id];
+    } else if (pType == ThreadProposalType.GovernorChange) {
+      emit GovernorChanged(governor, _governors[id]);
+      governor = _governors[id];
+      delete _governors[id];
 
-      // Have the agent themselves complete this proposal to signify their consent
-      // to becoming the agent for this Thread
-      if (msg.sender != agent) {
-        revert NotAgent(msg.sender, agent);
+      // Have the governor themselves complete this proposal to signify their consent
+      // to becoming the governor for this Thread
+      if (msg.sender != governor) {
+        revert NotGovernor(msg.sender, governor);
       }
 
     } else if (pType == ThreadProposalType.FrabricChange) {
@@ -223,13 +218,13 @@ contract Thread is FrabricDAO, IThreadInitializable {
       IFrabricERC20(erc20).setParentWhitelist(IDAOCore(frabric).erc20());
 
     } else if (pType == ThreadProposalType.Dissolution) {
-      // Prevent the Thread from being locked up in a Dissolution the agent won't honor for whatever reason
-      // This will issue payment and then the agent will be obligated to transfer property or have bond slashed
+      // Prevent the Thread from being locked up in a Dissolution the governor won't honor for whatever reason
+      // This will issue payment and then the governor will be obligated to transfer property or have bond slashed
       // Not calling complete on a passed Dissolution may also be grounds for a bond slash
-      // The intent is to allow the agent to not listen to impropriety with the Frabric as arbitrator
+      // The intent is to allow the governor to not listen to impropriety with the Frabric as arbitrator
       // See the Frabric's community policies for more information on process
-      if (msg.sender != agent) {
-        revert NotAgent(msg.sender, agent);
+      if (msg.sender != governor) {
+        revert NotGovernor(msg.sender, governor);
       }
       Dissolution storage dissolution = _dissolutions[id];
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.price);
