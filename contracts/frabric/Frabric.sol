@@ -127,7 +127,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     pStruct.pType = participantType;
     pStruct.participants = participants;
     emit ParticipantsProposed(_nextProposalID, participantType, participants);
-    return _createProposal(uint16(FrabricProposalType.Participants), info);
+    return _createProposal(uint16(FrabricProposalType.Participants), false, info);
   }
 
   function proposeRemoveBond(
@@ -144,7 +144,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
     emit RemoveBondProposed(_nextProposalID, _governor, slash, amount);
-    return _createProposal(uint16(FrabricProposalType.RemoveBond), info);
+    return _createProposal(uint16(FrabricProposalType.RemoveBond), false, info);
   }
 
   function proposeThread(
@@ -176,7 +176,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     proposal.governor = _governor;
     proposal.data = data;
     emit ThreadProposed(_nextProposalID, variant, _governor, name, symbol, descriptor, data);
-    return _createProposal(uint16(FrabricProposalType.Thread), info);
+    return _createProposal(uint16(FrabricProposalType.Thread), false, info);
   }
 
   // This does assume the Thread's API meets expectations compiled into the Frabric
@@ -238,7 +238,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
 
     _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, data);
     emit ThreadProposalProposed(_nextProposalID, thread, _proposalType, info);
-    return _createProposal(uint16(FrabricProposalType.ThreadProposal), info);
+    return _createProposal(uint16(FrabricProposalType.ThreadProposal), false, info);
   }
 
   function _participantRemoval(address _participant) internal override {

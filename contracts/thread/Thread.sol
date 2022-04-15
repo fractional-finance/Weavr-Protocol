@@ -157,7 +157,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   ) external override returns (uint256) {
     _descriptors[_nextProposalID] = _descriptor;
     emit DescriptorChangeProposed(_nextProposalID, _descriptor);
-    return _createProposal(uint16(ThreadProposalType.DescriptorChange), info);
+    return _createProposal(uint16(ThreadProposalType.DescriptorChange), false, info);
   }
 
   function proposeFrabricChange(
@@ -169,7 +169,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     _frabrics[_nextProposalID] = _frabric;
     _governors[_nextProposalID] = _governor;
     emit FrabricChangeProposed(_nextProposalID, _frabric, _governor);
-    return _createProposal(uint16(ThreadProposalType.FrabricChange), info);
+    return _createProposal(uint16(ThreadProposalType.FrabricChange), true, info);
   }
 
   function proposeGovernorChange(
@@ -178,7 +178,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   ) external override viableGovernor(_governor) returns (uint256) {
     _governors[_nextProposalID] = _governor;
     emit GovernorChangeProposed(_nextProposalID, _governor);
-    return _createProposal(uint16(ThreadProposalType.GovernorChange), info);
+    return _createProposal(uint16(ThreadProposalType.GovernorChange), true, info);
   }
 
   // Leave the ecosystem, setting a new Frabric and governor, while also enabling upgrades
@@ -208,7 +208,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     _frabrics[_nextProposalID] = _frabric;
     _governors[_nextProposalID] = _governor;
     emit EcosystemLeaveWithUpgradesProposed(_nextProposalID, _frabric, _governor);
-    return _createProposal(uint16(ThreadProposalType.EcosystemLeaveWithUpgrades), info);
+    return _createProposal(uint16(ThreadProposalType.EcosystemLeaveWithUpgrades), true, info);
   }
 
   function proposeDissolution(
@@ -221,7 +221,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     }
     _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, price);
     emit DissolutionProposed(_nextProposalID, msg.sender, token, price);
-    return _createProposal(uint16(ThreadProposalType.Dissolution), info);
+    return _createProposal(uint16(ThreadProposalType.Dissolution), true, info);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {

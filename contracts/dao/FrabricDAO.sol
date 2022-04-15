@@ -82,7 +82,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
   function proposePaper(bytes32 info) external returns (uint256) {
     // No dedicated event as the DAO emits type and info
-    return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, info);
+    return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, false, info);
   }
 
   // These are allowed to be overriden (see Thread for why)
@@ -137,7 +137,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     // The only missing indexing case is when it's proposed to upgrade, yet that never passes/executes
     // This should be minimally considerable and coverable by outside solutions if truly needed
     emit UpgradeProposed(_nextProposalID, beacon, instance, impl);
-    return _createProposal(uint16(CommonProposalType.Upgrade) | commonProposalBit, info);
+    return _createProposal(uint16(CommonProposalType.Upgrade) | commonProposalBit, true, info);
   }
 
   function proposeTokenAction(
@@ -191,7 +191,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
     _tokenActions[_nextProposalID] = TokenAction(token, target, mint, price, amount);
     emit TokenActionProposed(_nextProposalID, token, target, mint, price, amount);
-    return _createProposal(uint16(CommonProposalType.TokenAction) | commonProposalBit, info);
+    return _createProposal(uint16(CommonProposalType.TokenAction) | commonProposalBit, false, info);
   }
 
   function proposeParticipantRemoval(
@@ -210,7 +210,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
     _removals[_nextProposalID] = Removal(participant, removalFee);
     emit RemovalProposed(_nextProposalID, participant, removalFee);
-    uint256 id =  _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
+    uint256 id =  _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, false, info);
 
     // If signatures were provided, then the purpose is to freeze this participant's
     // funds for the duration of the proposal. This will not affect any existing

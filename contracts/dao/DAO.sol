@@ -23,9 +23,10 @@ abstract contract DAO is Composable, IDAO {
     // This is intended to be an enum (limited to the 8-bit space) with a bit flag
     // This allows 8 different categories of enums with a simple bit flag
     // If they were shifted and used as a number...
-    // This could be uint24 as we have an extra byte in the slot right now, yet
-    // there's no reason to when this could probably be a uint10 if those were allowed
     uint16 pType;
+
+    // Whether or not this proposal requires a supermajority to pass
+    bool supermajority;
 
     // The following are exposed via getters
     // This won't be deleted yet this struct is used in _proposals which atomically increments keys
@@ -62,6 +63,8 @@ abstract contract DAO is Composable, IDAO {
   }
 
   function requiredParticipation() public view returns (uint128) {
+    // Uses the current total supply instead of the historical total supply in
+    // order to represent the current community
     return uint128(IERC20(erc20).totalSupply()) / 10;
   }
 
@@ -99,7 +102,11 @@ abstract contract DAO is Composable, IDAO {
     }
   }
 
-  function _createProposal(uint16 proposalType, bytes32 info) internal beforeProposal() returns (uint256 id) {
+  function _createProposal(
+    uint16 proposalType,
+    bool supermajority,
+    bytes32 info
+  ) internal beforeProposal() returns (uint256 id) {
     id = _nextProposalID;
     _nextProposalID++;
 
@@ -112,6 +119,7 @@ abstract contract DAO is Composable, IDAO {
     // This is why cancelProposal exists
     proposal.voteBlock = uint64(block.number) - 1;
     proposal.pType = proposalType;
+    proposal.supermajority = supermajority;
 
     // Separate event to allow indexing by type/creator while maintaining state machine consistency
     // Also exposes info
@@ -222,22 +230,36 @@ abstract contract DAO is Composable, IDAO {
 
   function queueProposal(uint256 id) external {
     Proposal storage proposal = _proposals[id];
+
     // Proposal should be Active to be queued
     if (proposal.state != ProposalState.Active) {
       revert InactiveProposal(id);
     }
+
     // Proposal's voting period should be over
     if (block.timestamp < (proposal.stateStartTime + votingPeriod)) {
       revert ActiveProposal(id, block.timestamp, proposal.stateStartTime + votingPeriod);
     }
+
+    // Proposal should've gotten enough votes to pass
+    int128 passingVotes = 0;
+    if (proposal.supermajority) {
+      // Utilize a 66% supermajority requirement
+      // If 0 represents 50%, a further 16% of votes must be positive
+      // Doesn't add 1 to handle rounding due to the following if statement
+      passingVotes = int128(proposal.totalVotes / 6);
+    }
+
     // In case of a tie, err on the side of caution and fail the proposal
-    if (proposal.votes <= 0) {
+    if (proposal.votes <= passingVotes) {
       revert ProposalFailed(id, proposal.votes);
     }
-    // Uses the current total supply instead of the historical total supply to represent the current community
+
+    // Require sufficient participation to ensure this actually represents the community
     if (proposal.totalVotes < requiredParticipation()) {
       revert NotEnoughParticipation(id, proposal.totalVotes, requiredParticipation());
     }
+
     proposal.state = ProposalState.Queued;
     proposal.stateStartTime = uint64(block.timestamp);
     emit ProposalStateChanged(id, proposal.state);
