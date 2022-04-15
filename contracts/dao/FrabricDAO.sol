@@ -77,7 +77,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
   function _isCommonProposal(uint16 pType) internal pure returns (bool) {
     // Uses a shift instead of a bit mask to ensure this is the only bit set
-    return (pType >> 8) == commonProposalBit;
+    return (pType >> 8) == 1;
   }
 
   function proposePaper(bytes32 info) external override returns (uint256) {
@@ -116,17 +116,23 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       revert UnsupportedInterface(beacon, type(IFrabricBeacon).interfaceId);
     }
 
-    bytes32 instanceName = IComposable(instance).contractName();
-    bytes32 implName = IComposable(impl).contractName();
-    if (instanceName != implName) {
-      revert DifferentContract(instanceName, implName);
+    if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
+      revert UnsupportedInterface(impl, type(IComposable).interfaceId);
     }
+    bytes32 beaconName = IFrabricBeacon(beacon).beaconName();
+
+    if (!impl.supportsInterface(type(IComposable).interfaceId)) {
+      revert UnsupportedInterface(impl, type(IComposable).interfaceId);
+    }
+    bytes32 implName = IComposable(impl).contractName();
 
     // This check is also performed by the Beacon itself when calling upgrade
     // It's just optimal to prevent this proposal from ever existing and being pending if it's not valid
-    bytes32 beaconName = IFrabricBeacon(beacon).beaconName();
-    if (instanceName != beaconName) {
-      revert DifferentContract(instanceName, beaconName);
+    // Since this doesn't check instance's contractName, it could be setting an implementation of X
+    // on beacon X, yet this is pointless. Because the instance is X, its actual beacon must be X,
+    // and it will never accept this implementation (which isn't even being passed to it)
+    if (beaconName != implName) {
+      revert DifferentContract(beaconName, implName);
     }
 
     if (!_canProposeUpgrade(beacon, instance, impl)) {
@@ -152,7 +158,10 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     uint256 amount,
     bytes32 info
   ) external override returns (uint256 id) {
+    bool supermajority = false;
+
     if (mint) {
+      supermajority = true;
       if (token != erc20) {
         revert MintingDifferentToken(token, erc20);
       }
@@ -165,8 +174,9 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       // FRBC's mintable property being set to true is a byproduct of the setup
       // and a bit of laid groundwork, just as all this code is
 
-      // This could be placed earlier to save on gas yet this is more readable and
-      // this should never be called anyways
+      // Placed at the end, despite being slightly more expensive (if this branch
+      // is taken, which it shouldn't be, thanks to this), to silence warnings
+      // about unreachable code
       revert NotMintable();
     }
 
@@ -192,7 +202,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       revert ZeroAmount();
     }
 
-    id = _createProposal(uint16(CommonProposalType.TokenAction) | commonProposalBit, false, info);
+    id = _createProposal(uint16(CommonProposalType.TokenAction) | commonProposalBit, supermajority, info);
     _tokenActions[id] = TokenAction(token, target, mint, price, amount);
     emit TokenActionProposed(id, token, target, mint, price, amount);
   }
