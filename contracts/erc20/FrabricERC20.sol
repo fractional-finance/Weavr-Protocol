@@ -21,7 +21,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
   mapping(address => uint64) public override frozenUntil;
   mapping(address => uint8) public override removalFee;
-  bool internal _removal;
+  bool private _removal;
 
   function initialize(
     string memory name,
@@ -29,14 +29,14 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     uint256 supply,
     bool _mintable,
     address parentWhitelist,
-    address tradedToken,
+    address tradeToken,
     address _auction
   ) external override initializer {
     __Ownable_init();
     __Pausable_init();
     __DistributionERC20_init(name, symbol);
     __FrabricWhitelist_init(parentWhitelist);
-    __IntegratedLimitOrderDEX_init(tradedToken);
+    __IntegratedLimitOrderDEX_init(tradeToken);
 
     __Composable_init("FrabricERC20", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
@@ -64,6 +64,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     mintable = _mintable;
 
     auction = _auction;
+
     _removal = false;
   }
 
@@ -77,10 +78,10 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   function balanceOf(
     address account
   ) public view override(IERC20Upgradeable, ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint256) {
-    return ERC20Upgradeable.balanceOf(account);
+    return super.balanceOf(account);
   }
   function decimals() public view override(ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint8) {
-    return ERC20Upgradeable.decimals();
+    return super.decimals();
   }
 
   // Also define frozen so the DEX can prevent further orders from being placed
@@ -117,10 +118,14 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
     // If they were removed from the parent with a fee, carry it here
     // Technically, parentWhitelist is used here as parent ERC20
-    // They're just the same
+    // Since they're the same...
     if (fee == 0) {
       if (
         (parentWhitelist != address(0)) &&
+        // Check if it supports IRemovalFee, as that isn't actually a requirement
+        // Solely IWhitelist is, and doing this check keeps the parentWhitelist bounds
+        // accordingly minimal and focused. It's also only a minor gas cost given how
+        // infrequent removals are
         (IComposable(parentWhitelist).supportsInterface(type(IRemovalFee).interfaceId))
       ) {
         fee = IRemovalFee(parentWhitelist).removalFee(person);
@@ -159,7 +164,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
         // List the transferred tokens
         IAuctionCore(auction).listTransferred(
           address(this),
-          tradedToken,
+          tradeToken,
           person,
           uint64(block.timestamp + (i * (1 weeks))),
           1 weeks,
@@ -195,7 +200,9 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     return super.whitelisted(person);
   }
 
-  function removed(address person) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IFrabricWhitelist) returns (bool) {
+  function removed(
+    address person
+  ) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IFrabricWhitelist) returns (bool) {
     return super.removed(person);
   }
 
@@ -227,9 +234,6 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   }
   function pause() external override onlyOwner {
     _pause();
-  }
-  function unpause() external override onlyOwner {
-    _unpause();
   }
 
   // Transfer requirements

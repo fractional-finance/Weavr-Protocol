@@ -31,7 +31,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   // Amount of tokens which have yet to be converted to Thread tokens
   // Equivalent to the amount of funds deposited and not withdrawn if none have
   // been burnt yet
-  function outstanding() public view returns (uint256) {
+  function outstanding() public view override returns (uint256) {
     return totalSupply();
   }
 
@@ -95,7 +95,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     // Thread is initialized after Crowdfund due to Crowdfund having the amount conversion code
     // Therefore, Thread's decimals function must be static and work without initialization OR ThreadDeployer must be updated
     // To ensure this is never missed, ThreadDeployer checks for decimal accuracy before and after initialization
-    // That way, if anyone edits FrabricERC20 and edits its initializer calls without reading the surrounding code, it'll fail, forcing review
+    // That way, if anyone edits FrabricERC20 and edits its initializer calls without reading the surrounding code,
+    // it'll fail, forcing review
     return amount * (10 ** (18 - decimals()));
   }
 
@@ -114,7 +115,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     transferAllowed = false;
   }
 
-  function deposit(uint256 amount) external {
+  function deposit(uint256 amount) external override {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
@@ -154,7 +155,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   }
 
   // Enable withdrawing funds before the target is reached
-  function withdraw(uint256 amount) external {
+  function withdraw(uint256 amount) external override {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
@@ -173,7 +174,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   }
 
   // Cancel a Crowdfund before execution starts
-  function cancel() external {
+  function cancel() external override {
     if (msg.sender != governor) {
       revert NotGovernor(msg.sender, governor);
     }
@@ -188,7 +189,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   }
 
   // Transfer the funds from a Crowdfund to the governor for execution
-  function execute() external {
+  function execute() external override {
     if (outstanding() != target) {
       revert CrowdfundNotReached();
     }
@@ -202,7 +203,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   }
 
   // Take a executing Crowdfund which externally failed and return the leftover funds
-  function refund(uint256 amount) external {
+  function refund(uint256 amount) external override {
     if (msg.sender != governor) {
       revert NotGovernor(msg.sender, governor);
     }
@@ -222,7 +223,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     }
   }
 
-  function finish() external {
+  function finish() external override {
     if (msg.sender != governor) {
       revert NotGovernor(msg.sender, governor);
     }

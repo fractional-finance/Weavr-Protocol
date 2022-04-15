@@ -46,7 +46,7 @@ abstract contract DAO is Composable, IDAO {
   uint64 public override votingPeriod;
   uint64 public override queuePeriod;
 
-  uint256 internal _nextProposalID;
+  uint256 private _nextProposalID;
   mapping(uint256 => Proposal) private _proposals;
 
   mapping(uint256 => bool) public override passed;
@@ -60,6 +60,19 @@ abstract contract DAO is Composable, IDAO {
     erc20 = _erc20;
     votingPeriod = _votingPeriod;
     queuePeriod = 48 hours;
+  }
+
+  // Create a fake proposal
+  // Used by the Frabric to add its initial participants in a manner consistent
+  // with actual usage
+  function _fakeProposal(uint16 proposalType, bytes32 info) internal returns (uint256 id) {
+    id = _nextProposalID;
+    _nextProposalID++;
+
+    emit NewProposal(id, proposalType, address(0), info);
+    emit ProposalStateChanged(id, ProposalState.Active);
+    emit ProposalStateChanged(id, ProposalState.Queued);
+    emit ProposalStateChanged(id, ProposalState.Executed);
   }
 
   function requiredParticipation() public view returns (uint128) {
@@ -228,7 +241,7 @@ abstract contract DAO is Composable, IDAO {
     }
   }
 
-  function queueProposal(uint256 id) external {
+  function queueProposal(uint256 id) external override {
     Proposal storage proposal = _proposals[id];
 
     // Proposal should be Active to be queued
@@ -237,8 +250,9 @@ abstract contract DAO is Composable, IDAO {
     }
 
     // Proposal's voting period should be over
-    if (block.timestamp < (proposal.stateStartTime + votingPeriod)) {
-      revert ActiveProposal(id, block.timestamp, proposal.stateStartTime + votingPeriod);
+    uint256 end = proposal.stateStartTime + votingPeriod;
+    if (block.timestamp < end) {
+      revert ActiveProposal(id, block.timestamp, end);
     }
 
     // Proposal should've gotten enough votes to pass
@@ -265,7 +279,7 @@ abstract contract DAO is Composable, IDAO {
     emit ProposalStateChanged(id, proposal.state);
   }
 
-  function cancelProposal(uint256 id, address[] calldata voters) external {
+  function cancelProposal(uint256 id, address[] calldata voters) external override {
     // Must be queued. Even if it's completable, if it has yet to be completed, allow this
     Proposal storage proposal = _proposals[id];
     if (proposal.state != ProposalState.Queued) {
@@ -319,11 +333,7 @@ abstract contract DAO is Composable, IDAO {
   function _completeProposal(uint256 id, uint16 proposalType) internal virtual;
 
   // Does not require canonically ordering when executing proposals in case a proposal has invalid actions, halting everything
-  function completeProposal(uint256 id) external {
-    if (IFrabricERC20(erc20).paused()) {
-      revert CurrentlyPaused();
-    }
-
+  function completeProposal(uint256 id) external override {
     // Safe against re-entrancy (regarding multiple execution of the same proposal)
     // as long as this block is untouched. While multiple proposals can be executed
     // simultaneously, that should not be an issue
@@ -333,8 +343,9 @@ abstract contract DAO is Composable, IDAO {
     if (proposal.state != ProposalState.Queued) {
       revert NotQueued(id, proposal.state);
     }
-    if (block.timestamp < (proposal.stateStartTime + queuePeriod)) {
-      revert StillQueued(id, block.timestamp, proposal.stateStartTime + queuePeriod);
+    uint256 end = proposal.stateStartTime + queuePeriod;
+    if (block.timestamp < end) {
+      revert StillQueued(id, block.timestamp, end);
     }
     delete _proposals[id];
     // Solely used for getter functionality

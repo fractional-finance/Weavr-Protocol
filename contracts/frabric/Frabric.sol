@@ -71,16 +71,12 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
 
     __Composable_init("Frabric", false);
     version++;
+    supportsInterface[type(IFrabricCore).interfaceId] = true;
     supportsInterface[type(IFrabric).interfaceId] = true;
 
     // Simulate a full DAO proposal to add the genesis participants
-    emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesisMerkle);
-    emit NewProposal(_nextProposalID, uint16(FrabricProposalType.Participants), address(0), "Genesis Participants");
-    emit ProposalStateChanged(_nextProposalID, ProposalState.Active);
-    emit ProposalStateChanged(_nextProposalID, ProposalState.Queued);
-    emit ProposalStateChanged(_nextProposalID, ProposalState.Executed);
-    // Update the proposal ID to ensure a lack of collision with the first actual DAO proposal
-    _nextProposalID++;
+    uint256 id = _fakeProposal(uint16(FrabricProposalType.Participants), keccak256("Genesis Participants"));
+    emit ParticipantsProposed(id, ParticipantType.Genesis, genesisMerkle);
     // Actually add the genesis participants
     for (uint256 i = 0; i < genesis.length; i++) {
       participant[genesis[i]] = ParticipantType.Genesis;
@@ -104,7 +100,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     ParticipantType participantType,
     bytes32 participants,
     bytes32 info
-  ) external override returns (uint256) {
+  ) external override returns (uint256 id) {
     if (participantType == ParticipantType.Null) {
       // CommonProposalType.ParticipantRemoval should be used
       revert ProposingNullParticipants();
@@ -123,11 +119,11 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
       }
     }
 
-    Participants storage pStruct = _participants[_nextProposalID];
+    id = _createProposal(uint16(FrabricProposalType.Participants), false, info);
+    Participants storage pStruct = _participants[id];
     pStruct.pType = participantType;
     pStruct.participants = participants;
-    emit ParticipantsProposed(_nextProposalID, participantType, participants);
-    return _createProposal(uint16(FrabricProposalType.Participants), false, info);
+    emit ParticipantsProposed(id, participantType, participants);
   }
 
   function proposeRemoveBond(
@@ -135,16 +131,16 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     bool slash,
     uint256 amount,
     bytes32 info
-  ) external override returns (uint256) {
-    _removeBonds[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
+  ) external override returns (uint256 id) {
+    id = _createProposal(uint16(FrabricProposalType.RemoveBond), false, info);
+    _removeBonds[id] = RemoveBondProposal(_governor, slash, amount);
     if (governor[_governor] < GovernorStatus.Active) {
       // Arguably a misuse as this actually checks they were never an active governor
       // Not that they aren't currently an active governor, which the error name suggests
       // This should be better to handle from an integration perspective however
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
-    emit RemoveBondProposed(_nextProposalID, _governor, slash, amount);
-    return _createProposal(uint16(FrabricProposalType.RemoveBond), false, info);
+    emit RemoveBondProposed(id, _governor, slash, amount);
   }
 
   function proposeThread(
@@ -155,7 +151,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     address _governor,
     bytes calldata data,
     bytes32 info
-  ) external override returns (uint256) {
+  ) external override returns (uint256 id) {
     if (governor[_governor] != GovernorStatus.Active) {
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
@@ -168,15 +164,16 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     // Threads a far more integral part of the system, ThreadProposal deals with an enum
     // for proposal type. This variant field is a uint256 which has a much larger impact scope
     IThreadDeployer(threadDeployer).validate(variant, data);
-    ThreadProposal storage proposal = _threads[_nextProposalID];
+
+    id = _createProposal(uint16(FrabricProposalType.Thread), false, info);
+    ThreadProposal storage proposal = _threads[id];
     proposal.variant = variant;
     proposal.name = name;
     proposal.symbol = symbol;
     proposal.descriptor = descriptor;
     proposal.governor = _governor;
     proposal.data = data;
-    emit ThreadProposed(_nextProposalID, variant, _governor, name, symbol, descriptor, data);
-    return _createProposal(uint16(FrabricProposalType.Thread), false, info);
+    emit ThreadProposed(id, variant, _governor, name, symbol, descriptor, data);
   }
 
   // This does assume the Thread's API meets expectations compiled into the Frabric
@@ -187,7 +184,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     uint16 _proposalType,
     bytes calldata data,
     bytes32 info
-  ) external returns (uint256) {
+  ) external returns (uint256 id) {
     // Technically not needed given we check for interface support, yet a healthy check to have
     if (IComposable(thread).contractName() != keccak256("Thread")) {
       revert DifferentContract(IComposable(thread).contractName(), keccak256("Thread"));
@@ -236,9 +233,9 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
       }
     }
 
-    _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, data);
-    emit ThreadProposalProposed(_nextProposalID, thread, _proposalType, info);
-    return _createProposal(uint16(FrabricProposalType.ThreadProposal), false, info);
+    id = _createProposal(uint16(FrabricProposalType.ThreadProposal), false, info);
+    _threadProposals[id] = ThreadProposalProposal(thread, selector, data);
+    emit ThreadProposalProposed(id, thread, _proposalType, info);
   }
 
   function _participantRemoval(address _participant) internal override {

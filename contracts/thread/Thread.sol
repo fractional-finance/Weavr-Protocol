@@ -154,31 +154,31 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function proposeDescriptorChange(
     bytes32 _descriptor,
     bytes32 info
-  ) external override returns (uint256) {
-    _descriptors[_nextProposalID] = _descriptor;
-    emit DescriptorChangeProposed(_nextProposalID, _descriptor);
-    return _createProposal(uint16(ThreadProposalType.DescriptorChange), false, info);
+  ) external override returns (uint256 id) {
+    id = _createProposal(uint16(ThreadProposalType.DescriptorChange), false, info);
+    _descriptors[id] = _descriptor;
+    emit DescriptorChangeProposed(id, _descriptor);
   }
 
   function proposeFrabricChange(
     address _frabric,
     address _governor,
     bytes32 info
-  ) external override viableFrabric(_frabric) returns (uint256) {
+  ) external override viableFrabric(_frabric) returns (uint256 id) {
+    id = _createProposal(uint16(ThreadProposalType.FrabricChange), true, info);
     // This could use a struct yet this is straightforward and simple
-    _frabrics[_nextProposalID] = _frabric;
-    _governors[_nextProposalID] = _governor;
-    emit FrabricChangeProposed(_nextProposalID, _frabric, _governor);
-    return _createProposal(uint16(ThreadProposalType.FrabricChange), true, info);
+    _frabrics[id] = _frabric;
+    _governors[id] = _governor;
+    emit FrabricChangeProposed(id, _frabric, _governor);
   }
 
   function proposeGovernorChange(
     address _governor,
     bytes32 info
-  ) external override viableGovernor(_governor) returns (uint256) {
-    _governors[_nextProposalID] = _governor;
-    emit GovernorChangeProposed(_nextProposalID, _governor);
-    return _createProposal(uint16(ThreadProposalType.GovernorChange), true, info);
+  ) external override viableGovernor(_governor) returns (uint256 id) {
+    id = _createProposal(uint16(ThreadProposalType.GovernorChange), true, info);
+    _governors[id] = _governor;
+    emit GovernorChangeProposed(id, _governor);
   }
 
   // Leave the ecosystem, setting a new Frabric and governor, while also enabling upgrades
@@ -191,7 +191,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     address _frabric,
     address _governor,
     bytes32 info
-  ) external returns (uint256) {
+  ) external override returns (uint256 id) {
     // A Thread could do proposeFrabricChange, to change their Frabric,
     // and then proposeEcosystemLeaveWithUpgrades to enable upgrades while claiming
     // the Frabric as theirs
@@ -205,23 +205,24 @@ contract Thread is FrabricDAO, IThreadInitializable {
       revert NotLeaving(frabric, _frabric);
     }
 
-    _frabrics[_nextProposalID] = _frabric;
-    _governors[_nextProposalID] = _governor;
-    emit EcosystemLeaveWithUpgradesProposed(_nextProposalID, _frabric, _governor);
-    return _createProposal(uint16(ThreadProposalType.EcosystemLeaveWithUpgrades), true, info);
+    id = _createProposal(uint16(ThreadProposalType.EcosystemLeaveWithUpgrades), true, info);
+    _frabrics[id] = _frabric;
+    _governors[id] = _governor;
+    emit EcosystemLeaveWithUpgradesProposed(id, _frabric, _governor);
   }
 
   function proposeDissolution(
     address token,
     uint256 price,
     bytes32 info
-  ) external override returns (uint256) {
+  ) external override returns (uint256 id) {
     if (price == 0) {
       revert ZeroPrice();
     }
-    _dissolutions[_nextProposalID] = Dissolution(msg.sender, token, price);
-    emit DissolutionProposed(_nextProposalID, msg.sender, token, price);
-    return _createProposal(uint16(ThreadProposalType.Dissolution), true, info);
+
+    id = _createProposal(uint16(ThreadProposalType.Dissolution), true, info);
+    _dissolutions[id] = Dissolution(msg.sender, token, price);
+    emit DissolutionProposed(id, msg.sender, token, price);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {

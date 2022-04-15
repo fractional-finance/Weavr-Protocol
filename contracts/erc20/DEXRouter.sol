@@ -35,14 +35,12 @@ contract DEXRouter is Composable, IDEXRouter {
     supportsInterface[type(IDEXRouter).interfaceId] = true;
   }
 
-  function buy(address token, uint256 payment, uint256 price, uint256 minimumAmount) external {
+  function buy(address token, uint256 payment, uint256 price, uint256 minimumAmount) external override {
     // Doesn't bother checking the supported interfaces to minimize gas usage
     // If this function executes in its entirety, then the contract has all needed functions
 
-    IERC20 tradedToken = IERC20(IIntegratedLimitOrderDEXCore(token).tradedToken());
-
     // Transfer only the specified of capital
-    tradedToken.safeTransferFrom(msg.sender, token, payment);
+    IERC20(IIntegratedLimitOrderDEXCore(token).tradeToken()).safeTransferFrom(msg.sender, token, payment);
     IIntegratedLimitOrderDEX(token).buy(msg.sender, price, minimumAmount);
   }
 

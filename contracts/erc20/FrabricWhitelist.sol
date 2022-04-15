@@ -19,7 +19,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   // Intended to point to a hash of the whitelisted party's personal info
   mapping(address => bytes32) public override info;
   // List of people removed from the whitelist
-  mapping(address => bool) internal _removed;
+  mapping(address => bool) private _removed;
 
   uint256[100] private __gap;
 

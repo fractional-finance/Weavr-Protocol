@@ -64,7 +64,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
   constructor() Composable("ThreadDeployer") initializer {}
 
   // Validates a variant and byte data
-  function validate(uint8 variant, bytes calldata data) external pure {
+  function validate(uint8 variant, bytes calldata data) external override pure {
     if (variant == 0) {
       abi.decode(data, (address, uint256));
     } else {

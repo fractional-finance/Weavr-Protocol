@@ -9,7 +9,8 @@ abstract contract Composable is Initializable, IComposable {
   // Doesn't use "name" due to IERC20 using "name"
   bytes32 public override contractName;
   // Version is global, and not per-interface, as interfaces aren't "DAO" and "FrabricDAO"
-  // Any version which changes the API would change the interface ID and therefore break continuinity
+  // Any version which changes the API would change the interface ID, so checking
+  // for supported functionality should be via supportsInterface, not version
   uint256 public override version;
   mapping(bytes4 => bool) public override supportsInterface;
 
@@ -27,6 +28,9 @@ abstract contract Composable is Initializable, IComposable {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor(string memory name) {
     contractName = keccak256(bytes(name));
+
+    supportsInterface[type(IERC165Upgradeable).interfaceId] = true;
+    supportsInterface[type(IComposable).interfaceId] = true;
   }
 
   function __Composable_init(string memory name, bool finalized) internal onlyInitializing {

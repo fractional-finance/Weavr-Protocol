@@ -28,7 +28,6 @@ interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IRemovalFee, I
 
   function paused() external view returns (bool);
   function pause() external;
-  function unpause() external;
 }
 
 interface IFrabricERC20Initializable is IFrabricERC20 {
@@ -38,7 +37,7 @@ interface IFrabricERC20Initializable is IFrabricERC20 {
     uint256 supply,
     bool mintable,
     address parentWhitelist,
-    address tradedToken,
+    address tradeToken,
     address auction
   ) external;
 }
