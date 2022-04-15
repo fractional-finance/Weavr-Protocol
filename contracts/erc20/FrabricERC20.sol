@@ -16,6 +16,8 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 // The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
 contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Initializable {
+  using ERC165Checker for address;
+
   bool public override mintable;
   address public override auction;
 
@@ -126,7 +128,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
         // Solely IWhitelist is, and doing this check keeps the parentWhitelist bounds
         // accordingly minimal and focused. It's also only a minor gas cost given how
         // infrequent removals are
-        (IComposable(parentWhitelist).supportsInterface(type(IRemovalFee).interfaceId))
+        (parentWhitelist.supportsInterface(type(IRemovalFee).interfaceId))
       ) {
         fee = IRemovalFee(parentWhitelist).removalFee(person);
       }

@@ -50,7 +50,10 @@ contract Thread is FrabricDAO, IThreadInitializable {
       revert UnsupportedInterface(_frabric, type(IDAOCore).interfaceId);
     }
 
-    if (!_frabric.supportsInterface(type(IFrabricCore).interfaceId)) {
+    // Converts to IComposable before calling supportsInterface again to save on gas
+    // EIP165Checker's supportsInterface function does multiple checks to ensure
+    // EIP165 validity. Since we've already performed these, now we can safely use
+    if (!IComposable(_frabric).supportsInterface(type(IFrabricCore).interfaceId)) {
       revert UnsupportedInterface(_frabric, type(IFrabricCore).interfaceId);
     }
 

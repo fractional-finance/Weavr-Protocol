@@ -79,8 +79,9 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     address resolved = implementation(instance);
     bytes32 codeName = IComposable(resolved).contractName();
     if (
-      // This check is decently pointless yet ensures IComposable is being used
-      (!IComposable(resolved).supportsInterface(type(IComposable).interfaceId)) ||
+      // This check is decently pointless (especially as we've already called the
+      // function in question), yet it at least ensures IComposable
+      (!resolved.supportsInterface(type(IComposable).interfaceId)) ||
       (codeName != beaconName)
     ) {
       revert DifferentContract(codeName, beaconName);
