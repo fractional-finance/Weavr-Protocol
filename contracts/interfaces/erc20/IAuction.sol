@@ -17,12 +17,11 @@ interface IAuctionCore is IComposable {
     address traded,
     uint256 amount,
     uint64 start,
-    uint32 length,
-    uint8 fee
+    uint32 length
   );
 
-  function listTransferred(address token, address traded, address seller, uint64 start, uint32 length, uint8 fee) external;
-  function list(address token, address traded, uint256 amount, uint64 start, uint32 length, uint8 fee) external;
+  function listTransferred(address token, address traded, address seller, uint64 start, uint32 length) external;
+  function list(address token, address traded, uint256 amount, uint64 start, uint32 length) external;
 }
 
 interface IAuction is IAuctionCore {
@@ -45,7 +44,6 @@ interface IAuctionInitializable is IAuction {
   function initialize() external;
 }
 
-error FeeTooHigh(uint8 fee, uint8 maxFee);
 error AuctionPending(uint256 time, uint256 start);
 error AuctionOver(uint256 time, uint256 end);
 error BidTooLow(uint256 bid, uint256 currentBid);

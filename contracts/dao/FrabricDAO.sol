@@ -322,8 +322,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
               address(this),
               uint64(block.timestamp),
               // A longer time period can be decided on and utilized via the above method
-              1 weeks,
-              0
+              1 weeks
             );
           }
         }

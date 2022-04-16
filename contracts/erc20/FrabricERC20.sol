@@ -142,6 +142,13 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
     uint256 balance = balanceOf(person);
     if (balance != 0) {
+      // Send the removal fee to the owner (the DAO)
+      uint256 actualFee = balance * fee / 100;
+      // actualFee may be 0, yet balance will always remain non-0
+      balance -= actualFee;
+      _transfer(person, owner(), actualFee);
+
+      // Put the rest up for auction
       uint256 rounds = 4;
       uint256 amount = balance / rounds;
       // Dust, yet create the auction for technical accuracy
@@ -169,8 +176,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
           tradeToken,
           person,
           uint64(block.timestamp + (i * (1 weeks))),
-          1 weeks,
-          fee
+          1 weeks
         );
       }
       _removal = false;
