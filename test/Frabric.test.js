@@ -12,33 +12,20 @@ let deployTestFrabric = require("../scripts/deployTestFrabric.js");
 describe("Frabric Positive Test Cases", accounts => {
   it("should let you add participants", async () => {
     const signers = await ethers.getSigners();
-    let {
-      auction,
-      erc20Beacon,
-      frbc,
-      pair,
-      proxy,
+
+    let { frabric } = await deployTestFrabric();
+    frabric = new ethers.Contract(
       frabric,
-      router
-    } = await deployTestFrabric();
+      require("../artifacts/contracts/frabric/Frabric.sol/Frabric.json").abi,
+      signers[2]
+    );
 
     const merkle = new MerkleTree(
-        [signers[3].address, signers[4].address, signers[5].address],
-        ethers.utils.keccak256,
-        { hashLeaves: true, sortPairs: true }
+      [signers[3].address, signers[4].address, signers[5].address],
+      ethers.utils.keccak256,
+      { hashLeaves: true, sortPairs: true }
     );
-    frabric = new ethers.Contract(
-        frabric,
-        require("../artifacts/contracts/frabric/Frabric.sol/Frabric.json").abi,
-        signers[2]
-    );
-    frbc = new ethers.Contract(
-        frbc,
-        require("../artifacts/contracts/erc20/FrabricERC20.sol/FrabricERC20.json").abi,
-        signers[2]
-    );
-    let block = await waffle.provider.getBlockNumber()-1;
-    await frabric.proposeParticipants(5, merkle.getHexRoot(), ethers.utils.id("Proposing new participants"));
+    const receipt = await (await frabric.proposeParticipants(5, merkle.getHexRoot(), ethers.utils.id("Proposing new participants"))).wait();
 
     // Advance the clock 2 weeks
     await network.provider.request({
@@ -47,7 +34,7 @@ describe("Frabric Positive Test Cases", accounts => {
     });
 
     // Queue the proposal
-    await frabric.queueProposal(1);
+    await frabric.queueProposal(3);
 
     // Advance the clock 48 hours
     await network.provider.request({
@@ -56,9 +43,8 @@ describe("Frabric Positive Test Cases", accounts => {
     });
 
     // Pass it
-    await frabric.completeProposal(1);
+    await frabric.completeProposal(3);
 
-    // Shim for the fact ethers.js will change this functions names in the future
     const signArgs = [
       {
         name: "Frabric Protocol",
@@ -77,6 +63,7 @@ describe("Frabric Positive Test Cases", accounts => {
         kycHash: "0x0000000000000000000000000000000000000000000000000000000000000003"
       }
     ];
+    // Shim for the fact ethers.js will change this functions names in the future
     let signature;
     if (signers[1].signTypedData) {
       signature = await signers[1].signTypedData(...signArgs);
@@ -86,7 +73,7 @@ describe("Frabric Positive Test Cases", accounts => {
 
     // Approve the participant
     await frabric.approve(
-      1,
+      3,
       signers[3].address,
       "0x0000000000000000000000000000000000000000000000000000000000000003",
       merkle.getHexProof(ethers.utils.keccak256(signers[3].address)),
