@@ -25,16 +25,25 @@ contract TestFrabric is FrabricWhitelist {
     _setWhitelisted(person, dataHash);
   }
 
-  function threadDeployDeployer(
-    address threadDeployer, 
-    uint8 _variant,
-    address _agent,
-    bytes32 _ipfsHash,
-    string memory _name,
-    string memory _symbol,
-    bytes calldata data) external {
-      IThreadDeployer(threadDeployer).deploy(_variant, _name, _symbol, _ipfsHash, _agent, data);
-    }
+  function deployThread(
+    address threadDeployer,
+    uint8 variant,
+    string memory name,
+    string memory symbol,
+    bytes32 descriptor,
+    address _governor,
+    address tradeToken,
+    uint256 target
+  ) external {
+    IThreadDeployer(threadDeployer).deploy(
+      variant,
+      name,
+      symbol,
+      descriptor,
+      _governor,
+      abi.encode(tradeToken, target)
+    );
+  }
 
   function setGovernor(address person, IFrabricCore.GovernorStatus status) external {
     governor[person] = status;

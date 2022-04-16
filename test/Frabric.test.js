@@ -2,14 +2,10 @@ const { ethers, waffle, network } = require("hardhat");
 const { MerkleTree } = require("merkletreejs");
 
 const { assert } = require("chai");
-require("chai")
-    .use(require("bn-chai")(require("web3").utils.BN))
-    .use(require("chai-as-promised"))
-    .should();
 
 let deployTestFrabric = require("../scripts/deployTestFrabric.js");
 
-describe("Frabric Positive Test Cases", accounts => {
+describe("Frabric", accounts => {
   it("should let you add participants", async () => {
     const signers = await ethers.getSigners();
 

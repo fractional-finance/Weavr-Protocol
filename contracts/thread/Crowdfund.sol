@@ -103,7 +103,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   // Don't allow Crowdfund tokens to be transferred, yet mint/burn will still call this hook
   // Internal variable to allow transfers which is only set when minting/burning
   // Could also override transfer/transferFrom with reverts
-  function _beforeTokenTransfer(address, address, uint256) internal view override {
+  function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
+    super._beforeTokenTransfer(from, to, amount);
     if (!transferAllowed) {
       revert CrowdfundTransfer();
     }
@@ -159,10 +160,6 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
-    if (outstanding() == target) {
-      // Doesn't include target as it's not pertinent
-      revert CrowdfundReached();
-    }
     if (amount == 0) {
       revert ZeroAmount();
     }
@@ -190,6 +187,9 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
 
   // Transfer the funds from a Crowdfund to the governor for execution
   function execute() external override {
+    if (msg.sender != governor) {
+      revert NotGovernor(msg.sender, governor);
+    }
     if (outstanding() != target) {
       revert CrowdfundNotReached();
     }
