@@ -62,13 +62,10 @@ interface IFrabric is IFrabricCore {
     bytes32 info
   );
 
-  event KYCChanged(address indexed oldKYC, address indexed newKYC);
-
   function participant(address participant) external view returns (ParticipantType);
 
   function bond() external view returns (address);
   function threadDeployer() external view returns (address);
-  function kyc() external view returns (address);
 
   function proposeParticipants(
     ParticipantType participantType,
@@ -124,5 +121,5 @@ error ProposingParticipantRemovalOnThread();
 error ProposingFrabricChange();
 error ExternalCallFailed(address called, bytes4 selector, bytes error);
 error ParticipantsProposalNotPassed(uint256 id);
-error InvalidKYCSignature(address signer, address kyc);
+error InvalidKYCSignature(address signer, IFrabric.ParticipantType status);
 error IncorrectParticipant(address participant, bytes32 participants, bytes32[] proof);

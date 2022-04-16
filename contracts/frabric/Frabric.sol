@@ -19,7 +19,6 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
   address public override bond;
   address public override threadDeployer;
-  address public override kyc;
 
   struct Participants {
     ParticipantType pType;
@@ -259,20 +258,17 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       Participants storage participants = _participants[id];
 
       if (participants.pType == ParticipantType.KYC) {
-        address newKYC = address(bytes20(participants.participants));
+        address kyc = address(bytes20(participants.participants));
         // This check also exists in proposeParticipants, yet that doesn't
         // prevent the same participant from being proposed multiple times simultaneously
         // This is an edge case which should never happen, yet handling it means
         // checking here to ensure if they already exist, they're not overwritten
         // While we could error here, we may as well delete the invalid proposal and move on with life
-        if (participant[newKYC] != ParticipantType.Null) {
+        if (participant[kyc] != ParticipantType.Null) {
           delete _participants[id];
           return;
         }
 
-        emit KYCChanged(kyc, newKYC);
-        participant[kyc] = ParticipantType.Removed;
-        kyc = newKYC;
         participant[kyc] = ParticipantType.KYC;
         // Delete for the gas savings
         delete _participants[id];
@@ -363,8 +359,8 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       ),
       signature
     );
-    if (signer != kyc) {
-      revert InvalidKYCSignature(signer, kyc);
+    if (participant[signer] != ParticipantType.KYC) {
+      revert InvalidKYCSignature(signer, participant[signer]);
     }
 
     // Verify the address was actually part of this proposal
