@@ -23,22 +23,22 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
 
   uint256[100] private __gap;
 
-  function _setParentWhitelist(address parent) internal {
-    if ((parent != address(0)) && (!parent.supportsInterface(type(IWhitelist).interfaceId))) {
-      revert UnsupportedInterface(parent, type(IWhitelist).interfaceId);
+  function _setParentWhitelist(address _parent) internal {
+    if ((_parent != address(0)) && (!_parent.supportsInterface(type(IWhitelist).interfaceId))) {
+      revert UnsupportedInterface(_parent, type(IWhitelist).interfaceId);
     }
 
     // Does still emit even if address 0 was changed to address 0
     // Used to signify address 0 as the parent is a conscious decision
-    emit ParentWhitelistChange(parent, parent);
-    parent = parent;
+    emit ParentWhitelistChange(parent, _parent);
+    parent = _parent;
   }
 
-  function __FrabricWhitelist_init(address parent) internal onlyInitializing {
+  function __FrabricWhitelist_init(address _parent) internal onlyInitializing {
     supportsInterface[type(IWhitelist).interfaceId] = true;
     supportsInterface[type(IFrabricWhitelist).interfaceId] = true;
     global = false;
-    _setParentWhitelist(parent);
+    _setParentWhitelist(_parent);
   }
 
   function _setWhitelisted(address person, bytes32 dataHash) internal {
