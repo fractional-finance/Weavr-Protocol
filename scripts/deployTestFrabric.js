@@ -66,7 +66,10 @@ module.exports = async () => {
     "0x0000000000000000000000000000000000000000",
     2,
     upgrade.frabricCode,
-    (new ethers.utils.AbiCoder()).encode(["address", "address"], [upgrade.bond, upgrade.threadDeployer]),
+    (new ethers.utils.AbiCoder()).encode(
+      ["address", "address", "address"],
+      [upgrade.bond, upgrade.threadDeployer, signers[1].address]
+    ),
     ethers.utils.id("Upgrade to the Frabric")
   );
   await completeProposal(frabric, 1);
@@ -77,19 +80,6 @@ module.exports = async () => {
     signers[0]
   )
   await proxy.triggerUpgrade(frabric.address, 2);
-
-  frabric = new ethers.Contract(
-    frabric.address,
-    require("../artifacts/contracts/frabric/Frabric.sol/Frabric.json").abi,
-    signers[2]
-  );
-
-  await frabric.proposeParticipants(
-    3,
-    signers[1].address + "000000000000000000000000",
-    ethers.utils.id("Initial KYC")
-  );
-  await completeProposal(frabric, 2);
 
   return contracts;
 }

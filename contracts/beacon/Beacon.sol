@@ -131,6 +131,9 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
       revert InvalidVersion(version, min);
     }
 
+    // Considering the lack of validation around data, extensive care must be taken with it
+    // We could at least check this version wasn't already written to, yet that'd prevent
+    // recovery in the case invalid data did slip in
     upgradeDatas[instance][version] = data;
     emit Upgrade(instance, impl, version, data);
   }

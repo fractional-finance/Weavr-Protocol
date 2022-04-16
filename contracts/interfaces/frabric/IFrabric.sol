@@ -62,6 +62,7 @@ interface IFrabric is IFrabricCore {
     uint256 indexed proposalType,
     bytes32 info
   );
+  event ParticipantChange(address indexed participant, ParticipantType indexed participantType);
 
   function participant(address participant) external view returns (ParticipantType);
 

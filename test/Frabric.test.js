@@ -25,7 +25,7 @@ describe("Frabric Positive Test Cases", accounts => {
       ethers.utils.keccak256,
       { hashLeaves: true, sortPairs: true }
     );
-    const receipt = await (await frabric.proposeParticipants(5, merkle.getHexRoot(), ethers.utils.id("Proposing new participants"))).wait();
+    await frabric.proposeParticipants(5, merkle.getHexRoot(), ethers.utils.id("Proposing new participants"));
 
     // Advance the clock 2 weeks
     await network.provider.request({
@@ -34,7 +34,7 @@ describe("Frabric Positive Test Cases", accounts => {
     });
 
     // Queue the proposal
-    await frabric.queueProposal(3);
+    await frabric.queueProposal(2);
 
     // Advance the clock 48 hours
     await network.provider.request({
@@ -43,7 +43,7 @@ describe("Frabric Positive Test Cases", accounts => {
     });
 
     // Pass it
-    await frabric.completeProposal(3);
+    await frabric.completeProposal(2);
 
     const signArgs = [
       {
@@ -73,7 +73,7 @@ describe("Frabric Positive Test Cases", accounts => {
 
     // Approve the participant
     await frabric.approve(
-      3,
+      2,
       signers[3].address,
       "0x0000000000000000000000000000000000000000000000000000000000000003",
       merkle.getHexProof(ethers.utils.keccak256(signers[3].address)),

@@ -20,6 +20,7 @@ interface IInitialFrabric is IFrabricDAO {
     ParticipantType indexed participantType,
     bytes32 participants
   );
+  event ParticipantChange(address indexed participant, ParticipantType indexed participantType);
 
   function participant(address participant) external view returns (ParticipantType);
 }

@@ -25,6 +25,7 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
     // Actually add the genesis participants
     for (uint256 i = 0; i < genesis.length; i++) {
       participant[genesis[i]] = ParticipantType.Genesis;
+      emit ParticipantChange(genesis[i], ParticipantType.Genesis);
     }
   }
 

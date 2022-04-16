@@ -84,14 +84,18 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     supportsInterface[type(IFrabricCore).interfaceId] = true;
     supportsInterface[type(IFrabric).interfaceId] = true;
 
-    // Set bond and threadDeployer
-    (bond, threadDeployer) = abi.decode(data, (address, address));
+    // Set bond, threadDeployer, and an initial KYC
+    address kyc;
+    (bond, threadDeployer, kyc) = abi.decode(data, (address, address, address));
     if (!bond.supportsInterface(type(IBond).interfaceId)) {
       revert UnsupportedInterface(bond, type(IBond).interfaceId);
     }
     if (!threadDeployer.supportsInterface(type(IThreadDeployer).interfaceId)) {
       revert UnsupportedInterface(threadDeployer, type(IThreadDeployer).interfaceId);
     }
+
+    participant[kyc] = ParticipantType.KYC;
+    emit ParticipantChange(kyc, ParticipantType.KYC);
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -252,6 +256,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       governor[_participant] = GovernorStatus.Removed;
     }
     participant[_participant] = ParticipantType.Removed;
+    emit ParticipantChange(_participant, ParticipantType.Removed);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
@@ -272,6 +277,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
         }
 
         participant[kyc] = ParticipantType.KYC;
+        emit ParticipantChange(kyc, ParticipantType.KYC);
         // Delete for the gas savings
         delete _participants[id];
 
@@ -378,6 +384,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
     // Set their status
     participant[approving] = participants.pType;
+    emit ParticipantChange(approving, participants.pType);
     if (participants.pType == ParticipantType.Governor) {
       governor[approving] = GovernorStatus.Active;
       // Delete the proposal since it was just them
