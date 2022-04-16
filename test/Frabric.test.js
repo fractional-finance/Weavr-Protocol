@@ -7,29 +7,37 @@ require("chai")
     .use(require("chai-as-promised"))
     .should();
 
-let deployTestERC20 = require("../scripts/deployTestERC20.js");
-let deployUniswap = require("../scripts/deployUniswap.js");
-let deployFrabric = require("../scripts/deployFrabric.js");
+let deployTestFrabric = require("../scripts/deployTestFrabric.js");
 
 describe("Frabric Positive Test Cases", accounts => {
   it("should let you add participants", async () => {
     const signers = await ethers.getSigners();
-
-    const usdc = (await deployTestERC20()).address;
-    const uniswap = await deployUniswap();
-    let genesis = {};
-    genesis[signers[2].address] = {
-      info: "Test Genesis 0",
-      amount: 10
-    };
-    let { frabric, frbc } = await deployFrabric(usdc, uniswap.router.address, genesis, signers[1].address);
+    let {
+      auction,
+      erc20Beacon,
+      frbc,
+      pair,
+      proxy,
+      frabric,
+      router
+    } = await deployTestFrabric();
 
     const merkle = new MerkleTree(
-      [signers[3].address, signers[4].address, signers[5].address],
-      ethers.utils.keccak256,
-      { hashLeaves: true, sortPairs: true }
+        [signers[3].address, signers[4].address, signers[5].address],
+        ethers.utils.keccak256,
+        { hashLeaves: true, sortPairs: true }
     );
-    frabric = frabric.connect(signers[2]);
+    frabric = new ethers.Contract(
+        frabric,
+        require("../artifacts/contracts/frabric/Frabric.sol/Frabric.json").abi,
+        signers[2]
+    );
+    frbc = new ethers.Contract(
+        frbc,
+        require("../artifacts/contracts/erc20/FrabricERC20.sol/FrabricERC20.json").abi,
+        signers[2]
+    );
+    let block = await waffle.provider.getBlockNumber()-1;
     await frabric.proposeParticipants(5, merkle.getHexRoot(), ethers.utils.id("Proposing new participants"));
 
     // Advance the clock 2 weeks
