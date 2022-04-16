@@ -126,7 +126,6 @@ describe("Crowdfund", async () => {
   });
 
   it("should not allow depositing when executing", async () => {
-    // TODO: properly use actual errors
     await expect(
       crowdfund.connect(signers[0]).deposit(target)
     ).to.be.revertedWith("InvalidState(1, 0)");
