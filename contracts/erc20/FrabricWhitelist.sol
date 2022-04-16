@@ -23,7 +23,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
 
   uint256[100] private __gap;
 
-  function _setParentWhitelist(address _parent) internal {
+  function _setParent(address _parent) internal {
     if ((_parent != address(0)) && (!_parent.supportsInterface(type(IWhitelist).interfaceId))) {
       revert UnsupportedInterface(_parent, type(IWhitelist).interfaceId);
     }
@@ -38,7 +38,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
     supportsInterface[type(IWhitelist).interfaceId] = true;
     supportsInterface[type(IFrabricWhitelist).interfaceId] = true;
     global = false;
-    _setParentWhitelist(_parent);
+    _setParent(_parent);
   }
 
   function _setWhitelisted(address person, bytes32 dataHash) internal {

@@ -27,7 +27,7 @@ interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IRemovalFee, I
   function mint(address to, uint256 amount) external;
   function burn(uint256 amount) external;
 
-  function setParentWhitelist(address whitelist) external;
+  function setParent(address parent) external;
   function setWhitelisted(address person, bytes32 dataHash) external;
   function remove(address participant, uint8 fee) external;
   function triggerRemoval(address person) external;

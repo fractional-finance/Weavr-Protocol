@@ -208,8 +208,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     return super.removed(person);
   }
 
-  function setParentWhitelist(address whitelist) external override onlyOwner {
-    _setParentWhitelist(whitelist);
+  function setParent(address _parent) external override onlyOwner {
+    _setParent(_parent);
   }
 
   function setWhitelisted(address person, bytes32 dataHash) external override onlyOwner nonReentrant {
