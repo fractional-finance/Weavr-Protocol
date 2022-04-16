@@ -210,11 +210,13 @@ describe("Happy Path", async  () => {
 
 describe("Crowdfund Negative Test Cases", accounts => {
   beforeEach(async function () {
-   await init();
-   stateCounter = 0;
+   
   });
     
   it("Should not be allowed to back a crowdfund that has ended", async () => {
+    await init();
+    stateCounter = 0;
+
     const balance = await erc20.balanceOf(agent.address);
     const amount = ethers.BigNumber.from(target);
     
@@ -231,16 +233,83 @@ describe("Crowdfund Negative Test Cases", accounts => {
     const event = (await crowdfund.queryFilter(crowdfund.filters.StateChange()));
     expect(event[stateCounter].args.state).to.equal(State.Finished);
     // const tx3 = await crowdfund.deposit(amount);
-    expect(
-      await crowdfund.deposit(amount)
-    )
-    .to.be.revertedWith(
-      "'InvalidState(3, 0)'"
-    );
+    
+    await assertErrorMessage(
+      (await crowdfund.deposit(amount)),
+      "reverted with custom error 'InvalidState(3, 0)'"
+    );  
+    // GETS THE RIGHT ERROR JUST NEED ASSERTION DO BE IMPLEMENTED
   });
-  it("Should not be allowed to withdraw funds from a crowdfund that is executing", async () => {});
-  it("Should not be allowed to withdraw funds from a crowdfund that has ended", async () => {});
+  it("Should not be allowed to withdraw funds from a crowdfund that is executing", async () => {
+    await init();
+    stateCounter = 0;
+    
+    const balance = await erc20.balanceOf(agent.address);
+    const amount = ethers.BigNumber.from(target);
+    
+    await erc20.approve(crowdfund.address, balance);
+    
+    const tx = await crowdfund.deposit(amount);
+    
+    const tx1 = await crowdfund.execute();
+    expect(tx1).to.emit(Crowdfund, "StateChange");
+    stateCounter++;
+
+    const tx2 = await crowdfund.withdraw(amount)
+    // GETS THE RIGHT ERROR JUST NEED ASSERTION DO BE IMPLEMENTED
+  });
+  it("Should not be allowed to withdraw funds from a crowdfund that has ended", async () => {
+    await init();
+    stateCounter = 0;
+
+    const balance = await erc20.balanceOf(agent.address);
+    const amount = ethers.BigNumber.from(target);
+    
+    await erc20.approve(crowdfund.address, balance);
+    
+    const tx = await crowdfund.deposit(amount);
+    
+    const tx1 = await crowdfund.execute();
+    expect(tx1).to.emit(Crowdfund, "StateChange");
+    stateCounter++;
+
+    const tx2 = await crowdfund.finish();
+    expect(tx2).to.emit(Crowdfund, "StateChange");
+    stateCounter++;
+
+    const tx3 = await crowdfund.withdraw(amount)
+    // GETS THE RIGHT ERROR JUST NEED ASSERTION DO BE IMPLEMENTED
+
+  });
   it("Should not launch a crowdfund with a zero fundraising target", async () => {
-    // let crowdfund =  await ethers.getContractFactory("ERC20");
+    
+    target = ethers.BigNumber.from("0").toString();
+    const ABIC = ethers.utils.defaultAbiCoder;
+    data = ABIC.encode(
+      ["address", "uint256"],
+      [erc20.address, target]
+    );
+  
+  const TestFrabric = await ethers.getContractFactory("TestFrabric");
+  testFrabric = await TestFrabric.deploy();
+  await testFrabric.deployed();
+  await testFrabric.setWhitelisted(user1.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+  await testFrabric.setWhitelisted(user2.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+  await testFrabric.setWhitelisted(user3.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+  await testFrabric.setWhitelisted(agent.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+  
+  await threadDeployer.threadDeployer.transferOwnership(testFrabric.address);
+  
+  const res = await testFrabric.threadDeployDeployer(
+    threadDeployer.threadDeployer.address,
+    0,
+    agent.address,
+    "TestThread",
+    "TT",
+    data
+  );
+  const add = (await threadDeployer.threadDeployer.queryFilter(threadDeployer.threadDeployer.filters.Thread()))[0].args.crowdfund;
+  const Crowdfund = await ethers.getContractFactory("Crowdfund");
+  crowdfund = Crowdfund.attach(add);
   });
 });
