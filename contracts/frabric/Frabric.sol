@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import { StorageSlotUpgradeable as StorageSlot } from "@openzeppelin/contracts-upgradeable/utils/StorageSlotUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 
 import "../interfaces/frabric/IBond.sol";
@@ -55,29 +56,21 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   }
   mapping(uint256 => ThreadProposalProposal) private _threadProposals;
 
-  // Since SingleBeacon utilizes release channels, when the Frabric triggers an
-  // upgrade on itself, the beacon can't then call upgrade with runtime determined
-  // arguments since the beacon doesn't actually know the address of the instance
-  // Even if it did, some SingleBeacons are used for multiple instances, which
-  // couldn't all be called at once, making that an incomplete solution
-  // The easiest solution is therefore just to bake in arguments
-
-  //function upgrade() external override {
-  //  address _bond = 0x0000000000000000000000000000000000000000;
-  //  address _threadDeployer = 0x0000000000000000000000000000000000000000;
-
-  // These arguments are solely here for testing purposes and are incredibly insecure
-  // The above lines of code will be used instead of this block in any actual deployment
-  // The chain ID error check further guarantees this property as even if someone
-  // does deploy this, they won't be able to successfully call it
-  function upgrade(address _bond, address _threadDeployer) external override {
-    if (block.chainid != 31337) {
-      revert InsecureUpgradeFunction();
+  function upgrade(uint256 _version, bytes calldata data) external override {
+    address beacon = StorageSlot.getAddressSlot(
+      // Beacon storage slot
+      0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50
+    ).value;
+    if (msg.sender != beacon) {
+      revert NotBeacon(msg.sender, beacon);
     }
 
-    // Increment the version after verifying it
-    if (version != 1) {
-      revert AlreadyUpgraded();
+    // While this isn't possible for this version (2), it is possible if this was
+    // code version 3 yet triggerUpgrade was never called for version 2
+    // In that scenario, this could be called with version 2 data despite expecting
+    // version 3 data
+    if (_version != (version + 1)) {
+      revert InvalidVersion(_version, version + 1);
     }
     version++;
 
@@ -92,8 +85,13 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     supportsInterface[type(IFrabric).interfaceId] = true;
 
     // Set bond and threadDeployer
-    bond = _bond;
-    threadDeployer = _threadDeployer;
+    (bond, threadDeployer) = abi.decode(data, (address, address));
+    if (!bond.supportsInterface(type(IBond).interfaceId)) {
+      revert UnsupportedInterface(bond, type(IBond).interfaceId);
+    }
+    if (!threadDeployer.supportsInterface(type(IThreadDeployer).interfaceId)) {
+      revert UnsupportedInterface(threadDeployer, type(IThreadDeployer).interfaceId);
+    }
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -159,6 +157,10 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     bytes calldata data,
     bytes32 info
   ) external override returns (uint256 id) {
+    if (version < 2) {
+      revert NotUpgraded(version, 2);
+    }
+
     if (governor[_governor] != GovernorStatus.Active) {
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
@@ -294,6 +296,10 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       }
 
     } else if (pType == FrabricProposalType.RemoveBond) {
+      if (version < 2) {
+        revert NotUpgraded(version, 2);
+      }
+
       RemoveBondProposal storage remove = _removeBonds[id];
       if (remove.slash) {
         IBond(bond).slash(remove.governor, remove.amount);
@@ -305,6 +311,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     } else if (pType == FrabricProposalType.Thread) {
       ThreadProposal storage proposal = _threads[id];
       // This governor may no longer be viable for usage yet the Thread will check
+      // When proposing this proposal type, we validate we upgraded which means this has been set
       IThreadDeployer(threadDeployer).deploy(
         proposal.variant, proposal.name, proposal.symbol, proposal.descriptor, proposal.governor, proposal.data
       );

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.9;
 
+import "../common/IUpgradeable.sol";
 import "../dao/IFrabricDAO.sol";
 
 interface IFrabricCore is IFrabricDAO {
@@ -103,12 +104,7 @@ interface IFrabric is IFrabricCore {
   ) external;
 }
 
-interface IFrabricUpgradeable is IFrabric {
-  // This will be replaced with
-  //function upgrade(address _bond, address _threadDeployer) external;
-  // when actually deployed. See Frabric.sol for more info
-  function upgrade(address _bond, address _threadDeployer) external;
-}
+interface IFrabricUpgradeable is IFrabric, IUpgradeable {}
 
 error InsecureUpgradeFunction();
 
