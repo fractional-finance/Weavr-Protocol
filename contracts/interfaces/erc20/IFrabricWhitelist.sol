@@ -17,7 +17,7 @@ interface IFrabricWhitelist is IComposable, IWhitelist {
   event GlobalAcceptance();
 
   function global() external view returns (bool);
-  function parentWhitelist() external view returns (address);
+  function parent() external view returns (address);
   function info(address person) external view returns (bytes32);
 
   function explicitlyWhitelisted(address person) external view returns (bool);

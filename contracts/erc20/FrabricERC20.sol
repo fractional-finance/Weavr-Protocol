@@ -30,14 +30,14 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     string memory symbol,
     uint256 supply,
     bool _mintable,
-    address parentWhitelist,
+    address parent,
     address tradeToken,
     address _auction
   ) external override initializer {
     __Ownable_init();
     __Pausable_init();
     __DistributionERC20_init(name, symbol);
-    __FrabricWhitelist_init(parentWhitelist);
+    __FrabricWhitelist_init(parent);
     __IntegratedLimitOrderDEX_init(tradeToken);
 
     __Composable_init("FrabricERC20", false);
@@ -114,8 +114,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     // Doesn't need an address 0 check as it's using supportsInterface
     // Even if this was address 0 and we somehow got 0 values out of it,
     // it wouldn't be an issue
-    if (parentWhitelist.supportsInterface(type(IFreeze).interfaceId)) {
-      uint64 until = IFreeze(parentWhitelist).frozenUntil(person);
+    if (parent.supportsInterface(type(IFreeze).interfaceId)) {
+      uint64 until = IFreeze(parent).frozenUntil(person);
       if (until > frozenUntil[person]) {
         frozenUntil[person] = until;
       }
@@ -131,18 +131,16 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     }
 
     // If they were removed from the parent with a fee, carry it here
-    // Technically, parentWhitelist is used here as parent ERC20
-    // Since they're the same...
     if (fee == 0) {
       if (
-        (parentWhitelist != address(0)) &&
+        (parent != address(0)) &&
         // Check if it supports IRemovalFee, as that isn't actually a requirement
-        // Solely IWhitelist is, and doing this check keeps the parentWhitelist bounds
+        // Solely IWhitelist is, and doing this check keeps the parent bounds
         // accordingly minimal and focused. It's also only a minor gas cost given how
         // infrequent removals are
-        (parentWhitelist.supportsInterface(type(IRemovalFee).interfaceId))
+        (parent.supportsInterface(type(IRemovalFee).interfaceId))
       ) {
-        fee = IRemovalFee(parentWhitelist).removalFee(person);
+        fee = IRemovalFee(parent).removalFee(person);
       }
     }
 

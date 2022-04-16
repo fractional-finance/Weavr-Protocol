@@ -110,7 +110,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     string memory name,
     string memory symbol,
     uint256 threadBaseTokenSupply,
-    address parentWhitelist,
+    address parent,
     address tradeToken
   ) private returns (uint256) {
     // Since the Crowdfund needs the decimals of both tokens (raise and Thread),
@@ -128,7 +128,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
       symbol,
       threadTokenSupply,
       false,
-      parentWhitelist,
+      parent,
       tradeToken,
       auction
     );
@@ -175,13 +175,13 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     // Deploy and initialize the Thread
     address thread = deployThread(name, erc20, descriptor, governor, crowdfund);
 
-    address parentWhitelist = IDAOCore(msg.sender).erc20();
+    address parent = IDAOCore(msg.sender).erc20();
 
     // Initialize the Crowdfund
     ICrowdfundInitializable(crowdfund).initialize(
       name,
       symbol,
-      parentWhitelist,
+      parent,
       governor,
       thread,
       tradeToken,
@@ -196,7 +196,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
       name,
       symbol,
       threadBaseTokenSupply,
-      parentWhitelist,
+      parent,
       tradeToken
     );
 

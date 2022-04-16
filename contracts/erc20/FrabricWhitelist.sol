@@ -15,7 +15,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   // A future upgrade may add a governance-followable path to set it
   bool public override global;
   // Whitelist used for the entire Frabric platform
-  address public override parentWhitelist;
+  address public override parent;
   // Intended to point to a hash of the whitelisted party's personal info
   mapping(address => bytes32) public override info;
   // List of people removed from the whitelist
@@ -30,8 +30,8 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
 
     // Does still emit even if address 0 was changed to address 0
     // Used to signify address 0 as the parent is a conscious decision
-    emit ParentWhitelistChange(parentWhitelist, parent);
-    parentWhitelist = parent;
+    emit ParentWhitelistChange(parent, parent);
+    parent = parent;
   }
 
   function __FrabricWhitelist_init(address parent) internal onlyInitializing {
@@ -79,7 +79,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
       // Was never removed
       (!_removed[person]) &&
       // Check the parent whitelist (actually relevant check most of the time)
-      ((parentWhitelist != address(0)) && IWhitelist(parentWhitelist).whitelisted(person)) ||
+      ((parent != address(0)) && IWhitelist(parent).whitelisted(person)) ||
       // Global or explicitly whitelisted
       global || (info[person] != bytes32(0))
     );
