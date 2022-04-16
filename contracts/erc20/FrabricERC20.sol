@@ -87,7 +87,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   }
 
   // Also define frozen so the DEX can prevent further orders from being placed
-  function frozen(address person) public view override returns (bool) {
+  function frozen(address person) public view override(IFreeze, IntegratedLimitOrderDEX) returns (bool) {
     return block.timestamp <= frozenUntil[person];
   }
 
@@ -108,6 +108,18 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   function freeze(address person, uint64 until) external override onlyOwner {
     frozenUntil[person] = until;
     emit Freeze(person, until);
+  }
+
+  function triggerFreeze(address person) external override {
+    // Doesn't need an address 0 check as it's using supportsInterface
+    // Even if this was address 0 and we somehow got 0 values out of it,
+    // it wouldn't be an issue
+    if (parentWhitelist.supportsInterface(type(IFreeze).interfaceId)) {
+      uint64 until = IFreeze(parentWhitelist).frozenUntil(person);
+      if (until > frozenUntil[person]) {
+        frozenUntil[person] = until;
+      }
+    }
   }
 
   // Labelled unsafe due to its split checks with triggerRemoval and lack of
@@ -185,22 +197,6 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     emit Removal(person, balance);
   }
 
-  function triggerRemoval(address person) public override nonReentrant {
-    // Check they were actually removed from the whitelist
-    if (whitelisted(person)) {
-      revert Whitelisted(person);
-    }
-
-    // Check they actually used this contract in some point
-    // If they never held tokens, this could be someone who was never whitelisted
-    // Even if they were at one point, they aren't now, and they have no data to clean up
-    if (numCheckpoints(person) == 0) {
-      revert NothingToRemove(person);
-    }
-
-    _removeUnsafe(person, 0);
-  }
-
   // Whitelist functions
   function whitelisted(
     address person
@@ -234,6 +230,22 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     // and enable calling remove on any Thread. For a Thread, this won't change
     // the whitelist at all, as it'll still be whitelisted on the Frabric
     _removeUnsafe(person, fee);
+  }
+
+  function triggerRemoval(address person) public override nonReentrant {
+    // Check they were actually removed from the whitelist
+    if (whitelisted(person)) {
+      revert Whitelisted(person);
+    }
+
+    // Check they actually used this contract in some point
+    // If they never held tokens, this could be someone who was never whitelisted
+    // Even if they were at one point, they aren't now, and they have no data to clean up
+    if (numCheckpoints(person) == 0) {
+      revert NothingToRemove(person);
+    }
+
+    _removeUnsafe(person, 0);
   }
 
   // Pause functions
