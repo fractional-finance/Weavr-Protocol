@@ -42,9 +42,22 @@ abstract contract DistributionERC20 is ERC20VotesUpgradeable, Composable, IDistr
     _nextID = 0;
   }
 
+  // Doesn't hook into _transfer as _mint doesn't pass through it
+  function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+    super._afterTokenTransfer(from, to, amount);
+    // Delegate to self to track voting power, if it isn't already tracked
+    if (delegates(to) == address(0x0)) {
+      _delegate(to, to);
+    }
+  }
+
   // Disable delegation to enable distributions
   // Removes the need to track both historical balances AND historical voting power
   // Also resolves legal liability which is currently not fully explored and may be a concern
+  // While we may want voting delegation in the future, we'd have to duplicate the checkpointing
+  // code now to keep ERC20Votes' private variables for votes as, truly, votes. It's better
+  // to just duplicate it in the future if we need to, which also gives us more control
+  // over the process
   function delegate(address) public pure override(IVotesUpgradeable, ERC20VotesUpgradeable) {
     revert Delegation();
   }
@@ -82,6 +95,7 @@ abstract contract DistributionERC20 is ERC20VotesUpgradeable, Composable, IDistr
     if (amount == 0) {
       revert ZeroAmount();
     }
+
     IERC20(distribution.token).safeTransfer(person, amount);
     emit Claimed(id, person, amount);
   }

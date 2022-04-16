@@ -3,7 +3,20 @@ pragma solidity >=0.8.9;
 
 import "../dao/IFrabricDAO.sol";
 
-interface IFrabric {
+interface IFrabricCore is IFrabricDAO {
+  enum GovernorStatus {
+    Null,
+    Unverified, // Proposed and elected, yet hasn't gone through KYC
+    Active,
+    // Removed is last as GovernorStatus is written as a linear series of transitions
+    // > Unverified will work to find any Governor which was ever active
+    Removed
+  }
+
+  function governor(address governor) external view returns (GovernorStatus);
+}
+
+interface IFrabric is IFrabricCore {
   enum FrabricProposalType {
     Participants,
     RemoveBond,
@@ -22,15 +35,6 @@ interface IFrabric {
     Corporation
   }
 
-  enum GovernorStatus {
-    Null,
-    Unverified, // Proposed and elected, yet hasn't gone through KYC
-    Active,
-    // Removed is last as GovernorStatus is written as a linear series of transitions
-    // > Unverified will work to find any Governor which was ever active
-    Removed
-  }
-
   event ParticipantsProposed(
     uint256 indexed id,
     ParticipantType indexed participantType,
@@ -45,16 +49,17 @@ interface IFrabric {
   event ThreadProposed(
     uint256 indexed id,
     uint256 indexed variant,
-    address indexed agent,
+    address indexed governor,
     string name,
     string symbol,
+    bytes32 descriptor,
     bytes data
   );
   event ThreadProposalProposed(
     uint256 indexed id,
     address indexed thread,
     uint256 indexed proposalType,
-    string info
+    bytes32 info
   );
 
   event KYCChanged(address indexed oldKYC, address indexed newKYC);
@@ -65,32 +70,31 @@ interface IFrabric {
   function threadDeployer() external view returns (address);
   function kyc() external view returns (address);
 
-  function governor(address governor) external view returns (GovernorStatus);
-
   function proposeParticipants(
     ParticipantType participantType,
     bytes32 participants,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
   function proposeRemoveBond(
     address governor,
     bool slash,
     uint256 amount,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
   function proposeThread(
     uint8 variant,
-    address agent,
     string calldata name,
     string calldata symbol,
+    bytes32 descriptor,
+    address governor,
     bytes calldata data,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
   function proposeThreadProposal(
     address thread,
     uint16 proposalType,
     bytes calldata data,
-    string calldata info
+    bytes32 info
   ) external returns (uint256);
 
   function approve(
@@ -102,16 +106,14 @@ interface IFrabric {
   ) external;
 }
 
-interface IFrabricInitializable is IFrabric {
-  function initialize(
-    address erc20,
-    address[] calldata genesis,
-    bytes32 genesisMerkle,
-    address bond,
-    address threadDeployer,
-    address kyc
-  ) external;
+interface IFrabricUpgradeable is IFrabric {
+  // This will be replaced with
+  //function upgrade(address _bond, address _threadDeployer) external;
+  // when actually deployed. See Frabric.sol for more info
+  function upgrade(address _bond, address _threadDeployer) external;
 }
+
+error InsecureUpgradeFunction();
 
 error ProposingNullParticipants();
 error ProposingGenesisParticipants();

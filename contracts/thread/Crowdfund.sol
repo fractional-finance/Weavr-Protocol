@@ -19,7 +19,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   bool private transferAllowed;
 
   address public override whitelist;
-  address public override agent;
+  address public override governor;
   // Thread isn't needed, just its ERC20
   // This keeps data relative and accessible though, being able to jump to a Thread via its Crowdfund
   // Being able to jump to its token isn't enough as the token doesn't know of the Thread
@@ -31,7 +31,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   // Amount of tokens which have yet to be converted to Thread tokens
   // Equivalent to the amount of funds deposited and not withdrawn if none have
   // been burnt yet
-  function outstanding() public view returns (uint256) {
+  function outstanding() public view override returns (uint256) {
     return totalSupply();
   }
 
@@ -39,7 +39,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     string memory name,
     string memory symbol,
     address _whitelist,
-    address _agent,
+    address _governor,
     address _thread,
     address _token,
     uint256 _target
@@ -53,7 +53,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     supportsInterface[type(ICrowdfund).interfaceId] = true;
 
     whitelist = _whitelist;
-    agent = _agent;
+    governor = _governor;
     thread = _thread;
     token = _token;
     if (_target == 0) {
@@ -63,7 +63,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     target = _target;
     state = State.Active;
     // This could be packed into the following, yet we'd lose indexing
-    emit CrowdfundStarted(agent, thread, token, target);
+    emit CrowdfundStarted(governor, thread, token, target);
     emit StateChange(state);
 
     // Normalize 1 of the raise token to the thread token to ensure normalization won't fail
@@ -95,7 +95,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     // Thread is initialized after Crowdfund due to Crowdfund having the amount conversion code
     // Therefore, Thread's decimals function must be static and work without initialization OR ThreadDeployer must be updated
     // To ensure this is never missed, ThreadDeployer checks for decimal accuracy before and after initialization
-    // That way, if anyone edits FrabricERC20 and edits its initializer calls without reading the surrounding code, it'll fail, forcing review
+    // That way, if anyone edits FrabricERC20 and edits its initializer calls without reading the surrounding code,
+    // it'll fail, forcing review
     return amount * (10 ** (18 - decimals()));
   }
 
@@ -114,7 +115,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     transferAllowed = false;
   }
 
-  function deposit(uint256 amount) external {
+  function deposit(uint256 amount) external override {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
@@ -154,7 +155,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   }
 
   // Enable withdrawing funds before the target is reached
-  function withdraw(uint256 amount) external {
+  function withdraw(uint256 amount) external override {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
@@ -173,9 +174,9 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   }
 
   // Cancel a Crowdfund before execution starts
-  function cancel() external {
-    if (msg.sender != agent) {
-      revert NotAgent(msg.sender, agent);
+  function cancel() external override {
+    if (msg.sender != governor) {
+      revert NotGovernor(msg.sender, governor);
     }
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
@@ -187,8 +188,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     emit StateChange(state);
   }
 
-  // Transfer the funds from a Crowdfund to the agent for execution
-  function execute() external {
+  // Transfer the funds from a Crowdfund to the governor for execution
+  function execute() external override {
     if (outstanding() != target) {
       revert CrowdfundNotReached();
     }
@@ -198,13 +199,13 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     state = State.Executing;
     emit StateChange(state);
 
-    IERC20(token).safeTransfer(agent, target);
+    IERC20(token).safeTransfer(governor, target);
   }
 
   // Take a executing Crowdfund which externally failed and return the leftover funds
-  function refund(uint256 amount) external {
-    if (msg.sender != agent) {
-      revert NotAgent(msg.sender, agent);
+  function refund(uint256 amount) external override {
+    if (msg.sender != governor) {
+      revert NotGovernor(msg.sender, governor);
     }
     if (state != State.Executing) {
       revert InvalidState(state, State.Executing);
@@ -212,19 +213,19 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     state = State.Refunding;
     emit StateChange(state);
 
-    // Allows the agent to refund 0
+    // Allows the governor to refund 0
     // If this is improper, they should be bond slashed accordingly
     // They should be bond slashed for any refunded amount which is too low
-    // Upon arbitration ruling the amount is too low, the agent could step in
+    // Upon arbitration ruling the amount is too low, the governor could step in
     // and issue a new distribution
     if (amount != 0) {
       distribute(token, amount);
     }
   }
 
-  function finish() external {
-    if (msg.sender != agent) {
-      revert NotAgent(msg.sender, agent);
+  function finish() external override {
+    if (msg.sender != governor) {
+      revert NotGovernor(msg.sender, governor);
     }
     if (state != State.Executing) {
       revert InvalidState(state, State.Executing);

@@ -16,11 +16,14 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 // The owner can also mint tokens, with a whitelist enforced unless disabled by owner, defaulting to a parent whitelist
 // Finally, the owner can pause transfers, intended for migrations and dissolutions
 contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Initializable {
+  using ERC165Checker for address;
+
   bool public override mintable;
   address public override auction;
 
   mapping(address => uint64) public override frozenUntil;
-  bool internal _removal;
+  mapping(address => uint8) public override removalFee;
+  bool private _removal;
 
   function initialize(
     string memory name,
@@ -28,18 +31,19 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     uint256 supply,
     bool _mintable,
     address parentWhitelist,
-    address tradedToken,
+    address tradeToken,
     address _auction
   ) external override initializer {
     __Ownable_init();
     __Pausable_init();
     __DistributionERC20_init(name, symbol);
     __FrabricWhitelist_init(parentWhitelist);
-    __IntegratedLimitOrderDEX_init(tradedToken);
+    __IntegratedLimitOrderDEX_init(tradeToken);
 
     __Composable_init("FrabricERC20", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
     supportsInterface[type(PausableUpgradeable).interfaceId] = true;
+    supportsInterface[type(IRemovalFee).interfaceId] = true;
     supportsInterface[type(IFrabricERC20).interfaceId] = true;
 
     // Whitelist the initializer
@@ -62,6 +66,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     mintable = _mintable;
 
     auction = _auction;
+
     _removal = false;
   }
 
@@ -70,15 +75,15 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
   // Redefine ERC20 functions so the DEX can pick them up as overrides and call them
   function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {
-    ERC20Upgradeable._transfer(from, to, amount);
+    super._transfer(from, to, amount);
   }
   function balanceOf(
     address account
   ) public view override(IERC20Upgradeable, ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint256) {
-    return ERC20Upgradeable.balanceOf(account);
+    return super.balanceOf(account);
   }
   function decimals() public view override(ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint8) {
-    return ERC20Upgradeable.decimals();
+    return super.decimals();
   }
 
   // Also define frozen so the DEX can prevent further orders from being placed
@@ -105,12 +110,32 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     emit Freeze(person, until);
   }
 
-  function _remove(address person) internal override {
+  // Labelled unsafe due to its split checks with triggerRemoval and lack of
+  // guarantees on what checks it will perform
+  function _removeUnsafe(address person, uint8 fee) internal override {
     // If they were already removed, return
     if (removed(person)) {
       return;
     }
+
+    // If they were removed from the parent with a fee, carry it here
+    // Technically, parentWhitelist is used here as parent ERC20
+    // Since they're the same...
+    if (fee == 0) {
+      if (
+        (parentWhitelist != address(0)) &&
+        // Check if it supports IRemovalFee, as that isn't actually a requirement
+        // Solely IWhitelist is, and doing this check keeps the parentWhitelist bounds
+        // accordingly minimal and focused. It's also only a minor gas cost given how
+        // infrequent removals are
+        (parentWhitelist.supportsInterface(type(IRemovalFee).interfaceId))
+      ) {
+        fee = IRemovalFee(parentWhitelist).removalFee(person);
+      }
+    }
+
     _setRemoved(person);
+    removalFee[person] = fee;
 
     // Clear the amount they have locked
     locked[person] = 0;
@@ -141,10 +166,11 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
         // List the transferred tokens
         IAuctionCore(auction).listTransferred(
           address(this),
-          tradedToken,
+          tradeToken,
           person,
           uint64(block.timestamp + (i * (1 weeks))),
-          1 weeks
+          1 weeks,
+          fee
         );
       }
       _removal = false;
@@ -153,55 +179,63 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     emit Removal(person, balance);
   }
 
-  function remove(address person) public override nonReentrant {
+  function triggerRemoval(address person) public override nonReentrant {
     // Check they were actually removed from the whitelist
     if (whitelisted(person)) {
       revert Whitelisted(person);
     }
-    _remove(person);
+
+    // Check they actually used this contract in some point
+    // If they never held tokens, this could be someone who was never whitelisted
+    // Even if they were at one point, they aren't now, and they have no data to clean up
+    if (numCheckpoints(person) == 0) {
+      revert NothingToRemove(person);
+    }
+
+    _removeUnsafe(person, 0);
   }
 
   // Whitelist functions
   function whitelisted(
     address person
   ) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IWhitelist) returns (bool) {
-    return FrabricWhitelist.whitelisted(person) && (!removed(person));
+    return super.whitelisted(person);
   }
 
-  function removed(address person) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IFrabricWhitelist) returns (bool) {
-    return FrabricWhitelist.removed(person);
+  function removed(
+    address person
+  ) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IFrabricWhitelist) returns (bool) {
+    return super.removed(person);
   }
 
   function setParentWhitelist(address whitelist) external override onlyOwner {
     _setParentWhitelist(whitelist);
   }
 
+  function setWhitelisted(address person, bytes32 dataHash) external override onlyOwner nonReentrant {
+    _setWhitelisted(person, dataHash);
+  }
+
   // nonReentrant would be overkill given onlyOwner except this needs to not be the initial vector
   // while re-entrancy happens through functions labelled nonReentrant
   // While the only external calls should be completely in-ecosystem and therefore to trusted code,
-  // _remove really isn't the thing to play around with
-  function setWhitelisted(address person, bytes32 dataHash) external override onlyOwner nonReentrant {
-    _setWhitelisted(person, dataHash);
+  // _removeUnsafe really isn't the thing to play around with
+  function remove(address person, uint8 fee) external override onlyOwner nonReentrant {
+    _setRemoved(person);
 
-    // If removing, remove them now
     // This will only apply to the Frabric/Thread in question
     // For a Frabric removal, this will remove them from the global whitelist,
     // and enable calling remove on any Thread. For a Thread, this won't change
     // the whitelist at all, as it'll still be whitelisted on the Frabric
-    if (dataHash == bytes32(0)) {
-      _remove(person);
-    }
+    _removeUnsafe(person, fee);
   }
 
   // Pause functions
   function paused() public view override(PausableUpgradeable, IFrabricERC20) returns (bool) {
-    return PausableUpgradeable.paused();
+    return super.paused();
   }
   function pause() external override onlyOwner {
     _pause();
-  }
-  function unpause() external override onlyOwner {
-    _unpause();
   }
 
   // Transfer requirements

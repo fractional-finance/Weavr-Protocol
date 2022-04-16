@@ -9,9 +9,10 @@ import "../interfaces/thread/IThread.sol";
 
 import "../dao/FrabricDAO.sol";
 
+import "../interfaces/frabric/IInitialFrabric.sol";
 import "../interfaces/frabric/IFrabric.sol";
 
-contract Frabric is FrabricDAO, IFrabricInitializable {
+contract Frabric is FrabricDAO, IFrabricUpgradeable {
   using ERC165Checker for address;
 
   mapping(address => ParticipantType) public override participant;
@@ -39,8 +40,10 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
 
   struct ThreadProposal {
     uint8 variant;
-    address agent;
+    address governor;
+    // This may not actually pack yet it's small enough to theoretically
     string symbol;
+    bytes32 descriptor;
     string name;
     bytes data;
   }
@@ -53,63 +56,65 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
   }
   mapping(uint256 => ThreadProposalProposal) private _threadProposals;
 
-  // The erc20 is expected to be fully initialized via JS during deployment
-  // Given in practice, the InitialFrabric will upgrade to this, there's no reason
-  // for this to be here other than testing. While the upgrade should set
-  // bond/threadDeployer, KYC should be voted on via governance
-  function initialize(
-    address _erc20,
-    address[] calldata genesis,
-    bytes32 genesisMerkle,
-    address _bond,
-    address _threadDeployer,
-    address _kyc
-  ) external override initializer {
-    __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks);
+  // Since SingleBeacon utilizes release channels, when the Frabric triggers an
+  // upgrade on itself, the beacon can't then call upgrade with runtime determined
+  // arguments since the beacon doesn't actually know the address of the instance
+  // Even if it did, some SingleBeacons are used for multiple instances, which
+  // couldn't all be called at once, making that an incomplete solution
+  // The easiest solution is therefore just to bake in arguments
 
-    __Composable_init("Frabric", false);
-    version++;
-    supportsInterface[type(IFrabric).interfaceId] = true;
+  //function upgrade() external override {
+  //  address _bond = 0x0000000000000000000000000000000000000000;
+  //  address _threadDeployer = 0x0000000000000000000000000000000000000000;
 
-    // Simulate a full DAO proposal to add the genesis participants
-    emit ParticipantsProposed(_nextProposalID, ParticipantType.Genesis, genesisMerkle);
-    emit NewProposal(_nextProposalID, uint16(FrabricProposalType.Participants), address(0), "Genesis Participants");
-    emit ProposalStateChanged(_nextProposalID, ProposalState.Active);
-    emit ProposalStateChanged(_nextProposalID, ProposalState.Queued);
-    emit ProposalStateChanged(_nextProposalID, ProposalState.Executed);
-    // Update the proposal ID to ensure a lack of collision with the first actual DAO proposal
-    _nextProposalID++;
-    // Actually add the genesis participants
-    for (uint256 i = 0; i < genesis.length; i++) {
-      participant[genesis[i]] = ParticipantType.Genesis;
+  // These arguments are solely here for testing purposes and are incredibly insecure
+  // The above lines of code will be used instead of this block in any actual deployment
+  // The chain ID error check further guarantees this property as even if someone
+  // does deploy this, they won't be able to successfully call it
+  function upgrade(address _bond, address _threadDeployer) external override {
+    if (block.chainid != 31337) {
+      revert InsecureUpgradeFunction();
     }
 
+    // Increment the version after verifying it
+    if (version != 1) {
+      revert AlreadyUpgraded();
+    }
+    version++;
+
+    // Drop support for IInitialFrabric
+    // While we do still match it, and it shouldn't hurt to keep it around,
+    // we never want to encourage its usage, nor do we want to forget about it
+    // if we ever do introduce an incompatibility
+    supportsInterface[type(IInitialFrabric).interfaceId] = false;
+
+    // Add support for the new Frabric interfaces
+    supportsInterface[type(IFrabricCore).interfaceId] = true;
+    supportsInterface[type(IFrabric).interfaceId] = true;
+
+    // Set bond and threadDeployer
     bond = _bond;
     threadDeployer = _threadDeployer;
-
-    kyc = _kyc;
-    participant[kyc] = ParticipantType.KYC;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() Composable("Frabric") initializer {}
 
-  function canPropose() public view override returns (bool) {
+  function canPropose() public view override(DAO, IDAOCore) returns (bool) {
     return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);
   }
 
   function proposeParticipants(
     ParticipantType participantType,
     bytes32 participants,
-    string calldata info
-  ) external override returns (uint256) {
+    bytes32 info
+  ) external override returns (uint256 id) {
     if (participantType == ParticipantType.Null) {
       // CommonProposalType.ParticipantRemoval should be used
       revert ProposingNullParticipants();
     } else if (participantType == ParticipantType.Genesis) {
       revert ProposingGenesisParticipants();
     }
-
 
     if ((participantType == ParticipantType.KYC) || (participantType == ParticipantType.Governor)) {
       // Validate this to be an address if this ParticipantType should only be a single address
@@ -122,40 +127,41 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
       }
     }
 
-    Participants storage pStruct = _participants[_nextProposalID];
+    id = _createProposal(uint16(FrabricProposalType.Participants), false, info);
+    Participants storage pStruct = _participants[id];
     pStruct.pType = participantType;
     pStruct.participants = participants;
-    emit ParticipantsProposed(_nextProposalID, participantType, participants);
-    return _createProposal(uint16(FrabricProposalType.Participants), info);
+    emit ParticipantsProposed(id, participantType, participants);
   }
 
   function proposeRemoveBond(
     address _governor,
     bool slash,
     uint256 amount,
-    string calldata info
-  ) external override returns (uint256) {
-    _removeBonds[_nextProposalID] = RemoveBondProposal(_governor, slash, amount);
+    bytes32 info
+  ) external override returns (uint256 id) {
+    id = _createProposal(uint16(FrabricProposalType.RemoveBond), false, info);
+    _removeBonds[id] = RemoveBondProposal(_governor, slash, amount);
     if (governor[_governor] < GovernorStatus.Active) {
       // Arguably a misuse as this actually checks they were never an active governor
       // Not that they aren't currently an active governor, which the error name suggests
       // This should be better to handle from an integration perspective however
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
-    emit RemoveBondProposed(_nextProposalID, _governor, slash, amount);
-    return _createProposal(uint16(FrabricProposalType.RemoveBond), info);
+    emit RemoveBondProposed(id, _governor, slash, amount);
   }
 
   function proposeThread(
     uint8 variant,
-    address agent,
     string calldata name,
     string calldata symbol,
+    bytes32 descriptor,
+    address _governor,
     bytes calldata data,
-    string calldata info
-  ) external override returns (uint256) {
-    if (governor[agent] != GovernorStatus.Active) {
-      revert NotActiveGovernor(agent, governor[agent]);
+    bytes32 info
+  ) external override returns (uint256 id) {
+    if (governor[_governor] != GovernorStatus.Active) {
+      revert NotActiveGovernor(_governor, governor[_governor]);
     }
     // Doesn't check for being alphanumeric due to iteration costs
     if ((bytes(name).length < 3) || (bytes(name).length > 50) || (bytes(symbol).length < 2) || (bytes(symbol).length > 5)) {
@@ -166,14 +172,16 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     // Threads a far more integral part of the system, ThreadProposal deals with an enum
     // for proposal type. This variant field is a uint256 which has a much larger impact scope
     IThreadDeployer(threadDeployer).validate(variant, data);
-    ThreadProposal storage proposal = _threads[_nextProposalID];
+
+    id = _createProposal(uint16(FrabricProposalType.Thread), false, info);
+    ThreadProposal storage proposal = _threads[id];
     proposal.variant = variant;
-    proposal.agent = agent;
     proposal.name = name;
     proposal.symbol = symbol;
+    proposal.descriptor = descriptor;
+    proposal.governor = _governor;
     proposal.data = data;
-    emit ThreadProposed(_nextProposalID, variant, agent, name, symbol, data);
-    return _createProposal(uint16(FrabricProposalType.Thread), info);
+    emit ThreadProposed(id, variant, _governor, name, symbol, descriptor, data);
   }
 
   // This does assume the Thread's API meets expectations compiled into the Frabric
@@ -183,8 +191,8 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
     address thread,
     uint16 _proposalType,
     bytes calldata data,
-    string calldata info
-  ) external returns (uint256) {
+    bytes32 info
+  ) external returns (uint256 id) {
     // Technically not needed given we check for interface support, yet a healthy check to have
     if (IComposable(thread).contractName() != keccak256("Thread")) {
       revert DifferentContract(IComposable(thread).contractName(), keccak256("Thread"));
@@ -219,8 +227,8 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
       }
 
       IThread.ThreadProposalType pType = IThread.ThreadProposalType(_proposalType);
-      if (pType == IThread.ThreadProposalType.AgentChange) {
-        selector = IThread.proposeAgentChange.selector;
+      if (pType == IThread.ThreadProposalType.GovernorChange) {
+        selector = IThread.proposeGovernorChange.selector;
       } else if (pType == IThread.ThreadProposalType.FrabricChange) {
         // Doesn't use UnhandledEnumCase as that suggests a development-level failure to handle cases
         // While that already isn't guaranteed in this function, as _proposalType is user input,
@@ -233,9 +241,9 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
       }
     }
 
-    _threadProposals[_nextProposalID] = ThreadProposalProposal(thread, selector, data);
-    emit ThreadProposalProposed(_nextProposalID, thread, _proposalType, info);
-    return _createProposal(uint16(FrabricProposalType.ThreadProposal), info);
+    id = _createProposal(uint16(FrabricProposalType.ThreadProposal), false, info);
+    _threadProposals[id] = ThreadProposalProposal(thread, selector, data);
+    emit ThreadProposalProposed(id, thread, _proposalType, info);
   }
 
   function _participantRemoval(address _participant) internal override {
@@ -300,8 +308,9 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
 
     } else if (pType == FrabricProposalType.Thread) {
       ThreadProposal storage proposal = _threads[id];
+      // This governor may no longer be viable for usage yet the Thread will check
       IThreadDeployer(threadDeployer).deploy(
-        proposal.variant, proposal.agent, proposal.name, proposal.symbol, proposal.data
+        proposal.variant, proposal.name, proposal.symbol, proposal.descriptor, proposal.governor, proposal.data
       );
       delete _threads[id];
 
@@ -360,7 +369,7 @@ contract Frabric is FrabricDAO, IFrabricInitializable {
 
     // Verify the address was actually part of this proposal
     // Directly use the address as a leaf. Since it's a RipeMD-160 hash of a 32-byte value, this shouldn't be an issue
-    if (!MerkleProofUpgradeable.verify(proof, participants.participants, bytes32(bytes20(approving)))) {
+    if (!MerkleProofUpgradeable.verify(proof, participants.participants, keccak256(abi.encodePacked(approving)))) {
       revert IncorrectParticipant(approving, participants.participants, proof);
     }
 

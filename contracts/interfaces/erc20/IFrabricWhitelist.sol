@@ -25,6 +25,7 @@ interface IFrabricWhitelist is IComposable, IWhitelist {
   function removed(address person) external view returns (bool);
 }
 
+error WhitelistingWithZero(address person);
+error Removed(address person);
 error NotWhitelisted(address person);
 error Whitelisted(address person);
-error Removed(address person);

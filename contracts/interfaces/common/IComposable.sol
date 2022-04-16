@@ -8,3 +8,5 @@ interface IComposable is IERC165Upgradeable {
   // Returns uint256 max if not upgradeable
   function version() external returns (uint256);
 }
+
+error AlreadyUpgraded();

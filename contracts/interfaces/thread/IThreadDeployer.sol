@@ -6,13 +6,14 @@ import "../common/IComposable.sol";
 interface IThreadDeployer is IComposable {
   event Thread(
     uint8 indexed variant,
-    address indexed agent,
+    address indexed governor,
     address indexed tradeToken,
     address erc20,
     address thread,
     address crowdfund
   );
 
+  function percentage() external view returns (uint8);
   function crowdfundProxy() external view returns (address);
   function erc20Beacon() external view returns (address);
   function threadBeacon() external view returns (address);
@@ -23,9 +24,10 @@ interface IThreadDeployer is IComposable {
 
   function deploy(
     uint8 variant,
-    address agent,
     string memory name,
     string memory symbol,
+    bytes32 descriptor,
+    address governor,
     bytes calldata data
   ) external;
 

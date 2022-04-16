@@ -5,7 +5,11 @@ import "./IDistributionERC20.sol";
 import "./IFrabricWhitelist.sol";
 import "./IIntegratedLimitOrderDEX.sol";
 
-interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IIntegratedLimitOrderDEX {
+interface IRemovalFee {
+  function removalFee(address person) external view returns (uint8);
+}
+
+interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IRemovalFee, IIntegratedLimitOrderDEX {
   event Freeze(address indexed person, uint64 until);
   event Removal(address indexed person, uint256 balance);
 
@@ -16,14 +20,14 @@ interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IIntegratedLim
   function mint(address to, uint256 amount) external;
   function burn(uint256 amount) external;
   function freeze(address person, uint64 until) external;
-  function remove(address person) external;
+  function triggerRemoval(address person) external;
 
   function setParentWhitelist(address whitelist) external;
   function setWhitelisted(address person, bytes32 dataHash) external;
+  function remove(address participant, uint8 fee) external;
 
   function paused() external view returns (bool);
   function pause() external;
-  function unpause() external;
 }
 
 interface IFrabricERC20Initializable is IFrabricERC20 {
@@ -33,7 +37,7 @@ interface IFrabricERC20Initializable is IFrabricERC20 {
     uint256 supply,
     bool mintable,
     address parentWhitelist,
-    address tradedToken,
+    address tradeToken,
     address auction
   ) external;
 }
@@ -41,6 +45,7 @@ interface IFrabricERC20Initializable is IFrabricERC20 {
 error SupplyExceedsUInt112(uint256 supply);
 error NotMintable();
 error Frozen(address person);
+error NothingToRemove(address person);
 // Not Paused due to an overlap with the event
 error CurrentlyPaused();
 error BalanceLocked(uint256 balanceAfterTransfer, uint256 lockedBalance);

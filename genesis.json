@@ -1,0 +1,22 @@
+{
+  "0x9C3BB8987003e082ba9038Dd2E8f3E1FFF89a50d": {
+    "info": "VecDeque",
+    "amount": "600000000000000000000"
+  },
+  "0x403383c411c0eB14eA0Bd15E7c2AD5431a7410C2": {
+    "info": "Abstrucked",
+    "amount": "100000000000000000000"
+  },
+  "0x16d1dc4e77a3D1FAC8BAff046477CAe3410FfeE2": {
+    "info": "Underhill",
+    "amount": "100000000000000000000"
+  },
+  "0x4ee7974A4A68C4f8C83f0Dc6Ac9eE1ef74daF403": {
+    "info": "Tony Stark",
+    "amount": "100000000000000000000"
+  },
+  "0x664C6D9AFCF3f6a0c925C8E00875E5145012B972": {
+    "info": "CoolDev",
+    "amount": "100000000000000000000"
+  }
+}

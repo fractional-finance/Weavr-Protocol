@@ -14,7 +14,7 @@ interface ICrowdfund is IDistributionERC20 {
     Finished
   }
 
-  event CrowdfundStarted(address indexed agent, address indexed thread, address indexed token, uint256 target);
+  event CrowdfundStarted(address indexed governor, address indexed thread, address indexed token, uint256 target);
   event StateChange(State indexed state);
   event Deposit(address indexed depositor, uint256 amount);
   event Withdraw(address indexed depositor, uint256 amount);
@@ -22,7 +22,7 @@ interface ICrowdfund is IDistributionERC20 {
 
   function whitelist() external view returns (address);
 
-  function agent() external view returns (address);
+  function governor() external view returns (address);
   function thread() external view returns (address);
 
   function token() external view returns (address);
@@ -47,7 +47,7 @@ interface ICrowdfundInitializable is ICrowdfund {
     string memory name,
     string memory symbol,
     address _whitelist,
-    address _agent,
+    address _governor,
     address _thread,
     address _token,
     uint256 _target

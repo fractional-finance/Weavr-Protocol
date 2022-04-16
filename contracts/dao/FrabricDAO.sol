@@ -33,6 +33,8 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
   uint16 constant public override commonProposalBit = 1 << 8;
 
+  uint8 public override maxRemovalFee;
+
   struct Upgrade {
     address beacon;
     address instance;
@@ -49,34 +51,52 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   }
   mapping(uint256 => TokenAction) internal _tokenActions;
 
-  mapping(uint256 => address) internal _removals;
+  struct Removal {
+    address participant;
+    uint8 fee;
+  }
+  mapping(uint256 => Removal) internal _removals;
 
   uint256[100] private __gap;
 
-  function __FrabricDAO_init(string memory name, address _erc20, uint64 _votingPeriod) internal onlyInitializing {
+  function __FrabricDAO_init(
+    string memory name,
+    address _erc20,
+    uint64 _votingPeriod,
+    uint8 _maxRemovalFee
+  ) internal onlyInitializing {
     __EIP712_init(name, "1");
     __DAO_init(_erc20, _votingPeriod);
     supportsInterface[type(IFrabricDAO).interfaceId] = true;
+
+    if (_maxRemovalFee > 100) {
+      revert InvalidRemovalFee(_maxRemovalFee, 100);
+    }
+    maxRemovalFee = _maxRemovalFee;
   }
 
   function _isCommonProposal(uint16 pType) internal pure returns (bool) {
     // Uses a shift instead of a bit mask to ensure this is the only bit set
-    return (pType >> 8) == commonProposalBit;
+    return (pType >> 8) == 1;
   }
 
-  function proposePaper(string calldata info) external returns (uint256) {
+  function proposePaper(bytes32 info) external override returns (uint256) {
     // No dedicated event as the DAO emits type and info
-    return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, info);
+    return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, false, info);
   }
 
-  // Allowed to be overriden (see Thread for why)
-  // Isn't required to be overriden and assumes Upgrade proposals are valid like
-  // any other proposal unless overriden
+  // These are allowed to be overriden (see Thread for why)
+  // They aren't required to be overriden and proposals are assumed to be valid
+  // like any other proposal if they aren't
   function _canProposeUpgrade(
     address /*beacon*/,
     address /*instance*/,
     address /*impl*/
   ) internal view virtual returns (bool) {
+    return true;
+  }
+
+  function _canProposeRemoval(address /*participant*/) internal view virtual returns (bool) {
     return true;
   }
 
@@ -90,34 +110,43 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     address beacon,
     address instance,
     address impl,
-    string calldata info
-  ) external returns (uint256) {
+    bytes32 info
+  ) external override returns (uint256 id) {
     if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
       revert UnsupportedInterface(beacon, type(IFrabricBeacon).interfaceId);
     }
 
-    bytes32 instanceName = IComposable(instance).contractName();
-    if (instanceName != IComposable(impl).contractName()) {
-      revert DifferentContract(instanceName, IComposable(impl).contractName());
+    if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
+      revert UnsupportedInterface(impl, type(IComposable).interfaceId);
     }
+    bytes32 beaconName = IFrabricBeacon(beacon).beaconName();
+
+    if (!impl.supportsInterface(type(IComposable).interfaceId)) {
+      revert UnsupportedInterface(impl, type(IComposable).interfaceId);
+    }
+    bytes32 implName = IComposable(impl).contractName();
+
     // This check is also performed by the Beacon itself when calling upgrade
     // It's just optimal to prevent this proposal from ever existing and being pending if it's not valid
-    if (instanceName != IFrabricBeacon(beacon).beaconName()) {
-      revert DifferentContract(instanceName, IFrabricBeacon(beacon).beaconName());
+    // Since this doesn't check instance's contractName, it could be setting an implementation of X
+    // on beacon X, yet this is pointless. Because the instance is X, its actual beacon must be X,
+    // and it will never accept this implementation (which isn't even being passed to it)
+    if (beaconName != implName) {
+      revert DifferentContract(beaconName, implName);
     }
 
     if (!_canProposeUpgrade(beacon, instance, impl)) {
       revert ProposingUpgrade(beacon, instance, impl);
     }
 
-    _upgrades[_nextProposalID] = Upgrade(beacon, instance, impl);
+    id = _createProposal(uint16(CommonProposalType.Upgrade) | commonProposalBit, true, info);
+    _upgrades[id] = Upgrade(beacon, instance, impl);
     // Doesn't index impl as parsing the Beacon's logs for its indexed impl argument
     // will return every time a contract upgraded to it
     // This combination of options should be competent for almost all use cases
     // The only missing indexing case is when it's proposed to upgrade, yet that never passes/executes
     // This should be minimally considerable and coverable by outside solutions if truly needed
-    emit UpgradeProposed(_nextProposalID, beacon, instance, impl);
-    return _createProposal(uint16(CommonProposalType.Upgrade) | commonProposalBit, info);
+    emit UpgradeProposed(id, beacon, instance, impl);
   }
 
   function proposeTokenAction(
@@ -127,15 +156,28 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     bool mint,
     uint256 price,
     uint256 amount,
-    string calldata info
-  ) external returns (uint256) {
+    bytes32 info
+  ) external override returns (uint256 id) {
+    bool supermajority = false;
+
     if (mint) {
+      supermajority = true;
       if (token != erc20) {
         revert MintingDifferentToken(token, erc20);
       }
       if (!IFrabricERC20(erc20).mintable()) {
         revert NotMintable();
       }
+
+      // All of this mint code should work and will be reviewed by auditors to confirm that
+      // That said, at this time, we are not launching with any form of minting enabled
+      // FRBC's mintable property being set to true is a byproduct of the setup
+      // and a bit of laid groundwork, just as all this code is
+
+      // Placed at the end, despite being slightly more expensive (if this branch
+      // is taken, which it shouldn't be, thanks to this), to silence warnings
+      // about unreachable code
+      revert NotMintable();
     }
 
     if (price != 0) {
@@ -160,64 +202,72 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       revert ZeroAmount();
     }
 
-    _tokenActions[_nextProposalID] = TokenAction(token, target, mint, price, amount);
-    emit TokenActionProposed(_nextProposalID, token, target, mint, price, amount);
-    return _createProposal(uint16(CommonProposalType.TokenAction) | commonProposalBit, info);
+    id = _createProposal(uint16(CommonProposalType.TokenAction) | commonProposalBit, supermajority, info);
+    _tokenActions[id] = TokenAction(token, target, mint, price, amount);
+    emit TokenActionProposed(id, token, target, mint, price, amount);
   }
 
   function proposeParticipantRemoval(
     address participant,
-    string calldata info,
-    bytes[] calldata signatures
-  ) external returns (uint256) {
+    uint8 removalFee,
+    bytes[] calldata signatures,
+    bytes32 info
+  ) external override returns (uint256 id) {
+    if (!_canProposeRemoval(participant)) {
+      revert ProposingParticipantRemoval(participant);
+    }
+
+    if (removalFee > maxRemovalFee) {
+      revert InvalidRemovalFee(removalFee, maxRemovalFee);
+    }
+
+    id =  _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, false, info);
+    _removals[id] = Removal(participant, removalFee);
+    emit RemovalProposed(id, participant, removalFee);
+
     // If signatures were provided, then the purpose is to freeze this participant's
     // funds for the duration of the proposal. This will not affect any existing
     // DEX orders yet will prevent further DEX orders from being placed. This prevents
     // dumping (which already isn't incentivized as tokens will be put up for auction)
     // and games of hot potato where they're transferred to friends/associates to
     // prevent their re-distribution. While they can also buy their own tokens off
-    // the Auction contract, this is a step closer to being an optimal system
+    // the Auction contract (with an alt), this is a step closer to being an optimal
+    // system
 
     // If this is done maliciously, whoever proposed this should be removed themselves
     if (signatures.length != 0) {
-      uint256 votes = 0;
-      uint160 prevSigner = 0;
       for (uint256 i = 0; i < signatures.length; i++) {
-        // Recover the signer
-        address signer = ECDSA.recover(
-          _hashTypedDataV4(
-            keccak256(
-              abi.encode(keccak256("Removal(address participant)"), participant)
-            )
-          ),
-          signatures[i]
+        // Vote with the recovered signer. This will tell us how many votes they
+        // have in the end, and if these people are voting to freeze their funds,
+        // they believe they should be removed. They can change their mind later
+
+        // Safe usage as this proposal is guaranteed to be active
+        _voteUnsafe(
+          id,
+          ECDSA.recover(
+            _hashTypedDataV4(
+              keccak256(
+                abi.encode(keccak256("Removal(address participant)"), participant)
+              )
+            ),
+            signatures[i]
+          )
         );
-
-        // Ensure they weren't duplicated by enforcing the signatures are sorted
-        if (uint160(signer) <= prevSigner) {
-          revert UnsortedVoter(signer);
-        }
-        prevSigner = uint160(signer);
-
-        // Increment the amount of votes being used to freeze these funds
-        votes += IERC20(erc20).balanceOf(signer);
       }
 
       // If the votes of these holders doesn't meet the required participation threshold, throw
-      if (votes < requiredParticipation()) {
+      // Guaranteed to be positive as all votes have been for so far
+      if (uint128(proposalVotes(id)) < requiredParticipation()) {
         // Uses an ID of type(uint256).max since this proposal doesn't have an ID yet
+        // While we have an id variable, if this transaction reverts, it'll no longer be valid
         // We could also use 0 yet that would overlap with an actual proposal
-        revert NotEnoughParticipation(type(uint256).max, votes, requiredParticipation());
+        revert NotEnoughParticipation(type(uint256).max, uint128(proposalVotes(id)), requiredParticipation());
       }
 
       // Freeze the token until this proposal completes, with an extra 1 day buffer
       // for someone to call completeProposal
       IFrabricERC20(erc20).freeze(participant, uint64(block.timestamp) + votingPeriod + queuePeriod + uint64(1 days));
     }
-
-    _removals[_nextProposalID] = participant;
-    emit RemovalProposed(_nextProposalID, participant);
-    return _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, info);
   }
 
   // Has an empty body as it doesn't have to be overriden
@@ -268,21 +318,22 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
             IAuctionCore(action.target).listTransferred(
               action.token,
               // Use our ERC20's DEX token as the Auction token to receive
-              IIntegratedLimitOrderDEXCore(erc20).tradedToken(),
+              IIntegratedLimitOrderDEXCore(erc20).tradeToken(),
               address(this),
               uint64(block.timestamp),
               // A longer time period can be decided on and utilized via the above method
-              1 weeks
+              1 weeks,
+              0
             );
           }
         }
         delete _tokenActions[id];
 
       } else if (pType == CommonProposalType.ParticipantRemoval) {
-        address removed = _removals[id];
+        Removal storage removal = _removals[id];
+        IFrabricERC20(erc20).remove(removal.participant, removal.fee);
+        _participantRemoval(removal.participant);
         delete _removals[id];
-        IFrabricERC20(erc20).setWhitelisted(removed, bytes32(0));
-        _participantRemoval(removed);
 
       } else {
         revert UnhandledEnumCase("FrabricDAO _completeProposal CommonProposal", _pType);

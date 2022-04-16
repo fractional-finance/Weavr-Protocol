@@ -15,7 +15,7 @@ interface IIntegratedLimitOrderDEXCore {
   // Part of core to symbolize amount should always be whole while price is atomic
   function atomic(uint256 amount) external returns (uint256);
 
-  function tradedToken() external view returns (address);
+  function tradeToken() external view returns (address);
 
   // sell is here as the FrabricDAO has the ability to sell tokens on their integrated DEX
   // That means this function API can't change, nor can cancelOrder (also used by FrabricDAO)

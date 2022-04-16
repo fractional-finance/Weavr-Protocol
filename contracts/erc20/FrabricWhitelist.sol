@@ -19,7 +19,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   // Intended to point to a hash of the whitelisted party's personal info
   mapping(address => bytes32) public override info;
   // List of people removed from the whitelist
-  mapping(address => bool) internal _removed;
+  mapping(address => bool) private _removed;
 
   uint256[100] private __gap;
 
@@ -41,8 +41,11 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
     _setParentWhitelist(parent);
   }
 
-  // Set dataHash of 0x0 to remove from whitelist
   function _setWhitelisted(address person, bytes32 dataHash) internal {
+    if (dataHash == bytes32(0)) {
+      revert WhitelistingWithZero(person);
+    }
+
     // If they've already been set with this data hash, return
     if (info[person] == dataHash) {
       return;
@@ -59,18 +62,22 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
 
     emit WhitelistUpdate(person, info[person], dataHash);
     info[person] = dataHash;
-
-    // Doesn't set removed as it is the responsibility of the caller
   }
 
-  // Removed is automatically set when removed from the whitelist yet also may be
-  // triggered by the inheriting contract if they were removed from the parent whitelist
   function _setRemoved(address person) internal {
+    if (_removed[person]) {
+      revert Removed(person);
+    }
     _removed[person] = true;
+
+    emit WhitelistUpdate(person, info[person], bytes32(0));
+    info[person] = bytes32(0);
   }
 
   function whitelisted(address person) public view virtual override returns (bool) {
     return (
+      // Was never removed
+      (!_removed[person]) &&
       // Check the parent whitelist (actually relevant check most of the time)
       ((parentWhitelist != address(0)) && IWhitelist(parentWhitelist).whitelisted(person)) ||
       // Global or explicitly whitelisted

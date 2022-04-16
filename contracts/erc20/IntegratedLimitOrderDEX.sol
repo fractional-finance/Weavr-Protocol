@@ -18,7 +18,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   using SafeERC20 for IERC20;
 
   // Token to trade against, presumably a USD stablecoin or WETH
-  address public override tradedToken;
+  address public override tradeToken;
   // Last known balance of the DEX token
   uint256 public override tradeTokenBalance;
   // DEX token balances of traders on the DEX
@@ -29,6 +29,13 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
   struct Order {
     address trader;
+    // Right now, we don't allow removed parties to be added back due to leftover
+    // data such as DEX orders. With a versioning system, this could be effectively
+    // handled. While this won't be implemented right now, as it's a pain with a
+    // lot of security considerations not worth handling right now, this does leave
+    // our options open (even though we could probably add it later without issue
+    // as it fits into an existing storage slot)
+    uint8 version;
     uint256 amount;
   }
 
@@ -50,15 +57,15 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   function decimals() public virtual returns (uint8);
 
   function frozen(address person) public view virtual returns (bool);
-  function _remove(address person) internal virtual;
+  function _removeUnsafe(address person, uint8 fee) internal virtual;
   function whitelisted(address person) public view virtual returns (bool);
   function removed(address person) public view virtual returns (bool);
 
-  function __IntegratedLimitOrderDEX_init(address _tradedToken) internal onlyInitializing {
+  function __IntegratedLimitOrderDEX_init(address _tradeToken) internal onlyInitializing {
     __ReentrancyGuard_init();
     supportsInterface[type(IIntegratedLimitOrderDEXCore).interfaceId] = true;
     supportsInterface[type(IIntegratedLimitOrderDEX).interfaceId] = true;
-    tradedToken = _tradedToken;
+    tradeToken = _tradeToken;
   }
 
   // Convert a token quantity to atomic units
@@ -79,8 +86,8 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     // tradeTokenBalance isn't exploitable. Solidity 0.8's underflow protections ensure
     // it will revert unless the balance is topped up. Topping up the balance won't
     // be credited as a transfer though and is solely an additional cost
-    IERC20(tradedToken).safeTransfer(trader, amount);
-    tradeTokenBalance = IERC20(tradedToken).balanceOf(address(this));
+    IERC20(tradeToken).safeTransfer(trader, amount);
+    tradeTokenBalance = IERC20(tradeToken).balanceOf(address(this));
   }
 
   // Fill orders
@@ -104,7 +111,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
       // This function is trusted code, and here it is trusted to not be idiotic
       Order storage order = point.orders[h];
       while (!whitelisted(order.trader)) {
-        _remove(order.trader);
+        _removeUnsafe(order.trader, 0);
 
         // If we're iterating over buy orders, return the removed trader's DEX tokens
         if (!buying) {
@@ -220,7 +227,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
     // Add the new order
     // We could also merge orders here, if an existing order for this trader at this price point existed
-    point.orders.push(Order(trader, amount));
+    point.orders.push(Order(trader, 0, amount));
     emit OrderIncrease(trader, price, amount);
 
     return (filled, point.orders.length - 1);
@@ -237,7 +244,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   ) external override nonReentrant returns (uint256, uint256) {
     // Determine the value sent
     // Not a pattern vulnerable to re-entrancy despite being a balance-based amount calculation
-    uint256 balance = IERC20(tradedToken).balanceOf(address(this));
+    uint256 balance = IERC20(tradeToken).balanceOf(address(this));
     uint256 received = balance - tradeTokenBalance;
     tradeTokenBalance = balance;
 
@@ -293,7 +300,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
       // If they are no longer whitelisted, remove them
       if (!whitelisted(order.trader)) {
-        _remove(order.trader);
+        _removeUnsafe(order.trader, 0);
       }
 
       if (

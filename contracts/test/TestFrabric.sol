@@ -4,6 +4,9 @@ pragma solidity ^0.8.9;
 import "../erc20/FrabricWhitelist.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
 
+import "../interfaces/dao/IDAO.sol";
+import "../interfaces/frabric/IFrabric.sol";
+
 contract TestFrabric is FrabricWhitelist {
   // Used by the Thread to determine how long to delay enabling Upgrade proposals for
   function votingPeriod() external pure returns (uint256) {
@@ -15,6 +18,8 @@ contract TestFrabric is FrabricWhitelist {
   function erc20() external view returns (address) {
     return address(this);
   }
+
+  mapping(address => IFrabricCore.GovernorStatus) public governor;
 
   function setWhitelisted(address person, bytes32 dataHash) external {
     _setWhitelisted(person, dataHash);
@@ -30,9 +35,14 @@ contract TestFrabric is FrabricWhitelist {
       IThreadDeployer(threadDeployer).deploy(_variant, _agent, _name, _symbol, data);
     }
 
-  
+  function setGovernor(address person, IFrabricCore.GovernorStatus status) external {
+    governor[person] = status;
+  }
+
   constructor() Composable("Frabric") initializer {
     __Composable_init("Frabric", false);
     __FrabricWhitelist_init(address(0));
+    supportsInterface[type(IDAOCore).interfaceId] = true;
+    supportsInterface[type(IFrabricCore).interfaceId] = true;
   }
 }

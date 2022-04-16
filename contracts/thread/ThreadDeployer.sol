@@ -23,6 +23,11 @@ import "../interfaces/thread/IThreadDeployer.sol";
 contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitializable {
   using SafeERC20 for IERC20;
 
+  // 6% fee given to the Frabric
+  // Since the below code actually does 100% + 6%, this ends up as 5.66%
+  // 1% is distributed per month via the timelock
+  uint8 constant public override percentage = 6;
+
   address public override crowdfundProxy;
   address public override erc20Beacon;
   address public override threadBeacon;
@@ -59,12 +64,80 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
   constructor() Composable("ThreadDeployer") initializer {}
 
   // Validates a variant and byte data
-  function validate(uint8 variant, bytes calldata data) external pure {
+  function validate(uint8 variant, bytes calldata data) external override pure {
     if (variant == 0) {
       abi.decode(data, (address, uint256));
     } else {
       revert UnknownVariant(variant);
     }
+  }
+
+  // Dedicated function to resolve stack depth errors
+  function deployThread(
+    string memory name,
+    address erc20,
+    bytes32 descriptor,
+    address governor,
+    address crowdfund
+  ) private returns (address) {
+    // Prevent participant removals against the following
+    address[] memory irremovable = new address[](3);
+    irremovable[0] = msg.sender;
+    irremovable[1] = timelock;
+    irremovable[2] = crowdfund;
+    // We could also include the Auction contract here, or an eventual Uniswap pair
+    // The first can't be done, as it'll be removed and then transferred its own tokens
+    // to be put up for Auction, which will error. The latter isn't present here
+    // and may never exist. Beyond the stupidity of attacking core infrastructure,
+    // there's no successful game theory incentives to doing it, hence why it's just these
+
+    return address(new BeaconProxy(
+      threadBeacon,
+      abi.encodeWithSelector(
+        IThreadInitializable.initialize.selector,
+        name,
+        erc20,
+        descriptor,
+        msg.sender,
+        governor,
+        irremovable
+      )
+    ));
+  }
+
+  function initERC20(
+    address erc20,
+    string memory name,
+    string memory symbol,
+    uint256 threadBaseTokenSupply,
+    address parentWhitelist,
+    address tradeToken
+  ) private returns (uint256) {
+    // Since the Crowdfund needs the decimals of both tokens (raise and Thread),
+    // yet the ERC20 isn't initialized yet, ensure the decimals are static
+    // Prevents anyone from editing the FrabricERC20 and this initialize call
+    // without hitting actual errors during testing
+    // Thoroughly documented in Crowdfund
+    uint8 decimals = IERC20Metadata(erc20).decimals();
+
+    // Add 6% on top for the Frabric
+    uint256 threadTokenSupply = threadBaseTokenSupply * (100 + uint256(percentage)) / 100;
+
+    IFrabricERC20Initializable(erc20).initialize(
+      name,
+      symbol,
+      threadTokenSupply,
+      false,
+      parentWhitelist,
+      tradeToken,
+      auction
+    );
+
+    if (decimals != IERC20Metadata(erc20).decimals()) {
+      revert NonStaticDecimals(decimals, IERC20Metadata(erc20).decimals());
+    }
+
+    return threadTokenSupply - threadBaseTokenSupply;
   }
 
   // onlyOwner to ensure all Thread events represent Frabric Threads
@@ -75,16 +148,18 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     // the Frabric to also be upgraded
     // Is an uint8 so this contract can use it as an enum if desired in the future
     uint8 _variant,
-    address _agent,
     string memory _name,
     string memory _symbol,
+    bytes32 _descriptor,
+    address _governor,
     bytes calldata data
   ) external override onlyOwner {
     // Fixes stack too deep errors
     uint8 variant = _variant;
-    address agent = _agent;
     string memory name = _name;
     string memory symbol = _symbol;
+    bytes32 descriptor = _descriptor;
+    address governor = _governor;
 
     if (variant != 0) {
       revert UnknownVariant(variant);
@@ -92,48 +167,38 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
 
     (address tradeToken, uint256 target) = abi.decode(data, (address, uint256));
 
-    // Don't initialize the ERC20 yet
+    // Don't initialize the ERC20/Crowdfund yet
+    // It may be advantageous to utilize CREATE2 here, yet probably doesn't matter
     address erc20 = address(new BeaconProxy(erc20Beacon, bytes("")));
+    address crowdfund = address(new BeaconProxy(crowdfundProxy, bytes("")));
 
-    address thread = address(new BeaconProxy(
-      threadBeacon,
-      abi.encodeWithSelector(
-        IThreadInitializable.initialize.selector,
-        name,
-        erc20,
-        agent,
-        msg.sender
-      )
-    ));
+    // Deploy and initialize the Thread
+    address thread = deployThread(name, erc20, descriptor, governor, crowdfund);
 
-    address parentWhitelist = IDAOCore(owner()).erc20();
+    address parentWhitelist = IDAOCore(msg.sender).erc20();
 
-    address crowdfund = address(new BeaconProxy(
-      crowdfundProxy,
-      abi.encodeWithSelector(
-        ICrowdfundInitializable.initialize.selector,
-        name,
-        symbol,
-        parentWhitelist,
-        agent,
-        thread,
-        tradeToken,
-        target
-      )
-    ));
+    // Initialize the Crowdfund
+    ICrowdfundInitializable(crowdfund).initialize(
+      name,
+      symbol,
+      parentWhitelist,
+      governor,
+      thread,
+      tradeToken,
+      target
+    );
+
+    uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
 
     // Initialize the ERC20 now that we can call the Crowdfund contract for decimals
-    // Since it needs the decimals of both tokens, yet the ERC20 isn't initialized yet, ensure the decimals are static
-    // Prevents anyone from editing the FrabricERC20 and this initialize call without hitting errors during testing
-    // Thoroughly documented in Crowdfund
-    uint8 decimals = IERC20Metadata(erc20).decimals();
-    uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
-    // Add 6% on top for the Thread
-    uint256 threadTokenSupply = threadBaseTokenSupply * 106 / 100;
-    IFrabricERC20Initializable(erc20).initialize(name, symbol, threadTokenSupply, false, parentWhitelist, tradeToken, auction);
-    if (decimals != IERC20Metadata(erc20).decimals()) {
-      revert NonStaticDecimals(decimals, IERC20Metadata(erc20).decimals());
-    }
+    uint256 frabricShare = initERC20(
+      erc20,
+      name,
+      symbol,
+      threadBaseTokenSupply,
+      parentWhitelist,
+      tradeToken
+    );
 
     // Whitelist the Crowdfund and transfer the Thread tokens to it
     IFrabricERC20(erc20).setWhitelisted(crowdfund, keccak256("Crowdfund"));
@@ -145,16 +210,17 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     IFrabricERC20(erc20).setWhitelisted(timelock, keccak256("Timelock"));
 
     // Create the lock and transfer the additional tokens to it
-    ITimelock(timelock).lock(erc20, 6);
-    IERC20(erc20).safeTransfer(timelock, threadTokenSupply - threadBaseTokenSupply);
+    // Schedule it to release at 1% per month
+    ITimelock(timelock).lock(erc20, percentage);
+    IERC20(erc20).safeTransfer(timelock, frabricShare);
 
     // Remove ourself from the token's whitelist
-    IFrabricERC20(erc20).setWhitelisted(address(this), bytes32(0));
+    IFrabricERC20(erc20).remove(address(this), 0);
 
     // Transfer token ownership to the Thread
     OwnableUpgradeable(erc20).transferOwnership(thread);
 
-    emit Thread(variant, agent, tradeToken, erc20, thread, crowdfund);
+    emit Thread(variant, governor, tradeToken, erc20, thread, crowdfund);
   }
 
   // Recover tokens sent here

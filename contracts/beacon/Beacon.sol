@@ -76,11 +76,15 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     emit Upgrade(instance, impl);
 
     // Ensure the new implementation is of the expected type
-    // This does enforce a bound on code to be IComposable
-    // We could check the code supports the IComposable interface here yet this
-    // is a sufficiently specific call which would cause an error in the same location
-    if (IComposable(implementation(instance)).contractName() != beaconName) {
-      revert DifferentContract(IComposable(implementation(instance)).contractName(), beaconName);
+    address resolved = implementation(instance);
+    bytes32 codeName = IComposable(resolved).contractName();
+    if (
+      // This check is decently pointless (especially as we've already called the
+      // function in question), yet it at least ensures IComposable
+      (!resolved.supportsInterface(type(IComposable).interfaceId)) ||
+      (codeName != beaconName)
+    ) {
+      revert DifferentContract(codeName, beaconName);
     }
   }
 }
