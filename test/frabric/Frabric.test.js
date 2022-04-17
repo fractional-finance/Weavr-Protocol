@@ -4,7 +4,7 @@ const { MerkleTree } = require("merkletreejs");
 const { assert } = require("chai");
 
 const deployTestFrabric = require("../scripts/deployTestFrabric.js");
-const { ParticipantType, completeProposal } = require("./common.js");
+const { ParticipantType, completeProposal } = require("../common.js");
 
 let signers, kyc, genesis, frabric, pID;
 

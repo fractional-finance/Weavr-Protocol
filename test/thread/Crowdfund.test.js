@@ -5,7 +5,7 @@ const FrabricERC20 = require("../scripts/deployFrabricERC20.js");
 const deployCrowdfundProxy = require("../scripts/deployCrowdfundProxy.js");
 const deployThreadDeployer = require("../scripts/deployThreadDeployer.js");
 
-const common = require("./common.js");
+const common = require("../common.js");
 
 const State = {
   Active: 0,

@@ -36,7 +36,7 @@ async function init(){
     ["address", "uint256"],
     [erc20.address, target]
   );
-  
+
   const TestFrabric = await ethers.getContractFactory("TestFrabric");
   testFrabric = await TestFrabric.deploy();
   await testFrabric.deployed();
@@ -70,7 +70,7 @@ describe("Thread Happy-Path", async () => {
   it("Should initialize a Thread changing emitting AgentChanged and FrabricChanged", async () => {
     expect(threadDeployer.threadDeployer).to.emit(Thread, "AgentChanged");
     expect(threadDeployer.threadDeployer).to.emit(Thread, "FrabricChanged");
-    
+
   });
 
 });
@@ -191,4 +191,3 @@ describe("Thread Happy-Path", async () => {
 //     }
 //   });
 // });
-
