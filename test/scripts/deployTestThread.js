@@ -1,5 +1,4 @@
-const hre = require("hardhat");
-const { ethers, upgrades } = hre;
+const { ethers, upgrades } = require("hardhat");
 
 const deployBeacon = require("../../scripts/deployBeacon.js");
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");

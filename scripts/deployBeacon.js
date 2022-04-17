@@ -1,5 +1,4 @@
-const hre = require("hardhat");
-const { ethers, waffle } = hre;
+const { ethers, waffle } = require("hardhat");
 
 // Support overriding the Beacon. It's generally Beacon yet may be SingleBeacon
 module.exports = async (args, codeFactory, Beacon) => {

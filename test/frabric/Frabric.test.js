@@ -259,7 +259,7 @@ describe("Frabric", accounts => {
   });
 
   // Used to practically demonstrate the delay is sufficient for all actions in a e2e test
-  it("should let you sell the tokens from an upgrading Thread", async () => {
+  it("should let you sell the tokens from a leaving Thread", async () => {
     // TODO
   });
 });

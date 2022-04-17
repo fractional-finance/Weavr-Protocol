@@ -8,6 +8,9 @@ const deployUniswap = require("../scripts/deployUniswap.js");
 const { queueAndComplete } = require("../common.js");
 
 module.exports = async () => {
+  // Redundant with `npx hardhat test`, yet supports running as
+  // `node test/scripts/deployTestFrabric.js` to ensure compilation and
+  // initialization still works as expected
   process.hhCompiled ? null : await hre.run("compile");
   process.hhCompiled = true;
 
@@ -61,7 +64,7 @@ module.exports = async () => {
     uniswap.factory.address,
     require("@uniswap/v2-core/build/UniswapV2Factory.json").abi,
     signers[0]
-  )).createPair(usdc, frbc);
+  )).createPair(frbc, usdc);
 
   return contracts;
 }
