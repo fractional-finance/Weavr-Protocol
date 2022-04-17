@@ -3,12 +3,12 @@ const { ethers, upgrades } = hre;
 
 const deployBeacon = require("./deployBeacon.js");
 const deployCrowdfundProxy = require("./deployCrowdfundProxy.js");
-const thread = require("./deployThread.js");
+const deployThreadBeacon = require("./deployThreadBeacon.js");
 const deployTimelock = require("./deployTimelock.js");
 
 module.exports = async (erc20Beacon, auction) => {
   const crowdfundProxy = await deployCrowdfundProxy();
-  const threadBeacon = await thread.deployBeacon();
+  const threadBeacon = await deployThreadBeacon();
   const timelock = await deployTimelock();
 
   const ThreadDeployer = await ethers.getContractFactory("ThreadDeployer");

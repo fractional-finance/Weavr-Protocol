@@ -3,7 +3,7 @@ const { MerkleTree } = require("merkletreejs");
 
 const { assert, expect } = require("chai");
 
-const deployTestFrabric = require("../../scripts/deployTestFrabric.js");
+const deployTestFrabric = require("../scripts/deployTestFrabric.js");
 const { FrabricProposalType, ParticipantType, GovernorStatus, completeProposal } = require("../common.js");
 
 let signers, deployer, kyc, genesis, governor;
@@ -18,21 +18,17 @@ describe("Frabric", accounts => {
     signers = await ethers.getSigners();
     [deployer, kyc, genesis, governor] = signers.splice(0, 4);
 
-    let {
-      usdc: usdcAddress, pair: pairAddress,
-      bond: bondAddr, threadDeployer: threadDeployerAddr,
-      frbc: frbcAddr, frabric: frabricAddr
-    } = await deployTestFrabric(); // TODO: Check the events/behavior from upgrade
-    usdc = (await ethers.getContractFactory("TestERC20")).attach(usdcAddress).connect(deployer);
+    const addrs = await deployTestFrabric(); // TODO: Check the events/behavior from upgrade
+    usdc = (await ethers.getContractFactory("TestERC20")).attach(addrs.usdc).connect(deployer);
     pair = new ethers.Contract(
-      pairAddress,
+      addrs.pair,
       require("@uniswap/v2-core/build/UniswapV2Pair.json").abi,
       governor
     );
-    bond = (await ethers.getContractFactory("Bond")).attach(bondAddr).connect(governor);
-    threadDeployer = (await ethers.getContractFactory("ThreadDeployer")).attach(threadDeployerAddr).connect(governor);
-    frbc = (await ethers.getContractFactory("FrabricERC20")).attach(frbcAddr).connect(genesis);
-    frabric = (await ethers.getContractFactory("Frabric")).attach(frabricAddr).connect(genesis);
+    bond = (await ethers.getContractFactory("Bond")).attach(addrs.bond).connect(governor);
+    threadDeployer = (await ethers.getContractFactory("ThreadDeployer")).attach(addrs.threadDeployer).connect(governor);
+    frbc = (await ethers.getContractFactory("FrabricERC20")).attach(addrs.frbc).connect(genesis);
+    frabric = (await ethers.getContractFactory("Frabric")).attach(addrs.frabric).connect(genesis);
 
     nextID = 2;
   });

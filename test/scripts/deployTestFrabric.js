@@ -1,11 +1,11 @@
 const hre = require("hardhat");
 const { ethers } = hre;
 
-const deployUniswap = require("./deployUniswap.js");
-const deployInitialFrabric = require("./deployInitialFrabric.js");
-const deployFrabric = require("./deployFrabric.js");
+const deployInitialFrabric = require("../../scripts/deployInitialFrabric.js");
+const deployFrabric = require("../../scripts/deployFrabric.js");
 
-const { completeProposal } = require("../test/common.js");
+const deployUniswap = require("../scripts/deployUniswap.js");
+const { completeProposal } = require("../common.js");
 
 module.exports = async () => {
   process.hhCompiled ? null : await hre.run("compile");
@@ -39,12 +39,7 @@ module.exports = async () => {
   contracts.bond = upgrade.bond;
   contracts.threadDeployer = upgrade.threadDeployer;
 
-  frabric = new ethers.Contract(
-    frabric,
-    require("../artifacts/contracts/frabric/InitialFrabric.sol/InitialFrabric.json").abi,
-    signers[2]
-  );
-
+  frabric = (await ethers.getContractFactory("InitialFrabric")).attach(frabric).connect(signers[2]);
   await frabric.proposeUpgrade(
     proxy,
     ethers.constants.AddressZero,
@@ -58,11 +53,7 @@ module.exports = async () => {
   );
   await completeProposal(frabric, 1);
 
-  proxy = new ethers.Contract(
-    proxy,
-    require("../artifacts/contracts/beacon/SingleBeacon.sol/SingleBeacon.json").abi,
-    signers[0]
-  )
+  proxy = (await ethers.getContractFactory("SingleBeacon")).attach(proxy);
   await proxy.triggerUpgrade(frabric.address, 2);
 
   // Actually create the pair

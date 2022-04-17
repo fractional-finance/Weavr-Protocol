@@ -1,18 +1,17 @@
 const hre = require("hardhat");
 const { ethers } = hre;
 
-// Solely used for testing
+const deployBeacon = require("./deployBeacon.js");
+
 module.exports = async () => {
   process.hhCompiled ? null : await hre.run("compile");
   process.hhCompiled = true;
-
-  const TestERC20 = await ethers.getContractFactory("TestERC20");
-  return await TestERC20.deploy("Test Token", "TERC");
+  return await deployBeacon([2], await ethers.getContractFactory("Thread"));
 };
 
 if (require.main === module) {
   module.exports()
-    .then(token => console.log("Test Token: " + token.address))
+    .then(beacon => console.log("Thread Beacon: " + beacon.address))
     .catch(error => {
       console.error(error);
       process.exit(1);

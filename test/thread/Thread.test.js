@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
-const Thread = require("../../scripts/deployThread.js");
+const deployTestThread = require("../scripts/deployTestThread.js");
 
 let signers, governor, thread;
 
@@ -10,7 +10,7 @@ describe("Thread", async () => {
     signers = await ethers.getSigners();
     let owner = signers.splice(0, 1)[0];
     governor = signers.splice(0, 1)[0];
-    thread = await Thread.deployTestThread(governor.address);
+    const contracts = await deployTestThread(governor.address); // TODO: Verify init
   });
 
   it("should have tests", async () => {
