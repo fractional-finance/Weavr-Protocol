@@ -3,43 +3,37 @@ const { MerkleTree } = require("merkletreejs");
 
 const { assert } = require("chai");
 
-let deployTestFrabric = require("../scripts/deployTestFrabric.js");
+const deployTestFrabric = require("../scripts/deployTestFrabric.js");
+const { ParticipantType, completeProposal } = require("./common.js");
+
+let signers, kyc, genesis, frabric, pID;
 
 describe("Frabric", accounts => {
-  it("should let you add participants", async () => {
-    const signers = await ethers.getSigners();
+  before("", async () => {
+    signers = await ethers.getSigners();
+    [_, kyc, genesis] = signers.splice(0, 3);
 
-    let { frabric } = await deployTestFrabric();
+    let { frabric: frabricAddr } = await deployTestFrabric();
     frabric = new ethers.Contract(
-      frabric,
+      frabricAddr,
       require("../artifacts/contracts/frabric/Frabric.sol/Frabric.json").abi,
-      signers[2]
+      genesis
     );
 
+    pID = 2;
+  });
+
+  it("should let you add participants", async () => {
+    // Create the merkle tree of participants
     const merkle = new MerkleTree(
-      [signers[3].address, signers[4].address, signers[5].address],
+      [signers[0].address, signers[1].address, signers[2].address],
       ethers.utils.keccak256,
       { hashLeaves: true, sortPairs: true }
     );
-    await frabric.proposeParticipants(5, merkle.getHexRoot(), ethers.utils.id("Proposing new participants"));
 
-    // Advance the clock 2 weeks
-    await network.provider.request({
-      method: "evm_increaseTime",
-      params: [2 * 7 * 24 * 60 * 60 + 1]
-    });
-
-    // Queue the proposal
-    await frabric.queueProposal(2);
-
-    // Advance the clock 48 hours
-    await network.provider.request({
-      method: "evm_increaseTime",
-      params: [2 * 24 * 60 * 60 + 1]
-    });
-
-    // Pass it
-    await frabric.completeProposal(2);
+    // Perform the proposal
+    await frabric.proposeParticipants(ParticipantType.Individual, merkle.getHexRoot(), ethers.utils.id("Proposing new participants"));
+    await completeProposal(frabric, pID);
 
     const signArgs = [
       {
@@ -55,28 +49,29 @@ describe("Frabric", accounts => {
         ]
       },
       {
-        participant: signers[3].address,
+        participant: signers[1].address,
         kycHash: "0x0000000000000000000000000000000000000000000000000000000000000003"
       }
     ];
     // Shim for the fact ethers.js will change this functions names in the future
     let signature;
-    if (signers[1].signTypedData) {
-      signature = await signers[1].signTypedData(...signArgs);
+    if (kyc.signTypedData) {
+      signature = await kyc.signTypedData(...signArgs);
     } else {
-      signature = await signers[1]._signTypedData(...signArgs);
+      signature = await kyc._signTypedData(...signArgs);
     }
 
     // Approve the participant
     await frabric.approve(
-      2,
-      signers[3].address,
+      pID,
+      signers[1].address,
       "0x0000000000000000000000000000000000000000000000000000000000000003",
-      merkle.getHexProof(ethers.utils.keccak256(signers[3].address)),
+      merkle.getHexProof(ethers.utils.keccak256(signers[1].address)),
       signature
     );
+    pID++;
 
     // Verify they were successfully added
-    assert.equal(await frabric.participant(signers[3].address), 5);
+    assert.equal(await frabric.participant(signers[1].address), ParticipantType.Individual);
   });
 });

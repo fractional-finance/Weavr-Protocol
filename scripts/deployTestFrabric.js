@@ -1,29 +1,11 @@
 const hre = require("hardhat");
-const { ethers, upgrades, waffle, network } = hre;
+const { ethers } = hre;
 
 const deployUniswap = require("./deployUniswap.js");
 const deployInitialFrabric = require("./deployInitialFrabric.js");
 const deployFrabric = require("./deployFrabric.js");
 
-async function completeProposal(frabric, id) {
-  // Advance the clock 2 weeks
-  await network.provider.request({
-    method: "evm_increaseTime",
-    params: [2 * 7 * 24 * 60 * 60 + 1]
-  });
-
-  // Queue the proposal
-  await frabric.queueProposal(id);
-
-  // Advance the clock 48 hours
-  await network.provider.request({
-    method: "evm_increaseTime",
-    params: [2 * 24 * 60 * 60 + 1]
-  });
-
-  // Complete it
-  await frabric.completeProposal(id);
-}
+const { completeProposal } = require("../test/common.js");
 
 module.exports = async () => {
   process.hhCompiled ? null : await hre.run("compile");
@@ -31,7 +13,7 @@ module.exports = async () => {
 
   const signers = await ethers.getSigners();
 
-  let usdc = (await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD")).address;
+  const usdc = (await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD")).address;
   const uniswap = (await deployUniswap()).router.address;
 
   let genesis = {};
