@@ -81,9 +81,9 @@ abstract contract DAO is Composable, IDAO {
     return uint128(IERC20(erc20).totalSupply()) / 10;
   }
 
-  function canPropose() public virtual view returns (bool);
+  function canPropose(address proposer) public virtual view returns (bool);
   modifier beforeProposal() {
-    if (!canPropose()) {
+    if (!canPropose(msg.sender)) {
       revert NotAuthorizedToPropose(msg.sender);
     }
     _;
