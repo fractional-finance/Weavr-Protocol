@@ -56,15 +56,18 @@ describe("Crowdfund", async () => {
 
     // Do basic tests it emits the expected events at setup
     // TODO: Make this complete
-    const Crowdfund = await ethers.getContractFactory("Crowdfund");
-    expect(tx).to.emit(Crowdfund, "CrowdfundStarted");
-    expect(tx).to.emit(Crowdfund, "StateChange");
-
-    const args = (await threadDeployer.queryFilter(threadDeployer.filters.Thread()))[0].args;
 
     // Get the ERC20/Crowdfund
-    ferc20 = (await ethers.getContractFactory("FrabricERC20")).attach(args.erc20);
-    crowdfund = Crowdfund.attach(args.crowdfund);
+    ferc20 = (await ethers.getContractFactory("FrabricERC20")).attach(
+      (await threadDeployer.queryFilter(threadDeployer.filters.Thread()))[0].args.erc20
+    );
+    crowdfund = (await ethers.getContractFactory("Crowdfund")).attach(
+      (await threadDeployer.queryFilter(threadDeployer.filters.CrowdfundedThread()))[0].args.crowdfund
+    );
+
+    expect(tx)
+      .to.emit(crowdfund, "CrowdfundStarted")
+      .to.emit(crowdfund, "StateChange");
   });
 
   it("should allow depositing", async () => {
@@ -139,7 +142,7 @@ describe("Crowdfund", async () => {
     expect(await erc20.balanceOf(crowdfund.address)).to.equal(0);
   });
 
-  it("should not allow depositing when executing", async () => {
+  it("shouldn't allow depositing when executing", async () => {
     await expect(
       crowdfund.connect(signers[0]).deposit(target)
     ).to.be.revertedWith("InvalidState(1, 0)");
@@ -155,7 +158,7 @@ describe("Crowdfund", async () => {
     // TODO: actually check the state was changed
   });
 
-  it("should not allow depositing when finished", async () => {
+  it("shouldn't allow depositing when finished", async () => {
     // TODO
     await expect(
       crowdfund.connect(signers[0]).deposit(target)

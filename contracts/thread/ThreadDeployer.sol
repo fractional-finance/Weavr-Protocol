@@ -220,7 +220,11 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     // Transfer token ownership to the Thread
     OwnableUpgradeable(erc20).transferOwnership(thread);
 
-    emit Thread(variant, governor, tradeToken, erc20, thread, crowdfund);
+    // Doesn't include name/symbol due to stack depth issues
+    // descriptor is sufficient to confirm which of the Frabric's events this lines up with,
+    // assuming it's unique, which it always should be (though this isn't explicitly confirmed on chain)
+    emit Thread(thread, variant, governor, erc20, descriptor);
+    emit CrowdfundedThread(thread, tradeToken, crowdfund, target);
   }
 
   // Recover tokens sent here

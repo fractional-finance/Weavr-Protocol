@@ -5,13 +5,14 @@ import "../common/IComposable.sol";
 
 interface IThreadDeployer is IComposable {
   event Thread(
+    address indexed thread,
     uint8 indexed variant,
     address indexed governor,
-    address indexed tradeToken,
     address erc20,
-    address thread,
-    address crowdfund
+    bytes32 descriptor
   );
+
+  event CrowdfundedThread(address indexed thread, address indexed token, address indexed crowdfund, uint256 target);
 
   function percentage() external view returns (uint8);
   function crowdfundProxy() external view returns (address);
