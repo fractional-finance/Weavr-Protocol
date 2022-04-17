@@ -26,4 +26,6 @@ interface IBondInitializable is IBond {
 
 error BondTransfer();
 error NotActiveGovernor(address governor, IFrabric.GovernorStatus status);
-error RecoveringBond();
+// Obvious, yet tells people the exact address to look for avoiding the need to
+// then pull it up to double check it
+error RecoveringBond(address bond);

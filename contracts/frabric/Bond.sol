@@ -45,7 +45,9 @@ contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() Composable("Bond") initializer {}
 
-  function _beforeTokenTransfer(address from, address, uint256) internal view override {
+  function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
+    super._beforeTokenTransfer(from, to, amount);
+
     // from == address(0) means it's being minted
     // _burning means it's being burnt
     // These are the only valid reasons this token should be transferred and these
@@ -89,7 +91,7 @@ contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
 
   function recover(address token) external override {
     if (token == bondToken) {
-      revert RecoveringBond();
+      revert RecoveringBond(token);
     }
     IERC20(token).safeTransfer(owner(), IERC20(token).balanceOf(address(this)));
   }
