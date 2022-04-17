@@ -1,6 +1,5 @@
 const { ethers, waffle, network } = require("hardhat");
 const { MerkleTree } = require("merkletreejs");
-
 const { assert, expect } = require("chai");
 
 const deployTestFrabric = require("../scripts/deployTestFrabric.js");

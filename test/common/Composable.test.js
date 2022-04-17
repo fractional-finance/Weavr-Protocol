@@ -1,6 +1,4 @@
-const hre = require("hardhat");
-const { ethers } = hre;
-
+const { ethers } = require("hardhat");
 const { assert, expect } = require("chai");
 
 let TestComposable, composable;

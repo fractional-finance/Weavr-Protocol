@@ -1,10 +1,7 @@
-const { ethers, waffle, network } = require("hardhat");
-
-const { MerkleTree } = require("merkletreejs");
+const { ethers } = require("hardhat");
+const { expect } = require("chai");
 
 const deployBond = require("../../scripts/deployBond.js");
-
-const { assert, expect } = require("chai");
 
 const { GovernorStatus } = require("../common.js");
 

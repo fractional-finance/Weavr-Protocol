@@ -43,6 +43,7 @@ module.exports = {
 
   snapshot: () => waffle.provider.send("evm_snapshot", []),
   revert: (id) => waffle.provider.send("evm_revert", [id]),
+  increaseTime: (time) => waffle.provider.send("evm_increaseTime", [time]),
 
   propose: async (dao, proposal, id, args, order) => {
     let ProposalType;
@@ -87,13 +88,13 @@ module.exports = {
 
   queueAndComplete: async (dao, id) => {
     // Advance the clock by the voting period (+ 1 second)
-    await waffle.provider.send("evm_increaseTime", [parseInt(await dao.votingPeriod()) + 1]);
+    module.exports.increaseTime(parseInt(await dao.votingPeriod()) + 1);
 
     // Queue the proposal
     await dao.queueProposal(id);
 
     // Advance the clock 48 hours
-    await waffle.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]);
+    module.exports.increaseTime(2 * 24 * 60 * 60 + 1);
 
     // Complete it
     return await dao.completeProposal(id);
