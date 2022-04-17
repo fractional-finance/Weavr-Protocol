@@ -5,6 +5,8 @@ const FrabricERC20 = require("../scripts/deployFrabricERC20.js");
 const deployCrowdfundProxy = require("../scripts/deployCrowdfundProxy.js");
 const deployThreadDeployer = require("../scripts/deployThreadDeployer.js");
 
+const common = require("./common.js");
+
 const State = {
   Active: 0,
   Executing: 1,
@@ -83,9 +85,17 @@ describe("Crowdfund", async () => {
     // TODO: Check balances
   });
 
-  it("should allow cancelling", async () => {
-    // TODO: snapshot, cancel, ensure state transition and Distribution creation
+  it("shouldn't allow anyone to cancel", async () => {
+    // TODO
+  });
 
+  it("should allow cancelling", async () => {
+    snapshot = await common.snapshot();
+    const balance = await erc20.balanceOf(crowdfund.address);
+    const tx = await crowdfund.connect(governor).cancel();
+    expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Refunding);
+    expect(tx).to.emit(crowdfund, "Distributed").withArgs(0, erc20.address, balance);
+    // TODO: check state is actually updated
   });
 
   // Does not test claiming refunds as that's routed through DistributionERC20
@@ -94,8 +104,12 @@ describe("Crowdfund", async () => {
     await expect(
       crowdfund.connect(signers[0]).deposit(target)
     ).to.be.revertedWith("InvalidState(2, 0)");
+
+    // Revert to the next snapshot for the rest of the tests
+    await common.revert(snapshot);
   });
 
+  // Less of a test and more transiting the state to where it needs to be for testing
   it("should reach target", async () => {
     const amount = ethers.BigNumber.from(target).sub(await erc20.balanceOf(crowdfund.address));
     await erc20.transfer(signers[1].address, amount);
@@ -132,7 +146,8 @@ describe("Crowdfund", async () => {
   });
 
   it("should allow finishing", async () => {
-    // TODO take a snapshot to test refunding with
+    // Create a snapshot to use to test refunds with
+    snapshot = await common.snapshot();
 
     expect(
       await crowdfund.connect(governor).finish()
@@ -155,6 +170,8 @@ describe("Crowdfund", async () => {
   });
 
   it("should only allow the governor to refund", async () => {
+    common.revert(snapshot);
+
     // TODO
   });
 
