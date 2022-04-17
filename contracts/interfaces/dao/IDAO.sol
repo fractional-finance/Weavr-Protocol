@@ -20,7 +20,7 @@ interface IDAOCore is IComposable {
   function votingPeriod() external view returns (uint64);
   function passed(uint256 id) external view returns (bool);
 
-  function canPropose() external view returns (bool);
+  function canPropose(address proposer) external view returns (bool);
   function proposalActive(uint256 id) external view returns (bool);
 
   function completeProposal(uint256 id) external;

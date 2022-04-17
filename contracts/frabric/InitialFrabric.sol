@@ -32,8 +32,8 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() Composable("Frabric") initializer {}
 
-  function canPropose() public view override(DAO, IDAOCore) returns (bool) {
-    return uint256(participant[msg.sender]) > uint256(ParticipantType.Removed);
+  function canPropose(address proposer) public view override(DAO, IDAOCore) returns (bool) {
+    return uint256(participant[proposer]) > uint256(ParticipantType.Removed);
   }
 
   function _completeSpecificProposal(uint256, uint256 _pType) internal pure override {
