@@ -1,8 +1,8 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const FrabricERC20 = require("../scripts/deployFrabricERC20.js");
-const Thread = require("../scripts/deployThread.js");
-const ThreadDeployer = require("../scripts/deployThreadDeployer.js");
+const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
+const Thread = require("../../scripts/deployThread.js");
+const ThreadDeployer = require("../../scripts/deployThreadDeployer.js");
 
 let thread;
 let target;

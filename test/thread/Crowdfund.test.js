@@ -1,9 +1,9 @@
 const { ethers, waffle } = require("hardhat");
 const { expect } = require("chai");
 
-const FrabricERC20 = require("../scripts/deployFrabricERC20.js");
-const deployCrowdfundProxy = require("../scripts/deployCrowdfundProxy.js");
-const deployThreadDeployer = require("../scripts/deployThreadDeployer.js");
+const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
+const deployCrowdfundProxy = require("../../scripts/deployCrowdfundProxy.js");
+const deployThreadDeployer = require("../../scripts/deployThreadDeployer.js");
 
 const common = require("../common.js");
 

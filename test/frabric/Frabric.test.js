@@ -3,22 +3,18 @@ const { MerkleTree } = require("merkletreejs");
 
 const { assert } = require("chai");
 
-const deployTestFrabric = require("../scripts/deployTestFrabric.js");
+const deployTestFrabric = require("../../scripts/deployTestFrabric.js");
 const { ParticipantType, completeProposal } = require("../common.js");
 
 let signers, kyc, genesis, frabric, pID;
 
 describe("Frabric", accounts => {
-  before("", async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     [_, kyc, genesis] = signers.splice(0, 3);
 
     let { frabric: frabricAddr } = await deployTestFrabric();
-    frabric = new ethers.Contract(
-      frabricAddr,
-      require("../artifacts/contracts/frabric/Frabric.sol/Frabric.json").abi,
-      genesis
-    );
+    frabric = (await ethers.getContractFactory("Frabric")).attach(frabricAddr).connect(genesis);
 
     pID = 2;
   });
