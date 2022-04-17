@@ -297,10 +297,11 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
         if (action.amount == 0) {
           IIntegratedLimitOrderDEXCore(action.token).cancelOrder(action.price);
         } else {
+          bool auction = action.target == IFrabricERC20(erc20).auction();
           if (action.mint) {
             IFrabricERC20(erc20).mint(action.target, action.amount);
           // The ILO DEX doesn't require transfer or even approve
-          } else if (action.price == 0) {
+          } else if ((action.price == 0) && (!auction)) {
             IERC20(action.token).safeTransfer(action.target, action.amount);
           }
 
@@ -317,13 +318,16 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
           // The issue is that the subcontract wouldn't know who transferred it tokens,
           // so it must have an owner for its funds. This means creating a new contract per Frabric/Thread
           // (or achieving global ERC777 adoptance yet that would be incredibly problematic for several reasons)
-          // The easiest solution is just to write a few lines into this contract to handle it.
-          } else if (action.target == IFrabricERC20(erc20).auction()) {
-            IAuctionCore(action.target).listTransferred(
+          // The easiest solution is just to write a few lines into this contract to handle it
+          } else if (auction) {
+            IERC20(action.token).safeIncreaseAllowance(action.target, action.amount);
+            IAuctionCore(action.target).list(
+              address(this),
               action.token,
               // Use our ERC20's DEX token as the Auction token to receive
               IIntegratedLimitOrderDEXCore(erc20).tradeToken(),
-              address(this),
+              action.amount,
+              1,
               uint64(block.timestamp),
               // A longer time period can be decided on and utilized via the above method
               1 weeks

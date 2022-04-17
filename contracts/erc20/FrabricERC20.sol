@@ -159,36 +159,22 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
       _transfer(person, owner(), actualFee);
 
       // Put the rest up for auction
-      uint256 rounds = 4;
-      uint256 amount = balance / rounds;
-      // Dust, yet create the auction for technical accuracy
-      // The real importance is on making sure this code doesn't error as that'll
-      // prevent the removal from actually executing
-      if (amount == 0) {
-        rounds = 1;
-      }
+      _approve(person, auction, balance);
 
-      // Set _removal = true for the entire body as multiple transfers will occur
-      // While this would be a risk if re-entrancy was possible, or if it was left set,
-      // every function which calls this is nonReentrant and it is set to false after the loop
+      // _removal is dangerous and this would be incredibly risky if re-entrancy
+      // was possible, or if it was left set, yet every function which calls this
+      // is nonReentrant and it is set to false immediately after this call to
+      // trusted code
       _removal = true;
-      for (uint256 i = 0; i < rounds; i++) {
-        // If this is the final round, compensate for any rounding errors
-        if (i == (rounds - 1)) {
-          amount = balance - ((balance / rounds) * i);
-        }
-
-        _transfer(person, auction, amount);
-
-        // List the transferred tokens
-        IAuctionCore(auction).listTransferred(
-          address(this),
-          tradeToken,
-          person,
-          uint64(block.timestamp + (i * (1 weeks))),
-          1 weeks
-        );
-      }
+      IAuctionCore(auction).list(
+        address(this),
+        tradeToken,
+        person,
+        balance,
+        4,
+        uint64(block.timestamp),
+        1 weeks
+      );
       _removal = false;
     }
 
