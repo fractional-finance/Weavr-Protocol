@@ -12,7 +12,7 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
   function initialize(
     address _erc20,
     address[] calldata genesis,
-    bytes32 genesisMerkle
+    bytes32 genesisMerkle // Unvalidated due to lack of an efficient way to do so
   ) external override initializer {
     __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks, 100);
 
@@ -25,6 +25,11 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
     // Actually add the genesis participants
     for (uint256 i = 0; i < genesis.length; i++) {
       participant[genesis[i]] = ParticipantType.Genesis;
+      // Now that this event is here, which it wasn't when the full DAO proposal
+      // simulation code was added, said code is decently pointless. That said,
+      // it does make ParticipantsProposed complete which may be considered beneficial
+      // At the very least, there's something romantic about a DAO's first proposal
+      // being the people who are there for its start
       emit ParticipantChange(genesis[i], ParticipantType.Genesis);
     }
   }

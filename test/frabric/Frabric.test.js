@@ -344,4 +344,9 @@ describe("Frabric", accounts => {
     expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Removed);
     assert(!(await frabric.canPropose(governor.address)));
   });
+
+  // Used to practically demonstrate the delay is sufficient for all actions in a e2e test
+  it("should let you sell the tokens from an upgrading Thread", async () => {
+    // TODO
+  });
 });

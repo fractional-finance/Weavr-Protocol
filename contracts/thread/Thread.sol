@@ -107,6 +107,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     supportsInterface[type(IThread).interfaceId] = true;
 
     descriptor = _descriptor;
+    // Doesn't bother faking a proposal, yet this will still emit XChanged
     _setFrabric(_frabric);
     _setGovernor(_governor);
 

@@ -333,6 +333,9 @@ abstract contract DAO is Composable, IDAO {
   function _completeProposal(uint256 id, uint16 proposalType) internal virtual;
 
   // Does not require canonically ordering when executing proposals in case a proposal has invalid actions, halting everything
+  // It would make a more robust system for specific proposal types, such as Thread's FrabricChange,
+  // if only the most recent instance of such a proposal could be edited though
+  // That is left for Thread to implement outside of the API of DAO
   function completeProposal(uint256 id) external override {
     // Safe against re-entrancy (regarding multiple execution of the same proposal)
     // as long as this block is untouched. While multiple proposals can be executed
