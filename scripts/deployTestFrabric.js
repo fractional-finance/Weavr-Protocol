@@ -14,7 +14,7 @@ module.exports = async () => {
   const signers = await ethers.getSigners();
 
   const usdc = (await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD")).address;
-  const uniswap = (await deployUniswap()).router.address;
+  const uniswap = await deployUniswap();
 
   let genesis = {};
   genesis[signers[2].address] = {
@@ -22,7 +22,7 @@ module.exports = async () => {
     amount: "100000000000000000000"
   };
 
-  let contracts = await deployInitialFrabric(usdc, uniswap, genesis);
+  let contracts = await deployInitialFrabric(usdc, uniswap.router.address, genesis);
   contracts.usdc = usdc;
 
   let {
@@ -64,6 +64,13 @@ module.exports = async () => {
     signers[0]
   )
   await proxy.triggerUpgrade(frabric.address, 2);
+
+  // Actually create the pair
+  await (new ethers.Contract(
+    uniswap.factory.address,
+    require("@uniswap/v2-core/build/UniswapV2Factory.json").abi,
+    signers[0]
+  )).createPair(usdc, frbc);
 
   return contracts;
 }

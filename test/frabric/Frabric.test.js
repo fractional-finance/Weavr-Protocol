@@ -7,8 +7,11 @@ const deployTestFrabric = require("../../scripts/deployTestFrabric.js");
 const { FrabricProposalType, ParticipantType, GovernorStatus, completeProposal } = require("../common.js");
 
 let signers, deployer, kyc, genesis, governor;
+let usdc, pair;
 let bond, threadDeployer;
 let frbc, frabric, nextID;
+
+// TODO: Also test majority/supermajority functions
 
 describe("Frabric", accounts => {
   before(async () => {
@@ -16,11 +19,16 @@ describe("Frabric", accounts => {
     [deployer, kyc, genesis, governor] = signers.splice(0, 4);
 
     let {
-      usdc: usdcAddress,
+      usdc: usdcAddress, pair: pairAddress,
       bond: bondAddr, threadDeployer: threadDeployerAddr,
       frbc: frbcAddr, frabric: frabricAddr
-    } = await deployTestFrabric();
+    } = await deployTestFrabric(); // TODO: Check the events/behavior from upgrade
     usdc = (await ethers.getContractFactory("TestERC20")).attach(usdcAddress).connect(deployer);
+    pair = new ethers.Contract(
+      pairAddress,
+      require("@uniswap/v2-core/build/UniswapV2Pair.json").abi,
+      governor
+    );
     bond = (await ethers.getContractFactory("Bond")).attach(bondAddr).connect(governor);
     threadDeployer = (await ethers.getContractFactory("ThreadDeployer")).attach(threadDeployerAddr).connect(governor);
     frbc = (await ethers.getContractFactory("FrabricERC20")).attach(frbcAddr).connect(genesis);
@@ -39,11 +47,41 @@ describe("Frabric", accounts => {
   });
 
   it("shouldn't let you propose genesis participants", async () => {
-    // TODO
+    await expect(
+      frabric.proposeParticipants(
+        ParticipantType.Genesis,
+        ethers.constants.HashZero,
+        ethers.utils.id("Proposing genesis participants")
+      )
+    ).to.be.revertedWith("ProposingGenesisParticipants()");
   });
 
   it("should let you add KYC agencies", async () => {
-    // TODO
+    const [ kyc ] = signers.splice(0, 1);
+    const pID = nextID;
+    nextID++;
+    expect(
+      await frabric.proposeParticipants(
+        ParticipantType.KYC,
+        kyc.address + "000000000000000000000000",
+        ethers.utils.id("Proposing a new KYC agency")
+      )
+    )
+      .to.emit("NewProposal").withArgs(
+        pID,
+        FrabricProposalType.Participants,
+        genesis,
+        ethers.utils.id("Proposing a new KYC agency")
+      )
+      .to.emit("ParticipantsProposed").withArgs(pID, ParticipantType.KYC, kyc.address + "000000000000000000000000");
+    expect(
+      await completeProposal(frabric, pID)
+    ).to.emit("ParticipantChange").withArgs(kyc.address, ParticipantType.KYC);
+
+    // Verify they were successfully added
+    // They will not be present on the token's whitelist
+    expect(await frabric.participant(kyc.address)).to.equal(ParticipantType.KYC);
+    assert(await frabric.canPropose(kyc.address));
   });
 
   it("should let you add participants", async () => {
@@ -59,6 +97,9 @@ describe("Frabric", accounts => {
       );
 
       // Perform the proposal
+      // We could keep using nextID and increment when we're done with it, yet
+      // then, if this test fails, it will never be incremented and bork the
+      // rest of these test cases
       const pID = nextID;
       nextID++;
       expect(
@@ -182,15 +223,68 @@ describe("Frabric", accounts => {
     // Verify they were successfully added
     expect(await frbc.info(governor.address)).to.equal(signArgs[2].kycHash);
     expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Governor);
+    expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Active);
     assert(await frabric.canPropose(governor.address));
   });
 
+  // Not routed through the Frabric at all other than the GovernorStatus, which
+  // Bond uses a TestFrabric with to test. Just needs to be done and having this
+  // isolated code block for it is beneficial
+  it("should let governors add bond", async () => {
+    await frbc.transfer(pair.address, 10000);
+    await usdc.transfer(pair.address, 10000);
+    await pair.mint(governor.address);
+
+    await pair.approve(bond.address, 9000);
+    await bond.bond(9000);
+  });
+
   it("should let you remove bond", async () => {
-    // TODO
+    const pID = nextID;
+    nextID++;
+    expect(
+      await frabric.proposeRemoveBond(
+        governor.address,
+        false,
+        3333,
+        ethers.utils.id("Removing bond")
+      )
+    )
+      .to.emit("NewProposal").withArgs(
+        pID,
+        FrabricProposalType.RemoveBond,
+        genesis,
+        ethers.utils.id("Removing bond")
+      )
+      .to.emit("RemoveBondProposed").withArgs(pID, governor.address, false, 3333);
+    expect(
+      await completeProposal(frabric, pID)
+    ).to.emit("Unbond").withArgs(governor.address, 3333);
+    expect(await pair.balanceOf(governor.address)).to.equal(3333);
   });
 
   it("should let you slash bond", async () => {
-    // TODO
+    const pID = nextID;
+    nextID++;
+    expect(
+      await frabric.proposeRemoveBond(
+        governor.address,
+        true,
+        5667,
+        ethers.utils.id("Slashing bond")
+      )
+    )
+      .to.emit("NewProposal").withArgs(
+        pID,
+        FrabricProposalType.RemoveBond,
+        genesis,
+        ethers.utils.id("Slashing bond")
+      )
+      .to.emit("RemoveBondProposed").withArgs(pID, governor.address, true, 5667);
+    expect(
+      await completeProposal(frabric, pID)
+    ).to.emit("Slash").withArgs(governor.address, 5667);
+    expect(await pair.balanceOf(frabric.address)).to.equal(5667);
   });
 
   it("should let you create a Thread", async () => {
@@ -239,7 +333,19 @@ describe("Frabric", accounts => {
     // TODO
   });
 
+  // Participant removals are tested by the FrabricDAO test, yet the Frabric
+  // defines a hook
   it("should correctly handle participant removals", async () => {
-    // TODO
+    // Remove the governor as they have additional code in the hook, making them
+    // the single complete case
+    const pID = nextID;
+    nextID++;
+    await frabric.proposeParticipantRemoval(governor.address, 0, [], ethers.utils.id("Removing governor"));
+    expect(await completeProposal(frabric, pID))
+      .to.emit("ParticipantChange").withArgs(governor.address, ParticipantType.Removed);
+    expect(await frbc.info(governor.address)).to.equal(ethers.constants.HashZero);
+    expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Removed);
+    expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Removed);
+    assert(!(await frabric.canPropose(governor.address)));
   });
 });
