@@ -18,4 +18,5 @@ interface IDistributionERC20 is IVotesUpgradeable, IERC20, IComposable {
 }
 
 error Delegation();
+error FeeOnTransfer(address token);
 error AlreadyClaimed(uint256 id);

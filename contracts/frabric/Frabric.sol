@@ -290,12 +290,9 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
             // Simultaneously proposed and became a different participant or approved governor
             (participant[address(bytes20(participants.participants))] != ParticipantType.Null) ||
             // Simultaneously proposed as a governor multiple times BUT solely Unverified
-            // Because of that, this isn't actually significant, as they'll be set to Unverified
-            // again and that's that. Best to clean up and move on though
             (governor[address(bytes20(participants.participants))] != GovernorStatus.Null)
           ) {
-            delete _participants[id];
-            return;
+            revert ParticipantAlreadyApproved(address(bytes20(participants.participants)));
           }
           governor[address(bytes20(participants.participants))] = GovernorStatus.Unverified;
         }

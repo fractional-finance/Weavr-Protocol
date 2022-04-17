@@ -227,7 +227,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
     id = _createProposal(uint16(ThreadProposalType.Dissolution), true, info);
     _dissolutions[id] = Dissolution(msg.sender, token, price);
-    emit DissolutionProposed(id, msg.sender, token, price);
+    emit DissolutionProposed(id, token, price);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
@@ -280,7 +280,12 @@ contract Thread is FrabricDAO, IThreadInitializable {
       }
 
       Dissolution storage dissolution = _dissolutions[id];
+      uint256 balance = IERC20(dissolution.token).balanceOf(address(this));
       IERC20(dissolution.token).safeTransferFrom(dissolution.purchaser, address(this), dissolution.price);
+      // Ban fee on transfer to ensure Dissolution price is maintained
+      if ((balance + dissolution.price) != IERC20(dissolution.token).balanceOf(address(this))) {
+        revert FeeOnTransfer(dissolution.token);
+      }
       IFrabricERC20(erc20).pause();
       IERC20(dissolution.token).safeIncreaseAllowance(erc20, dissolution.price);
       IFrabricERC20(erc20).distribute(dissolution.token, dissolution.price);

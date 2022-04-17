@@ -218,7 +218,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     bytes32 info
   ) external override returns (uint256 id) {
     if (!_canProposeRemoval(participant)) {
-      revert ProposingParticipantRemoval(participant);
+      revert Irremovable(participant);
     }
 
     if (removalFee > maxRemovalFee) {
@@ -227,7 +227,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
     id =  _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, false, info);
     _removals[id] = Removal(participant, removalFee);
-    emit RemovalProposed(id, participant, removalFee);
+    emit ParticipantRemovalProposed(id, participant, removalFee);
 
     // If signatures were provided, then the purpose is to freeze this participant's
     // funds for the duration of the proposal. This will not affect any existing

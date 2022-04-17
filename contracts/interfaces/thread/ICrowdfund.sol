@@ -56,6 +56,5 @@ interface ICrowdfundInitializable is ICrowdfund {
 
 error CrowdfundTransfer();
 error InvalidState(ICrowdfund.State current, ICrowdfund.State expected);
-error FeeOnTransfer(address token);
 error CrowdfundReached();
 error CrowdfundNotReached();

@@ -5,7 +5,7 @@ const deployInitialFrabric = require("../../scripts/deployInitialFrabric.js");
 const deployFrabric = require("../../scripts/deployFrabric.js");
 
 const deployUniswap = require("../scripts/deployUniswap.js");
-const { completeProposal } = require("../common.js");
+const { queueAndComplete } = require("../common.js");
 
 module.exports = async () => {
   process.hhCompiled ? null : await hre.run("compile");
@@ -51,7 +51,7 @@ module.exports = async () => {
     ),
     ethers.utils.id("Upgrade to the Frabric")
   );
-  await completeProposal(frabric, 1);
+  await queueAndComplete(frabric, 1);
 
   proxy = (await ethers.getContractFactory("SingleBeacon")).attach(proxy);
   await proxy.triggerUpgrade(frabric.address, 2);

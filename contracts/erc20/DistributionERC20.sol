@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
 import "../common/Composable.sol";
@@ -11,7 +12,7 @@ import "../common/Composable.sol";
 import "../interfaces/erc20/IDistributionERC20.sol";
 
 // ERC20 Votes expanded with distribution functionality
-abstract contract DistributionERC20 is ERC20VotesUpgradeable, Composable, IDistributionERC20 {
+abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpgradeable, Composable, IDistributionERC20 {
   using SafeERC20 for IERC20;
 
   struct Distribution {
@@ -30,6 +31,7 @@ abstract contract DistributionERC20 is ERC20VotesUpgradeable, Composable, IDistr
   uint256[100] private __gap;
 
   function __DistributionERC20_init(string memory name, string memory symbol) internal {
+    __ReentrancyGuard_init();
     __ERC20_init(name, symbol);
     __ERC20Permit_init(name);
     __ERC20Votes_init();
@@ -38,8 +40,6 @@ abstract contract DistributionERC20 is ERC20VotesUpgradeable, Composable, IDistr
     supportsInterface[type(IERC20PermitUpgradeable).interfaceId] = true;
     supportsInterface[type(IVotesUpgradeable).interfaceId] = true;
     supportsInterface[type(IDistributionERC20).interfaceId] = true;
-
-    _nextID = 0;
   }
 
   // Doesn't hook into _transfer as _mint doesn't pass through it
@@ -74,12 +74,23 @@ abstract contract DistributionERC20 is ERC20VotesUpgradeable, Composable, IDistr
     }
 
     _distributions[_nextID] = Distribution(token, uint64(block.number), amount);
-    _nextID++;
     emit Distributed(_nextID, token, amount);
+    _nextID++;
   }
 
-  function distribute(address token, uint256 amount) public override {
+  function distribute(address token, uint256 amount) public override nonReentrant {
+    uint256 balance = IERC20(token).balanceOf(address(this));
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+    // This does mean USDT distributions could theoretically break at some point
+    // in the future and any automatic flow expecting this to work could break with it
+    // FeeOnTransfer is just incredibly complicated to deal with and not easily
+    // integrated here. Because this is used in the Crowdfund, if you could re-enter on
+    // this transferFrom call, you could buy Crowdfund tokens with funds then attributed
+    // to this distribution. This either means placing nonReentrant everywhere or just
+    // banning an idiotic token design in places like this
+    if (IERC20(token).balanceOf(address(this)) != (balance + amount)) {
+      revert FeeOnTransfer(token);
+    }
     _distribute(token, amount);
   }
 

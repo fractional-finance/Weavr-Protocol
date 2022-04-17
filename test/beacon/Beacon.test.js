@@ -25,22 +25,23 @@ describe("Beacon", () => {
   });
 
   it("should allow upgrading release channel 0", async () => {
-    let tx = await beacon.upgrade(ethers.constants.AddressZero, auction, 2, "0x");
-    expect(tx).to.emit("Upgrade").withArgs(ethers.constants.AddressZero, auction, 2, "0x");
+    await expect(
+      beacon.upgrade(ethers.constants.AddressZero, auction, 2, "0x")
+    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, auction, 2, "0x");
 
     // TODO: Verify implementation and implementations were correctly updated
   });
 
-  it("should resolve release channel 1 to release channel 0", async () => {
+  it("should resolve release channel 1 via release channel 0", async () => {
     expect(
       await beacon.implementation(ethers.constants.AddressZero)
-    ).to.equal(await beacon.implementation("0x0000000000000000000000000000000000000001"));
+    ).to.equal(auction);
   });
 
-  it("should resolve an address to release channel 0", async () => {
+  it("should resolve an address via release channel 0", async () => {
     expect(
       await beacon.implementation(signer.address)
-    ).to.equal(await beacon.implementation("0x0000000000000000000000000000000000000001"));
+    ).to.equal(auction);
   });
 
   it("should let you set you own code", async () => {

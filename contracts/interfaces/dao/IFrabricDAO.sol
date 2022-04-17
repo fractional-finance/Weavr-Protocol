@@ -27,7 +27,7 @@ interface IFrabricDAO is IDAO {
     uint256 price,
     uint256 amount
   );
-  event RemovalProposed(uint256 indexed id, address participant, uint8 fee);
+  event ParticipantRemovalProposed(uint256 indexed id, address participant, uint8 fee);
 
   function commonProposalBit() external view returns (uint16);
   function maxRemovalFee() external view returns (uint8);
@@ -59,7 +59,7 @@ interface IFrabricDAO is IDAO {
 
 error InvalidRemovalFee(uint8 fee, uint8 max);
 error ProposingUpgrade(address beacon, address instance, address code);
-error ProposingParticipantRemoval(address participant);
+error Irremovable(address participant);
 error MintingDifferentToken(address specified, address token);
 error TargetMalleability(address target, address expected);
 error NotRoundAmount(uint256 amount);

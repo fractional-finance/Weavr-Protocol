@@ -8,7 +8,7 @@ interface IThread is IFrabricDAO {
   event FrabricChangeProposed(uint256 indexed id, address indexed frabric, address indexed governor);
   event GovernorChangeProposed(uint256 indexed id, address indexed governor);
   event EcosystemLeaveWithUpgradesProposed(uint256 indexed id, address indexed frabric, address indexed governor);
-  event DissolutionProposed(uint256 indexed id, address indexed purchaser, address indexed token, uint256 amount);
+  event DissolutionProposed(uint256 indexed id, address indexed token, uint256 amount);
 
   event DescriptorChanged(bytes32 indexed oldDescriptor, bytes32 indexed newDescriptor);
   event FrabricChanged(address indexed oldGovernor, address indexed newGovernor);

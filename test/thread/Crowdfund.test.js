@@ -54,9 +54,6 @@ describe("Crowdfund", async () => {
       target
     );
 
-    // Do basic tests it emits the expected events at setup
-    // TODO: Make this complete
-
     // Get the ERC20/Crowdfund
     ferc20 = (await ethers.getContractFactory("FrabricERC20")).attach(
       (await threadDeployer.queryFilter(threadDeployer.filters.Thread()))[0].args.erc20
@@ -65,16 +62,17 @@ describe("Crowdfund", async () => {
       (await threadDeployer.queryFilter(threadDeployer.filters.CrowdfundedThread()))[0].args.crowdfund
     );
 
-    expect(tx)
-      .to.emit(crowdfund, "CrowdfundStarted")
-      .to.emit(crowdfund, "StateChange");
+    // Do basic tests it emits the expected events at setup
+    // TODO: Make this complete
+    await expect(tx).to.emit(crowdfund, "CrowdfundStarted")
+    await expect(tx).to.emit(crowdfund, "StateChange");
   });
 
   it("should allow depositing", async () => {
     const amount = ethers.BigNumber.from("100");
     await erc20.transfer(signers[0].address, amount);
     await erc20.connect(signers[0]).approve(crowdfund.address, amount);
-    expect(
+    await expect(
       await crowdfund.connect(signers[0]).deposit(amount)
     ).to.emit(crowdfund, "Deposit").withArgs(signers[0].address, amount);
     // TODO: Check balances
@@ -82,7 +80,7 @@ describe("Crowdfund", async () => {
 
   it("should allow withdrawing", async () => {
     const amount = ethers.BigNumber.from("20");
-    expect(
+    await expect(
       await crowdfund.connect(signers[0]).withdraw(amount)
     ).to.emit(crowdfund, "Withdraw").withArgs(signers[0].address, amount);
     // TODO: Check balances
@@ -96,8 +94,8 @@ describe("Crowdfund", async () => {
     snapshot = await common.snapshot();
     const balance = await erc20.balanceOf(crowdfund.address);
     const tx = await crowdfund.connect(governor).cancel();
-    expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Refunding);
-    expect(tx).to.emit(crowdfund, "Distributed").withArgs(0, erc20.address, balance);
+    await expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Refunding);
+    await expect(tx).to.emit(crowdfund, "Distributed").withArgs(0, erc20.address, balance);
     // TODO: check state is actually updated
   });
 
@@ -117,7 +115,7 @@ describe("Crowdfund", async () => {
     const amount = ethers.BigNumber.from(target).sub(await erc20.balanceOf(crowdfund.address));
     await erc20.transfer(signers[1].address, amount);
     await erc20.connect(signers[1]).approve(crowdfund.address, amount);
-    expect(
+    await expect(
       await crowdfund.connect(signers[1]).deposit(amount)
     ).to.emit(crowdfund, "Deposit").withArgs(signers[1].address, amount);
   });
@@ -133,7 +131,7 @@ describe("Crowdfund", async () => {
   });
 
   it("should allow executing once it reaches target", async () => {
-    expect(
+    await expect(
       await crowdfund.connect(governor).execute()
     ).to.emit(crowdfund, "StateChange").withArgs(State.Executing);
     // TODO: actually check the state was changed
@@ -152,7 +150,7 @@ describe("Crowdfund", async () => {
     // Create a snapshot to use to test refunds with
     snapshot = await common.snapshot();
 
-    expect(
+    await expect(
       await crowdfund.connect(governor).finish()
     ).to.emit(crowdfund, "StateChange").withArgs(State.Finished);
     // TODO: actually check the state was changed
@@ -181,8 +179,8 @@ describe("Crowdfund", async () => {
   it("should allow refunding", async () => {
     await erc20.connect(governor).approve(crowdfund.address, target);
     const tx = await crowdfund.connect(governor).refund(target);
-    expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Refunding);
-    expect(tx).to.emit(crowdfund, "Distributed").withArgs(0, erc20.address, target);
+    await expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Refunding);
+    await expect(tx).to.emit(crowdfund, "Distributed").withArgs(0, erc20.address, target);
   });
 
   // Does not test depositing when refunding as cancelled and refunding have the
