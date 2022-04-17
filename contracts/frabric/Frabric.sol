@@ -169,7 +169,10 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
     // Doesn't check for being alphanumeric due to iteration costs
-    if ((bytes(name).length < 3) || (bytes(name).length > 50) || (bytes(symbol).length < 2) || (bytes(symbol).length > 5)) {
+    if (
+      (bytes(name).length < 6) || (bytes(name).length > 64) ||
+      (bytes(symbol).length < 2) || (bytes(symbol).length > 5)
+    ) {
       revert InvalidName(name, symbol);
     }
     // Validate the data now before creating the proposal
