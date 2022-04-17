@@ -11,7 +11,7 @@ module.exports = {
   },
 
   // Doesn't use ThreadDeployer in order to prevent the need to fake an entire Crowdfund
-  deployTestThread: async (agent) => {
+  deployTestThread: async (governor) => {
     const TestERC20 = await ethers.getContractFactory("TestERC20");
     const token = await TestERC20.deploy("Test Token", "TERC");
 
@@ -21,7 +21,7 @@ module.exports = {
 
     const TestFrabric = await ethers.getContractFactory("TestFrabric");
     const frabric = await TestFrabric.deploy();
-    await frabric.setGovernor(agent, 2);
+    await frabric.setGovernor(governor, 2);
 
     const beacon = await module.exports.deployBeacon();
     const Thread = await ethers.getContractFactory("Thread");
@@ -33,7 +33,7 @@ module.exports = {
         erc20.address,
         "0x0000000000000000000000000000000000000000000000000000000000000000",
         frabric.address,
-        agent,
+        governor,
         [frabric.address]
       ]
     );
