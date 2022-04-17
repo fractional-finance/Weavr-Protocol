@@ -35,7 +35,7 @@ describe("Beacon", () => {
     expect(
       await beacon.implementation(ethers.constants.AddressZero)
     ).to.equal(await beacon.implementation("0x0000000000000000000000000000000000000001"));
-  })
+  });
 
   it("should resolve an address to release channel 0", async () => {
     expect(

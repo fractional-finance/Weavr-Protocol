@@ -23,6 +23,8 @@ module.exports = async () => {
   };
 
   let contracts = await deployInitialFrabric(usdc, uniswap, genesis);
+  contracts.usdc = usdc;
+
   let {
     auction,
     erc20Beacon,

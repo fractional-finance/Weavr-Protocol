@@ -17,6 +17,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   using ERC165Checker for address;
 
   mapping(address => ParticipantType) public override participant;
+  mapping(address => GovernorStatus) public override governor;
 
   address public override bond;
   address public override threadDeployer;
@@ -28,8 +29,6 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   }
   // The proposal structs are private as their events are easily grabbed and contain the needed information
   mapping(uint256 => Participants) private _participants;
-
-  mapping(address => GovernorStatus) public override governor;
 
   struct RemoveBondProposal {
     address governor;
@@ -217,6 +216,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       }
 
       CommonProposalType pType = CommonProposalType(_proposalType ^ commonProposalBit);
+      // This should be cheaper than a mapping at this size
       if (pType == CommonProposalType.Paper) {
         selector = IFrabricDAO.proposePaper.selector;
       } else if (pType == CommonProposalType.Upgrade) {
