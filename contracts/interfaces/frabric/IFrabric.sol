@@ -111,7 +111,7 @@ error InsecureUpgradeFunction();
 
 error ProposingNullParticipants();
 error ProposingGenesisParticipants();
-error InvalidAddress(address invalid);
+error InvalidAddress(bytes32 invalid);
 error ParticipantAlreadyApproved(address participant);
 error InvalidName(string name, string symbol);
 error ProposingParticipantRemovalOnThread();

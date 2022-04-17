@@ -120,7 +120,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     if ((participantType == ParticipantType.KYC) || (participantType == ParticipantType.Governor)) {
       // Validate this to be an address if this ParticipantType should only be a single address
       if (bytes32(bytes20(participants)) != participants) {
-        revert InvalidAddress(address(bytes20(participants)));
+        revert InvalidAddress(participants);
       }
 
       if (participant[address(bytes20(participants))] != ParticipantType.Null) {
@@ -349,7 +349,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   ) external override {
     if (approving == address(0)) {
       // Technically, it's an invalid participant, not an invalid address
-      revert InvalidAddress(address(0));
+      revert InvalidAddress(bytes32(bytes20(address(0))));
     } else if (participant[approving] != ParticipantType.Null) {
       revert ParticipantAlreadyApproved(approving);
     }
@@ -381,7 +381,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
     // Verify the address was actually part of this proposal
     // Directly use the address as a leaf. Since it's a RipeMD-160 hash of a 32-byte value, this shouldn't be an issue
-    if (!MerkleProofUpgradeable.verify(proof, participants.participants, keccak256(abi.encodePacked(approving)))) {
+    if (!MerkleProofUpgradeable.verify(proof, participants.participants, bytes32(bytes20(approving)))) {
       revert IncorrectParticipant(approving, participants.participants, proof);
     }
 

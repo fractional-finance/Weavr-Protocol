@@ -102,9 +102,9 @@ module.exports = async (usdc, uniswap, genesis) => {
 
   const root = (
     new MerkleTree(
-      genesisList,
+      genesisList.map((address) => address + "000000000000000000000000"),
       ethers.utils.keccak256,
-      { hashLeaves: true, sortPairs: true }
+      { sortPairs: true }
     )
   ).getHexRoot();
 
