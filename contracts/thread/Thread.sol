@@ -283,7 +283,6 @@ contract Thread is FrabricDAO, IThreadInitializable {
       IFrabricERC20(erc20).pause();
       IERC20(dissolution.token).safeIncreaseAllowance(erc20, dissolution.price);
       IFrabricERC20(erc20).distribute(dissolution.token, dissolution.price);
-      emit Dissolved(id);
       delete _dissolutions[id];
 
     } else {

@@ -29,7 +29,7 @@ module.exports = async () => {
     [
       "1 Main Street",
       erc20.address,
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x" + (new Buffer.from("ipfs").toString("hex")).repeat(8),
       frabric.address,
       governor,
       [frabric.address]
@@ -45,6 +45,7 @@ module.exports = async () => {
     token.address,
     auction.address
   );
+  await erc20.transferOwnership(thread.address);
 
   return { token, frabric, erc20, beacon, thread };
 }

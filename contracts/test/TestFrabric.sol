@@ -25,6 +25,10 @@ contract TestFrabric is FrabricWhitelist {
     _setWhitelisted(person, dataHash);
   }
 
+  function remove(address person) external {
+    _setRemoved(person);
+  }
+
   function deployThread(
     address threadDeployer,
     uint8 variant,

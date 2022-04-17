@@ -11,7 +11,7 @@ let usdc, pair;
 let bond, threadDeployer;
 let frbc, frabric, nextID;
 
-// TODO: Also test majority/supermajority functions
+// TODO: Test supermajority is used where it should be
 
 describe("Frabric", accounts => {
   before(async () => {

@@ -25,6 +25,14 @@ module.exports = {
     Removed: 3
   },
 
+  ThreadProposalType: {
+    DescriptorChange: 0,
+    FrabricChange: 1,
+    GovernorChange: 2,
+    EcosystemLeaveWithUpgrades: 3,
+    Dissolution: 4
+  },
+
   snapshot: () => waffle.provider.send("evm_snapshot", []),
   revert: (id) => waffle.provider.send("evm_revert", [id]),
 

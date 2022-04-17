@@ -16,7 +16,6 @@ interface IThread is IFrabricDAO {
   // Includes IDs to point to the original proposals since these have nothing worth putting in them
   // They emit other events as relevant
   event LeftEcosystemWithUpgrades(uint256 indexed id);
-  event Dissolved(uint256 indexed id);
 
   enum ThreadProposalType {
     DescriptorChange,
