@@ -221,38 +221,21 @@ describe("Frabric", accounts => {
     const pID = nextID;
     nextID++;
 
-    // Doesn't use propose due to ThreadProposed being out of order
-    const pTX = await frabric.proposeThread(
-      0,
-      "Test Thread",
-      "TTHR",
-      descriptor,
-      governor.address,
-      data,
-      ethers.utils.id("Proposing a new Thread")
-    );
-    await expect(pTX).to.emit(frabric, "NewProposal").withArgs(
+    const tx = await proposal(
+      frabric,
+      "Thread",
       pID,
-      FrabricProposalType.Thread,
-      genesis.address,
-      ethers.utils.id("Proposing a new Thread")
-    );
-    await expect(pTX).to.emit(frabric, "ThreadProposed").withArgs(
-      pID,
-      0,
-      governor.address,
-      "Test Thread",
-      "TTHR",
-      descriptor,
-      data
+      [0, "Test Thread", "TTHR", descriptor, governor.address, data],
+      [0, 4, 1, 2, 3, 5]
     );
 
-    const cTX = await queueAndComplete(frabric, pID);
+    // Grab unknown event arguments due to Waffle's lack of partial event matching
     const thread = (await threadDeployer.queryFilter(threadDeployer.filters.Thread()))[0].args.thread;
     const erc20 = (await threadDeployer.queryFilter(threadDeployer.filters.Thread()))[0].args.erc20;
     const crowdfund = (await threadDeployer.queryFilter(threadDeployer.filters.CrowdfundedThread()))[0].args.crowdfund;
-    await expect(cTX).to.emit(threadDeployer, "Thread").withArgs(thread, 0, governor.address, erc20, descriptor);
-    await expect(cTX).to.emit(threadDeployer, "CrowdfundedThread").withArgs(thread, usdc.address, crowdfund, 1000);
+
+    await expect(tx).to.emit(threadDeployer, "Thread").withArgs(thread, 0, governor.address, erc20, descriptor);
+    await expect(tx).to.emit(threadDeployer, "CrowdfundedThread").withArgs(thread, usdc.address, crowdfund, 1000);
   });
 
   it("should let you create a proposal on a Thread", async () => {

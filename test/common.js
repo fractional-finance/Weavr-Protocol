@@ -44,7 +44,7 @@ module.exports = {
   snapshot: () => waffle.provider.send("evm_snapshot", []),
   revert: (id) => waffle.provider.send("evm_revert", [id]),
 
-  propose: async (dao, proposal, id, args) => {
+  propose: async (dao, proposal, id, args, order) => {
     let ProposalType;
     if (module.exports.CommonProposalType.hasOwnProperty(proposal)) {
       ProposalType = module.exports.CommonProposalType;
@@ -72,7 +72,15 @@ module.exports = {
     if (typeof(args[args.length - 1]) === "object") {
       args.pop();
     }
-    await expect(tx).to.emit(dao, proposal + "Proposed").withArgs(id, ...args);
+
+    let ordered = args;
+    if (order) {
+      ordered = [];
+      for (let i of order) {
+        ordered.push(args[i]);
+      }
+    }
+    await expect(tx).to.emit(dao, proposal + "Proposed").withArgs(id, ...ordered);
 
     return tx;
   },
@@ -91,8 +99,8 @@ module.exports = {
     return await dao.completeProposal(id);
   },
 
-  proposal: async (dao, proposal, id, args) => {
-    await module.exports.propose(dao, proposal, id, args);
+  proposal: async (dao, proposal, id, args, order) => {
+    await module.exports.propose(dao, proposal, id, args, order);
     const tx = await module.exports.queueAndComplete(dao, id);
     return tx;
   }
