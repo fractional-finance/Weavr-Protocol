@@ -72,4 +72,8 @@ describe("Timelock", accounts => {
       remaining = await timelock.remainingMonths(token.address);
     }
   });
+
+  if("should void the timelock if the Thread is leaving the ecosystem", async () => {
+    // TODO
+  });
 });
