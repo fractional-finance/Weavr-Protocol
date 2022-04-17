@@ -15,8 +15,10 @@ import "../interfaces/beacon/IFrabricBeacon.sol";
 contract Beacon is Ownable, Composable, IFrabricBeacon {
   using ERC165Checker for address;
 
-  bytes32 public immutable override beaconName;
-  uint8 public immutable override releaseChannels;
+  // Doesn't use immutable so all Beacons have identical code
+  bytes32 public override beaconName;
+  uint8 public override releaseChannels;
+
   mapping(address => address) public override implementations;
   // Contained here to provide an authenticated way to deliver upgrade arguments
   // to contracts, instead of just hardcoding them in

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
@@ -28,8 +27,6 @@ import "../interfaces/erc20/IDEXRouter.sol";
 // capital lockup while providing a service others can take advantage of)
 
 contract DEXRouter is Composable, IDEXRouter {
-  using SafeERC20 for IERC20;
-
   constructor() Composable("DEXRouter") initializer {
     __Composable_init("DEXRouter", true);
     supportsInterface[type(IDEXRouter).interfaceId] = true;
@@ -40,7 +37,9 @@ contract DEXRouter is Composable, IDEXRouter {
     // If this function executes in its entirety, then the contract has all needed functions
 
     // Transfer only the specified of capital
-    IERC20(IIntegratedLimitOrderDEXCore(token).tradeToken()).safeTransferFrom(msg.sender, token, payment);
+    // Doesn't bother with SafeERC20 as the ILODEX will fully validate this transfer as needed
+    // Solely wastes gas to use it here as well
+    IERC20(IIntegratedLimitOrderDEXCore(token).tradeToken()).transferFrom(msg.sender, token, payment);
     IIntegratedLimitOrderDEX(token).buy(msg.sender, price, minimumAmount);
   }
 
