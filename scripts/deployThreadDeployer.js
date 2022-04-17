@@ -32,7 +32,7 @@ module.exports = async (erc20Beacon, auction) => {
 
 if (require.main === module) {
   // See commentary in deployFrabricERC20 on this behavior
-  module.exports("0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000")
+  module.exports(ethers.constants.AddressZero, ethers.constants.AddressZero)
     .then(contracts => {
       console.log("Crowdfund Proxy:      " + contracts.crowdfundProxy.address);
       console.log("Thread Beacon:        " + contracts.threadBeacon.address);

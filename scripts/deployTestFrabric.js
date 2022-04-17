@@ -45,7 +45,7 @@ module.exports = async () => {
 
   await frabric.proposeUpgrade(
     proxy,
-    "0x0000000000000000000000000000000000000000",
+    ethers.constants.AddressZero,
     2,
     upgrade.frabricCode,
     (new ethers.utils.AbiCoder()).encode(

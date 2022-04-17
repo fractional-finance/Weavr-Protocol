@@ -35,7 +35,7 @@ describe("Crowdfund", async () => {
 
     // Deploy the ThreadDeployer
     const erc20Beacon = await FrabricERC20.deployBeacon();
-    const { threadDeployer } = await deployThreadDeployer(erc20Beacon.address, "0x0000000000000000000000000000000000000000");
+    const { threadDeployer } = await deployThreadDeployer(erc20Beacon.address, ethers.constants.AddressZero);
     await threadDeployer.transferOwnership(frabric.address);
 
     // Have the ThreadDeployer deploy everything

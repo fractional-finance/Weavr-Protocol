@@ -18,8 +18,8 @@ describe("SingleBeacon", () => {
   });
 
   it("should allow upgrading release channel 0", async () => {
-    let tx = await beacon.upgrade("0x0000000000000000000000000000000000000000", auction, 2, "0x");
-    expect(tx).to.emit("Upgrade").withArgs("0x0000000000000000000000000000000000000000", auction, 2, "0x");
+    let tx = await beacon.upgrade(ethers.constants.AddressZero, auction, 2, "0x");
+    expect(tx).to.emit("Upgrade").withArgs(ethers.constants.AddressZero, auction, 2, "0x");
   });
 
   it("should only allow upgrading release channel 0", async () => {

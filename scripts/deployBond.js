@@ -24,7 +24,7 @@ module.exports = async (usdc, bondToken) => {
 };
 
 if (require.main === module) {
-  module.exports("0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000")
+  module.exports(ethers.constants.AddressZero, ethers.constants.AddressZero)
     .then(contracts => {
       console.log("Proxy: " + contracts.proxy.address);
       console.log("Bond:  " + contracts.bond.address);

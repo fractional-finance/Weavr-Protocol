@@ -53,7 +53,7 @@ module.exports = {
 };
 
 if (require.main === module) {
-  module.exports.deployTestThread("0x0000000000000000000000000000000000000000")
+  module.exports.deployTestThread(ethers.constants.AddressZero)
     .then(contracts => console.log("Thread: " + contracts.thread.address))
     .catch(error => {
       console.error(error);

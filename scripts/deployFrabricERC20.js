@@ -36,7 +36,7 @@ module.exports = {
         0,
         true,
         // Parent whitelist doesn't exist
-        "0x0000000000000000000000000000000000000000",
+        ethers.constants.AddressZero,
         usdc
       ]
     );
@@ -48,7 +48,7 @@ module.exports = {
 // except for deployFrabric which actually will deploy the Frabric
 if (require.main === module) {
   // Will disable the DEX functionality yet will deploy, which is all this block wants
-  module.exports.deployFRBC("0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000")
+  module.exports.deployFRBC(ethers.constants.AddressZero, ethers.constants.AddressZero)
     .then(contracts => {
       console.log("Auction Proxy:       " + contracts.auctionProxy.address);
       console.log("Auction:             " + contracts.auction.address);
