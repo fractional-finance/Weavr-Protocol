@@ -23,7 +23,6 @@ describe("Composable", () => {
   });
 
   it("should be EIP-165 compliant", async () => {
-    assert(!(await composable.supportsInterface("0x00000000")));
     assert(!(await composable.supportsInterface("0xFFFFFFFF")));
     assert(await composable.supportsInterface(TestComposable.interface.getSighash("supportsInterface")));
   });
