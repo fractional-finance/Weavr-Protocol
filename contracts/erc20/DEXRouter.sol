@@ -32,14 +32,23 @@ contract DEXRouter is Composable, IDEXRouter {
     supportsInterface[type(IDEXRouter).interfaceId] = true;
   }
 
-  function buy(address token, uint256 payment, uint256 price, uint256 minimumAmount) external override {
+  function buy(address token, address tradeToken, uint256 payment, uint256 price, uint256 minimumAmount) external override {
     // Doesn't bother checking the supported interfaces to minimize gas usage
     // If this function executes in its entirety, then the contract has all needed functions
 
     // Transfer only the specified of capital
+
+    // We could derive tradeToken from IIntegratedLimitOrderDEX(token), yet that opens a frontrunning
+    // attack where a user intending to spend token A ends up spending the much more expensive token B
+    // While this could be the wrong tradeToken, if the contract is honest, the user will receive minimumAmount
+    // no matter what so there's no issue. If it's dishonest, there's already little to be done
+    // The important thing is that the user knows when they make their TX what capital they're putting up
+    // and that is confirmed
+
     // Doesn't bother with SafeERC20 as the ILODEX will fully validate this transfer as needed
     // Solely wastes gas to use it here as well
-    IERC20(IIntegratedLimitOrderDEXCore(token).tradeToken()).transferFrom(msg.sender, token, payment);
+    IERC20(tradeToken).transferFrom(msg.sender, token, payment);
+
     IIntegratedLimitOrderDEX(token).buy(msg.sender, price, minimumAmount);
   }
 
