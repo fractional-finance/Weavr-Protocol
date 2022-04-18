@@ -7,6 +7,7 @@ import "../common/IComposable.sol";
 // Voting/cancellation/queueing may undergo significant changes in the future
 interface IDAOCore is IComposable {
   enum ProposalState {
+    Null, // Not needed given current usage yet sane to have
     Active,
     Queued,
     Executed,

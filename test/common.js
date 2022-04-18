@@ -2,6 +2,14 @@ const { waffle } = require("hardhat");
 const { expect } = require("chai");
 
 module.exports = {
+  ProposalState: {
+    Null: 0,
+    Active: 1,
+    Queued: 2,
+    Executed: 3,
+    Cancelled: 4
+  },
+
   CommonProposalType: {
     Paper: 256,
     Upgrade: 257,
