@@ -131,18 +131,18 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
       return;
     }
 
-    // If they were removed from the parent with a fee, carry it here
-    if (fee == 0) {
-      if (
-        (parent != address(0)) &&
-        // Check if it supports IRemovalFee, as that isn't actually a requirement
-        // Solely IWhitelist is, and doing this check keeps the parent bounds
-        // accordingly minimal and focused. It's also only a minor gas cost given how
-        // infrequent removals are
-        (parent.supportsInterface(type(IRemovalFee).interfaceId))
-      ) {
-        fee = IRemovalFee(parent).removalFee(person);
-      }
+    // If we didn't specify a fee, carry the parent's
+   // Checks if it supports IRemovalFee, as that isn't actually a requirement on
+   // parent. Solely IWhitelist is, and doing this check keeps the parent bounds
+   // accordingly minimal and focused. It's also only a minor gas cost given how
+   // infrequent removals are
+    if (
+      (fee == 0) &&
+      // Redundant thanks to supportsInterface
+      (parent != address(0)) &&
+      (parent.supportsInterface(type(IRemovalFee).interfaceId))
+    ) {
+      fee = IRemovalFee(parent).removalFee(person);
     }
 
     _setRemoved(person);
