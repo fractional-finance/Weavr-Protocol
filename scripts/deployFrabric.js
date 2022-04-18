@@ -31,8 +31,8 @@ module.exports = async (auction, erc20Beacon, usdc, pair, frabric) => {
   await threadDeployer.transferOwnership(frabric);
 
   return {
-    threadDeployer: threadDeployer.address,
-    bond: bond.address,
+    threadDeployer,
+    bond,
     frabricCode
   };
 };
@@ -56,7 +56,7 @@ if (require.main === module) {
     const contracts = await module.exports(auction, erc20Beacon, usdc, pair, frabric);
     console.log("Thread Deployer: " + contracts.threadDeployer.address);
     console.log("Bond:            " + contracts.bond.address);
-    console.log("Frabric Code:    " + contracts.frabricCode.address);
+    console.log("Frabric Code:    " + contracts.frabricCode);
   })().catch(error => {
     console.error(error);
     process.exit(1);

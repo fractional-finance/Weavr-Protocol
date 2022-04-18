@@ -16,7 +16,7 @@ module.exports = async () => {
 
   const signers = await ethers.getSigners();
 
-  const usdc = (await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD")).address;
+  const usdc = await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD");
   const uniswap = await deployUniswap();
 
   let genesis = {};
@@ -25,7 +25,7 @@ module.exports = async () => {
     amount: "100000000000000000000"
   };
 
-  let contracts = await deployInitialFrabric(usdc, uniswap.router.address, genesis);
+  let contracts = await deployInitialFrabric(usdc.address, uniswap.router.address, genesis);
   contracts.usdc = usdc;
 
   let {
@@ -34,37 +34,36 @@ module.exports = async () => {
     frbc,
     pair,
     proxy,
-    frabric,
-    router
+    frabric
   } = contracts;
 
-  const upgrade = await deployFrabric(auction, erc20Beacon, usdc, pair, frabric);
+  const upgrade = await deployFrabric(auction.address, erc20Beacon.address, usdc.address, pair, frabric.address);
   contracts.bond = upgrade.bond;
   contracts.threadDeployer = upgrade.threadDeployer;
 
-  frabric = (await ethers.getContractFactory("InitialFrabric")).attach(frabric).connect(signers[2]);
-  await frabric.proposeUpgrade(
-    proxy,
+  await frabric.connect(signers[2]).proposeUpgrade(
+    proxy.address,
     ethers.constants.AddressZero,
     2,
     upgrade.frabricCode,
     (new ethers.utils.AbiCoder()).encode(
       ["address", "address", "address"],
-      [upgrade.bond, upgrade.threadDeployer, signers[1].address]
+      [upgrade.bond.address, upgrade.threadDeployer.address, signers[1].address]
     ),
     ethers.utils.id("Upgrade to the Frabric")
   );
   await queueAndComplete(frabric, 1);
 
-  proxy = (await ethers.getContractFactory("SingleBeacon")).attach(proxy);
   await proxy.triggerUpgrade(frabric.address, 2);
+  contracts.frabric = (await ethers.getContractFactory("Frabric")).attach(contracts.frabric.address);
 
   // Actually create the pair
-  await (new ethers.Contract(
-    uniswap.factory.address,
-    require("@uniswap/v2-core/build/UniswapV2Factory.json").abi,
+  await uniswap.factory.createPair(frbc.address, usdc.address);
+  contracts.pair = new ethers.Contract(
+    pair,
+    require("@uniswap/v2-core/build/UniswapV2Pair.json").abi,
     signers[0]
-  )).createPair(frbc, usdc);
+  );
 
   return contracts;
 }
@@ -72,13 +71,13 @@ module.exports = async () => {
 if (require.main === module) {
   (async () => {
     const contracts = await module.exports();
-    console.log("Auction:           " + contracts.auction);
-    console.log("FRBC:              " + contracts.frbc);
-    console.log("Pair (Bond Token): " + contracts.pair);
-    console.log("Thread Deployer:   " + contracts.threadDeployer);
-    console.log("Bond:              " + contracts.bond);
-    console.log("Frabric:           " + contracts.frabric);
-    console.log("DEX Router:        " + contracts.router);
+    console.log("Auction:           " + contracts.auction.address);
+    console.log("FRBC:              " + contracts.frbc.address);
+    console.log("Pair (Bond Token): " + contracts.pair.address);
+    console.log("Thread Deployer:   " + contracts.threadDeployer.address);
+    console.log("Bond:              " + contracts.bond.address);
+    console.log("Frabric:           " + contracts.frabric.address);
+    console.log("DEX Router:        " + contracts.router.address);
   })().catch(error => {
     console.error(error);
     process.exit(1);

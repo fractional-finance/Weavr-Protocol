@@ -5,22 +5,20 @@ const deployBond = require("../../scripts/deployBond.js");
 
 const { GovernorStatus } = require("../common.js");
 
-let signers, deployer, governor;
+let deployer, governor;
 let usdc, pair;
 let bond, frabric;
 
 describe("Bond", accounts => {
   before(async () => {
-    signers = await ethers.getSigners();
-    [deployer, governor] = signers.splice(0, 2);
+    [deployer, governor] = (await ethers.getSigners()).splice(0, 2);
 
     usdc = await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD");
     pair = await (await ethers.getContractFactory("TestERC20")).deploy("Bond Test", "BOND");
 
     // Deploy the bond contract
     // TODO: Check the events/behavior from init
-    const { proxy, bond: bondContract } = await deployBond(usdc.address, pair.address);
-    bond = bondContract;
+    ({ bond } = await deployBond(usdc.address, pair.address));
 
     // Deploy a TestFrabric
     frabric = await (await ethers.getContractFactory("TestFrabric")).deploy();

@@ -17,18 +17,19 @@ describe("Frabric", accounts => {
     signers = await ethers.getSigners();
     [deployer, kyc, genesis, governor] = signers.splice(0, 4);
 
-    const addrs = await deployTestFrabric(); // TODO: Check the events/behavior from upgrade
-    usdc = (await ethers.getContractFactory("TestERC20")).attach(addrs.usdc).connect(deployer);
-    pair = new ethers.Contract(
-      addrs.pair,
-      require("@uniswap/v2-core/build/UniswapV2Pair.json").abi,
-      governor
-    );
-    bond = (await ethers.getContractFactory("Bond")).attach(addrs.bond).connect(governor);
-    threadDeployer = (await ethers.getContractFactory("ThreadDeployer")).attach(addrs.threadDeployer);
-    frbc = (await ethers.getContractFactory("FrabricERC20")).attach(addrs.frbc).connect(genesis);
-    frabric = (await ethers.getContractFactory("Frabric")).attach(addrs.frabric).connect(genesis);
+    ({
+      usdc, pair,
+      bond, threadDeployer,
+      frbc, frabric
+    } = await deployTestFrabric()); // TODO: Check the events/behavior from upgrade
 
+    // Connect as beneficial for testing
+    pair = pair.connect(governor);
+    bond = bond.connect(governor);
+    frbc = frbc.connect(genesis);
+    frabric = frabric.connect(genesis);
+
+    // First was the genesis participants, second was the upgrade
     nextID = 2;
   });
 

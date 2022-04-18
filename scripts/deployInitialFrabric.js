@@ -134,13 +134,13 @@ module.exports = async (usdc, uniswap, genesis) => {
   const router = await deployDEXRouter();
 
   return {
-    auction: auction.address,
-    erc20Beacon: erc20Beacon.address,
-    frbc: frbc.address,
+    auction,
+    erc20Beacon,
+    frbc,
     pair,
-    proxy: proxy.address,
-    frabric: frabric.address,
-    router: router.address
+    proxy,
+    frabric,
+    router
   };
 };
 
@@ -157,12 +157,12 @@ if (require.main === module) {
     genesis = require("../genesis.json");
 
     const contracts = await module.exports(usdc, uniswap, genesis);
-    console.log("Auction:           " + contracts.auction);
-    console.log("ERC20 Beacon:      " + contracts.erc20Beacon);
-    console.log("FRBC:              " + contracts.frbc);
+    console.log("Auction:           " + contracts.auction.address);
+    console.log("ERC20 Beacon:      " + contracts.erc20Beacon.address);
+    console.log("FRBC:              " + contracts.frbc.address);
     console.log("FRBC-USDC Pair:    " + contracts.pair);
-    console.log("Initial Frabric:   " + contracts.frabric);
-    console.log("DEX Router:        " + contracts.router);
+    console.log("Initial Frabric:   " + contracts.frabric.address);
+    console.log("DEX Router:        " + contracts.router.address);
   })().catch(error => {
     console.error(error);
     process.exit(1);
