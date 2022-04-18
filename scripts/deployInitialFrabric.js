@@ -10,7 +10,7 @@ const deployBeacon = require("./deployBeacon.js");
 const fERC20 = require("./deployFrabricERC20.js");
 const deployDEXRouter = require("./deployDEXRouter.js");
 
-module.exports = async (usdc, uniswap, genesis) => {
+module.exports = async (usd, uniswap, genesis) => {
   // Run compile if it hasn't been run already
   // Prevents a print statement of "Nothing to compile" from repeatedly appearing
   process.hhCompiled ? null : await hre.run("compile");
@@ -18,7 +18,7 @@ module.exports = async (usdc, uniswap, genesis) => {
 
   const signer = (await ethers.getSigners())[0];
 
-  const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await fERC20.deployFRBC(usdc);
+  const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await fERC20.deployFRBC(usd);
   await frbc.setWhitelisted(auction.address, ethers.utils.id("Auction"));
 
   // Deploy the Uniswap pair to get the bond token
@@ -30,14 +30,14 @@ module.exports = async (usdc, uniswap, genesis) => {
 
   const pair = u2SDK.computePairAddress({
     factoryAddress: await uniswap.factory(),
-    tokenA: new uSDK.Token(1, usdc, 18),
+    tokenA: new uSDK.Token(1, usd, 18),
     tokenB: new uSDK.Token(1, frbc.address, 18)
   });
   // Whitelisting the pair to create the LP token does break the whitelist to some degree
   // We're immediately creating a wrapped derivative token with no transfer limitations
   // That said, it's a derivative subject to reduced profit potential and unusable as FRBC
   // Considering the critical role Uniswap plays in the Ethereum ecosystem, we accordingly accept this effect
-  await frbc.setWhitelisted(pair, ethers.utils.id("Uniswap v2 FRBC-USDC Pair"));
+  await frbc.setWhitelisted(pair, ethers.utils.id("Uniswap v2 FRBC-USD Pair"));
 
   // Process the genesis
   let genesisList = [];
@@ -70,16 +70,16 @@ module.exports = async (usdc, uniswap, genesis) => {
   await frbc.mint(signer.address, 10000);
   await frbc.approve(uniswap.address, 10000);
 
-  usdc = new ethers.Contract(
-    usdc,
+  usd = new ethers.Contract(
+    usd,
     // Use the test Token contract as it'll supply IERC20
     (await ethers.getContractFactory("TestERC20")).interface,
     signer
   );
-  await usdc.approve(uniswap.address, 10000);
+  await usd.approve(uniswap.address, 10000);
 
   await uniswap.addLiquidity(
-    usdc.address,
+    usd.address,
     frbc.address,
     10000, 10000, 10000, 10000,
     signer.address,
@@ -87,7 +87,7 @@ module.exports = async (usdc, uniswap, genesis) => {
     Math.floor((Date.now() / 1000) + 30)
   );
 
-  usdc = usdc.address;
+  usd = usd.address;
   */
 
   // Remove self from the FRBC whitelist
@@ -146,23 +146,23 @@ module.exports = async (usdc, uniswap, genesis) => {
 
 if (require.main === module) {
   (async () => {
-    let usdc = process.env.USDC;
+    let usd = process.env.USD;
     let uniswap = process.env.UNISWAP;
     let genesis;
 
-    if ((!usdc) || (!uniswap)) {
-      console.error("Only some environment variables were provide. Provide USDC and the Uniswap v2 Router.");
+    if ((!usd) || (!uniswap)) {
+      console.error("Only some environment variables were provide. Provide USD and the Uniswap v2 Router.");
       process.exit(1);
     }
     genesis = require("../genesis.json");
 
-    const contracts = await module.exports(usdc, uniswap, genesis);
-    console.log("Auction:           " + contracts.auction.address);
-    console.log("ERC20 Beacon:      " + contracts.erc20Beacon.address);
-    console.log("FRBC:              " + contracts.frbc.address);
-    console.log("FRBC-USDC Pair:    " + contracts.pair);
-    console.log("Initial Frabric:   " + contracts.frabric.address);
-    console.log("DEX Router:        " + contracts.router.address);
+    const contracts = await module.exports(usd, uniswap, genesis);
+    console.log("Auction:         " + contracts.auction.address);
+    console.log("ERC20 Beacon:    " + contracts.erc20Beacon.address);
+    console.log("FRBC:            " + contracts.frbc.address);
+    console.log("FRBC-USD Pair:   " + contracts.pair);
+    console.log("Initial Frabric: " + contracts.frabric.address);
+    console.log("DEX Router:      " + contracts.router.address);
   })().catch(error => {
     console.error(error);
     process.exit(1);

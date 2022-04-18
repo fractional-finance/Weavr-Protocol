@@ -6,7 +6,7 @@ const deployTestFrabric = require("../scripts/deployTestFrabric.js");
 const { FrabricProposalType, ParticipantType, GovernorStatus, proposal, queueAndComplete } = require("../common.js");
 
 let signers, deployer, kyc, genesis, governor;
-let usdc, pair;
+let usd, pair;
 let bond, threadDeployer;
 let frbc, frabric, nextID;
 
@@ -18,7 +18,7 @@ describe("Frabric", accounts => {
     [deployer, kyc, genesis, governor] = signers.splice(0, 4);
 
     ({
-      usdc, pair,
+      usd, pair,
       bond, threadDeployer,
       frbc, frabric
     } = await deployTestFrabric()); // TODO: Check the events/behavior from upgrade
@@ -186,7 +186,7 @@ describe("Frabric", accounts => {
   // isolated code block for it is beneficial
   it("should let governors add bond", async () => {
     await frbc.transfer(pair.address, 10000);
-    await usdc.transfer(pair.address, 10000);
+    await usd.transfer(pair.address, 10000);
     await pair.mint(governor.address);
 
     await pair.approve(bond.address, 9000);
@@ -215,7 +215,7 @@ describe("Frabric", accounts => {
     const descriptor = "0x" + (new Buffer.from("ipfs").toString("hex")).repeat(8);
     const data = (new ethers.utils.AbiCoder()).encode(
       ["address", "uint256"],
-      [usdc.address, 1000]
+      [usd.address, 1000]
     );
 
     const pID = nextID;
@@ -235,7 +235,7 @@ describe("Frabric", accounts => {
     const crowdfund = (await threadDeployer.queryFilter(threadDeployer.filters.CrowdfundedThread()))[0].args.crowdfund;
 
     await expect(tx).to.emit(threadDeployer, "Thread").withArgs(thread, 0, governor.address, erc20, descriptor);
-    await expect(tx).to.emit(threadDeployer, "CrowdfundedThread").withArgs(thread, usdc.address, crowdfund, 1000);
+    await expect(tx).to.emit(threadDeployer, "CrowdfundedThread").withArgs(thread, usd.address, crowdfund, 1000);
   });
 
   it("should let you create a proposal on a Thread", async () => {

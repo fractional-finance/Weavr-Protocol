@@ -21,7 +21,7 @@ module.exports = {
     return { auctionProxy: auction.proxy, auction: auction.auction, erc20 };
   },
 
-  deployFRBC: async (usdc) => {
+  deployFRBC: async (usd) => {
     const beacon = await module.exports.deployBeacon();
     const frbc = await module.exports.deploy(
       beacon,
@@ -33,7 +33,7 @@ module.exports = {
         true,
         // Parent whitelist doesn't exist
         ethers.constants.AddressZero,
-        usdc
+        usd
       ]
     );
     return { auctionProxy: frbc.auctionProxy, auction: frbc.auction, beacon, frbc: frbc.erc20 };

@@ -2,14 +2,14 @@ const { ethers, upgrades } = require("hardhat");
 
 const deployBeacon = require("./deployBeacon.js");
 
-module.exports = async (usdc, bondToken) => {
+module.exports = async (usd, bondToken) => {
   const Bond = await ethers.getContractFactory("Bond");
   const proxy = await deployBeacon("single", Bond);
 
   const bond = await upgrades.deployBeaconProxy(
     proxy.address,
     Bond,
-    [usdc, bondToken]
+    [usd, bondToken]
   );
 
   return { proxy, bond };

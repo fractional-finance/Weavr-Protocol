@@ -6,19 +6,19 @@ const deployBond = require("../../scripts/deployBond.js");
 const { GovernorStatus } = require("../common.js");
 
 let deployer, governor;
-let usdc, pair;
+let usd, pair;
 let bond, frabric;
 
 describe("Bond", accounts => {
   before(async () => {
     [deployer, governor] = (await ethers.getSigners()).splice(0, 2);
 
-    usdc = await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD");
+    usd = await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD");
     pair = await (await ethers.getContractFactory("TestERC20")).deploy("Bond Test", "BOND");
 
     // Deploy the bond contract
     // TODO: Check the events/behavior from init
-    ({ bond } = await deployBond(usdc.address, pair.address));
+    ({ bond } = await deployBond(usd.address, pair.address));
 
     // Deploy a TestFrabric
     frabric = await (await ethers.getContractFactory("TestFrabric")).deploy();
@@ -70,11 +70,11 @@ describe("Bond", accounts => {
   });
 
   it("should let you recover arbitrary tokens", async () => {
-    await usdc.transfer(bond.address, 1);
+    await usd.transfer(bond.address, 1);
     await expect(
-      await bond.recover(usdc.address)
-    ).to.emit(usdc, "Transfer").withArgs(bond.address, frabric.address, 1);
-    expect(await usdc.balanceOf(frabric.address)).to.be.equal(1);
+      await bond.recover(usd.address)
+    ).to.emit(usd, "Transfer").withArgs(bond.address, frabric.address, 1);
+    expect(await usd.balanceOf(frabric.address)).to.be.equal(1);
   });
 
   it("shouldn't let you transfer the bond token", async () => {

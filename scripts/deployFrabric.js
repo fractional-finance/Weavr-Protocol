@@ -4,11 +4,11 @@ const { ethers } = hre;
 const deployBond = require("./deployBond.js");
 const deployThreadDeployer = require("./deployThreadDeployer.js");
 
-module.exports = async (auction, erc20Beacon, usdc, pair, frabric) => {
+module.exports = async (auction, erc20Beacon, usd, pair, frabric) => {
   process.hhCompiled ? null : await hre.run("compile");
   process.hhCompiled = true;
 
-  const { proxy: bondProxy, bond } = await deployBond(usdc, pair);
+  const { proxy: bondProxy, bond } = await deployBond(usd, pair);
   const {
     crowdfundProxy,
     threadBeacon,
@@ -41,19 +41,19 @@ if (require.main === module) {
   (async () => {
     let auction = process.env.AUCTION;
     let erc20Beacon = process.env.ERC20_BEACON;
-    let usdc = process.env.USDC;
+    let usd = process.env.USD;
     let pair = process.env.PAIR;
     let frabric = process.env.FRABRIC;
 
-    if ((!auction) || (!erc20Beacon) || (!usdc) || (!pair) || (!frabric)) {
+    if ((!auction) || (!erc20Beacon) || (!usd) || (!pair) || (!frabric)) {
       console.error(
         "Only some environment variables were provide. Provide the ERC20 Beacon, " +
-        "the Auction contract, USDC, the Uniswap Pair, and the Initial Frabric."
+        "the Auction contract, USD, the Uniswap Pair, and the Initial Frabric."
       );
       process.exit(1);
     }
 
-    const contracts = await module.exports(auction, erc20Beacon, usdc, pair, frabric);
+    const contracts = await module.exports(auction, erc20Beacon, usd, pair, frabric);
     console.log("Thread Deployer: " + contracts.threadDeployer.address);
     console.log("Bond:            " + contracts.bond.address);
     console.log("Frabric Code:    " + contracts.frabricCode);
