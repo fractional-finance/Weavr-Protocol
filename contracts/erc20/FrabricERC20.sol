@@ -44,6 +44,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
     supportsInterface[type(PausableUpgradeable).interfaceId] = true;
     supportsInterface[type(IRemovalFee).interfaceId] = true;
+    supportsInterface[type(IFreeze).interfaceId] = true;
     supportsInterface[type(IFrabricERC20).interfaceId] = true;
 
     // Whitelist the initializer
