@@ -11,6 +11,8 @@ const fERC20 = require("./deployFrabricERC20.js");
 const deployDEXRouter = require("./deployDEXRouter.js");
 
 module.exports = async (usdc, uniswap, genesis) => {
+  // Run compile if it hasn't been run already
+  // Prevents a print statement of "Nothing to compile" from repeatedly appearing
   process.hhCompiled ? null : await hre.run("compile");
   process.hhCompiled = true;
 
@@ -94,15 +96,11 @@ module.exports = async (usdc, uniswap, genesis) => {
   frbc.remove(signer.address, 0);
 
   const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
-  const proxy = await deployBeacon(
-    [],
-    InitialFrabric,
-    await ethers.getContractFactory("SingleBeacon")
-  );
+  const proxy = await deployBeacon("single", InitialFrabric);
 
   const root = (
     new MerkleTree(
-      genesisList.map((address) => address + "000000000000000000000000"),
+      genesisList.map(address => address + "000000000000000000000000"),
       ethers.utils.keccak256,
       { sortPairs: true }
     )

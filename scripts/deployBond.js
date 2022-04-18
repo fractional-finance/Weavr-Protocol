@@ -1,18 +1,10 @@
-const hre = require("hardhat");
-const { ethers, upgrades } = hre;
+const { ethers, upgrades } = require("hardhat");
 
 const deployBeacon = require("./deployBeacon.js");
 
 module.exports = async (usdc, bondToken) => {
-  process.hhCompiled ? null : await hre.run("compile");
-  process.hhCompiled = true;
-
   const Bond = await ethers.getContractFactory("Bond");
-  const proxy = await deployBeacon(
-    [],
-    Bond,
-    await ethers.getContractFactory("SingleBeacon")
-  );
+  const proxy = await deployBeacon("single", Bond);
 
   const bond = await upgrades.deployBeaconProxy(
     proxy.address,
@@ -22,15 +14,3 @@ module.exports = async (usdc, bondToken) => {
 
   return { proxy, bond };
 };
-
-if (require.main === module) {
-  module.exports(ethers.constants.AddressZero, ethers.constants.AddressZero)
-    .then(contracts => {
-      console.log("Proxy: " + contracts.proxy.address);
-      console.log("Bond:  " + contracts.bond.address);
-    })
-    .catch(error => {
-      console.error(error);
-      process.exit(1);
-    });
-}

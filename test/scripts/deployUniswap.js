@@ -1,6 +1,5 @@
 const { ethers } = require("hardhat");
 
-// Solely used for testing
 module.exports = async () => {
   const signer = (await ethers.getSigners())[0];
 

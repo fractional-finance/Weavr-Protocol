@@ -1,13 +1,15 @@
 const { ethers, waffle } = require("hardhat");
 
 // Support overriding the Beacon. It's generally Beacon yet may be SingleBeacon
-module.exports = async (args, codeFactory, Beacon) => {
+module.exports = async (releaseChannels, codeFactory) => {
   const code = await codeFactory.deploy();
 
-  if (Beacon == null) {
-    Beacon = await ethers.getContractFactory("Beacon");
+  let Beacon = await ethers.getContractFactory("Beacon");
+  if (releaseChannels === "single") {
+    Beacon = await ethers.getContractFactory("SingleBeacon");
+    releaseChannels = null;
   }
-  const beacon = await Beacon.deploy(await code.contractName.call(), ...args);
+  const beacon = await Beacon.deploy(await code.contractName.call(), releaseChannels);
   // Sanity check ethers.utils.id usage while here
   // Ensures whitelist consistency for JS whitelisted participants/contracts and Solidity whitelisted contracts
   if ((await beacon.contractName.call()) != ethers.utils.id("Beacon")) {
