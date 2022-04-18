@@ -1,15 +1,17 @@
-# Frabric-protocol
+# Frabric Protocol
 
-Hey there, Welcome to Frabric. :wave:
+This repository contains all the smart contracts which make up the Frabric Protocol, along with their tests and deployment scripts.
 
-Weave is Frabric's resource for all blockchain related objects and entities, which means it encompasses almost our entire business infrastructure.
+### Setup
 
-Expect entity specific guides as we develop.
+Assuming nodejs >= 16, npx, and yarn are available,
 
-## Prerequisites
+```
+yarn
+```
 
-NodeJS, NPM, and Truffle are requirements. Once you have NodeJS and NPM installed, run `npm i -g -s truffle`. Then, run `npm i` from within this project to install its dependencies.
+### Testing
 
-## Testing
-
-`truffle test`
+```
+npx hardhat test
+```
