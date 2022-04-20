@@ -83,8 +83,9 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     // This does mean USDT distributions could theoretically break at some point
     // in the future and any automatic flow expecting this to work could break with it
-    // FeeOnTransfer is just incredibly complicated to deal with and not easily
-    // integrated here. Because this is used in the Crowdfund, if you could re-enter on
+    // Fee-on-transfer is just incredibly complicated to deal with (as you need to use
+    // a re-entrancy vulnerable balance check) and not easily integrated here. Because
+    // this contract is used as a parent of Crowdfund, if you could re-enter on
     // this transferFrom call, you could buy Crowdfund tokens with funds then attributed
     // to this distribution. This either means placing nonReentrant everywhere or just
     // banning an idiotic token design in places like this

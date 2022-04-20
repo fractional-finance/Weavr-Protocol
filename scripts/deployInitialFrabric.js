@@ -7,7 +7,7 @@ const u2SDK = require("@uniswap/v2-sdk");
 const uSDK = require("@uniswap/sdk-core");
 
 const deployBeacon = require("./deployBeacon.js");
-const fERC20 = require("./deployFrabricERC20.js");
+const FrabricERC20 = require("./deployFrabricERC20.js");
 const deployDEXRouter = require("./deployDEXRouter.js");
 
 module.exports = async (usd, uniswap, genesis) => {
@@ -18,7 +18,7 @@ module.exports = async (usd, uniswap, genesis) => {
 
   const signer = (await ethers.getSigners())[0];
 
-  const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await fERC20.deployFRBC(usd);
+  const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
   await frbc.setWhitelisted(auction.address, ethers.utils.id("Auction"));
 
   // Deploy the Uniswap pair to get the bond token
@@ -112,7 +112,7 @@ module.exports = async (usd, uniswap, genesis) => {
     [
       frbc.address,
       genesisList,
-      root.substr(2) ? root : "0x0000000000000000000000000000000000000000000000000000000000000000"
+      root.substr(2) ? root : ethers.constants.HashZero
     ]
   );
   await frbc.setWhitelisted(frabric.address, ethers.utils.id("Frabric"));
