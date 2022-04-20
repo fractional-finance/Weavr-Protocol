@@ -101,7 +101,10 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     } else {
       // The impl for a specific contract can only be upgraded by itself or its owner
       // Relies on short circuiting so even non-owned contracts can call this
-      if ((msg.sender != instance) && (msg.sender != Ownable(instance).owner())) {
+      if (!(
+        (msg.sender == instance) ||
+        ((instance.supportsInterface(type(Ownable).interfaceId)) && (msg.sender == Ownable(instance).owner()))
+      )) {
         // Doesn't include the actual upgrade authority due to the ambiguity on who that is
         // Not worth it to try catch on the owner call and actually determine it
         revert NotUpgradeAuthority(msg.sender, instance);
