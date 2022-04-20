@@ -275,7 +275,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   }
 
   // Has an empty body as it doesn't have to be overriden
-  function _participantRemoval(address participant) internal virtual {}
+  function _participantRemoval(address /*participant*/) internal virtual {}
   // Has to be overriden
   function _completeSpecificProposal(uint256 id, uint256 proposalType) internal virtual;
 

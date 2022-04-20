@@ -262,4 +262,6 @@ describe("Frabric", accounts => {
   it("should let you sell the tokens from a leaving Thread", async () => {
     // TODO
   });
+
+  // TODO test it can upgrade all release channels and ecosystem contracts it's supposed to be able to
 });

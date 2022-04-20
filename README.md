@@ -15,3 +15,9 @@ yarn
 ```
 npx hardhat test
 ```
+
+### Coverage
+
+```
+npx hardhat coverage
+```
