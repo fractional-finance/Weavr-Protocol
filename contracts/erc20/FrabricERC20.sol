@@ -130,6 +130,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     if (removed(person)) {
       return;
     }
+    _setRemoved(person);
 
     // If we didn't specify a fee, carry the parent's
    // Checks if it supports IRemovalFee, as that isn't actually a requirement on
@@ -145,33 +146,36 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
       fee = IRemovalFee(parent).removalFee(person);
     }
 
-    _setRemoved(person);
     removalFee[person] = fee;
 
     // Clear the amount they have locked
+    // If this wasn't cleared, it'd be easier to implement adding people back
+    // The ILO DEX (main source of pollution) would be able to successfully
+    // correct this field as old orders are cleared
+    // There'd still be issues though and this proper
     locked[person] = 0;
 
     uint256 balance = balanceOf(person);
     if (balance != 0) {
       // Send the removal fee to the owner (the DAO)
       uint256 actualFee = balance * fee / 100;
-      // actualFee may be 0, yet balance will always remain non-0
-      balance -= actualFee;
-      _transfer(person, owner(), actualFee);
+      // Even if the fee is 0, this will always be non-zero
+      uint256 feed = balance - actualFee;
 
       // Put the rest up for auction
-      _approve(person, auction, balance);
+      _approve(person, auction, feed);
 
       // _removal is dangerous and this would be incredibly risky if re-entrancy
       // was possible, or if it was left set, yet every function which calls this
       // is nonReentrant and it is set to false immediately after this call to
       // trusted code
       _removal = true;
+      _transfer(person, owner(), actualFee);
       IAuctionCore(auction).list(
+        person,
         address(this),
         tradeToken,
-        person,
-        balance,
+        feed,
         4,
         uint64(block.timestamp),
         1 weeks
@@ -208,12 +212,10 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   // While the only external calls should be completely in-ecosystem and therefore to trusted code,
   // _removeUnsafe really isn't the thing to play around with
   function remove(address person, uint8 fee) external override onlyOwner nonReentrant {
-    _setRemoved(person);
-
     // This will only apply to the Frabric/Thread in question
     // For a Frabric removal, this will remove them from the global whitelist,
     // and enable calling remove on any Thread. For a Thread, this won't change
-    // the whitelist at all, as it'll still be whitelisted on the Frabric
+    // the whitelist at all, as they'll still be whitelisted on the Frabric
     _removeUnsafe(person, fee);
   }
 

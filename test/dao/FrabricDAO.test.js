@@ -1,9 +1,10 @@
 const { ethers, waffle, network } = require("hardhat");
-const { MerkleTree } = require("merkletreejs");
 const { assert, expect } = require("chai");
 
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
-const { OrderType, proposal } = require("../common.js");
+const { OrderType, propose, queueAndComplete, proposal } = require("../common.js");
+
+const WEEK = 7 * 24 * 60 * 60;
 
 let signers, deployer, participant;
 let usd, auction, frbc, fDAO;
@@ -24,6 +25,7 @@ describe("FrabricDAO", accounts => {
     await frbc.setWhitelisted(fDAO.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
     await frbc.mint(fDAO.address, ethers.utils.parseUnits("1"));
     await frbc.transferOwnership(fDAO.address);
+    frbc = frbc.connect(participant);
   });
 
   it("should have initialized correctly", async () => {
@@ -68,7 +70,7 @@ describe("FrabricDAO", accounts => {
     const time = (await waffle.provider.getBlock("latest")).timestamp;
     await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("1"));
     await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("1"));
-    await expect(tx).to.emit(auction, "NewAuction").withArgs(0, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("1"), time, 7 * 24 * 60 * 60);
+    await expect(tx).to.emit(auction, "NewAuction").withArgs(0, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("1"), time, WEEK);
     expect(await frbc.balanceOf(fDAO.address)).to.equal(0);
     expect(await frbc.balanceOf(auction.address)).to.equal(ethers.utils.parseUnits("1"));
   });
@@ -100,25 +102,95 @@ describe("FrabricDAO", accounts => {
     await expect(tx).to.emit(frbc, "Transfer").withArgs(ethers.constants.AddressZero, fDAO.address, ethers.utils.parseUnits("2"));
     await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("2"));
     await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("2"));
-    await expect(tx).to.emit(auction, "NewAuction").withArgs(1, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("2"), time, 7 * 24 * 60 * 60);
+    await expect(tx).to.emit(auction, "NewAuction").withArgs(1, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("2"), time, WEEK);
     expect(await frbc.balanceOf(auction.address)).to.equal(ethers.utils.parseUnits("3"));
   });
 
   it("should allow removing participants", async () => {
-    // TODO
+    for (let i = 0; i < 3; i++) {
+      const other = signers.splice(0, 1)[0];
+      await fDAO.whitelist(other.address);
+      await frbc.transfer(other.address, 100);
+
+      let removalFee = 0;
+      let signatures = [];
+      // Remove 5% for rounds 1 and 2
+      if (i !== 0) {
+        removalFee = 5;
+      }
+
+      // Freeze for the last round
+      if (i === 2) {
+        const signArgs = [
+          {
+            name: "Test Frabric DAO",
+            version: "1",
+            chainId: 31337,
+            verifyingContract: fDAO.address
+          },
+          {
+            Removal: [
+              { name: "participant", type: "address" }
+            ]
+          },
+          {
+            participant: other.address
+          }
+        ];
+        if (participant.signTypedData) {
+          signaturess = [await participant.signTypedData(...signArgs)];
+        } else {
+          signatures = [await participant._signTypedData(...signArgs)];
+        }
+      }
+
+      const { id, tx: freeze } = await propose(fDAO, "ParticipantRemoval", [other.address, removalFee, signatures]);
+      if (i == 2) {
+        let frozenUntil = (await waffle.provider.getBlock("latest")).timestamp + WEEK + (3 * 24 * 60 * 60);
+        await expect(freeze).to.emit(frbc, "Freeze").withArgs(other.address, frozenUntil);
+        expect(await frbc.frozenUntil(other.address)).to.equal(frozenUntil);
+        await expect(
+          frbc.connect(other).transfer(participant.address, 1)
+        ).to.be.revertedWith(`Frozen("${other.address}")`);
+      }
+
+      const tx = await queueAndComplete(fDAO, id);
+      await expect(tx).to.emit(frbc, "WhitelistUpdate").withArgs(
+        other.address,
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+      );
+      if (removalFee != 0) {
+        await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, fDAO.address, removalFee);
+      }
+      await expect(tx).to.emit(frbc, "Approval").withArgs(other.address, auction.address, 100 - removalFee);
+      await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, auction.address, 100 - removalFee);
+
+      let start = (await waffle.provider.getBlock("latest")).timestamp;
+      for (let b = 0; b < 4; b++) {
+        await expect(tx).to.emit(auction, "NewAuction").withArgs(
+          (i * 4) + (b + 2),
+          other.address,
+          frbc.address,
+          usd.address,
+          i == 0 ? 25 : (b != 3 ? 23 : 26),
+          start,
+          WEEK
+        );
+        start += WEEK;
+      }
+      await expect(tx).to.emit(frbc, "Removal").withArgs(other.address, 100);
+      await expect(tx).to.emit(fDAO, "RemovalHook").withArgs(other.address);
+
+      expect(await frbc.whitelisted(other.address)).to.equal(false);
+      expect(await frbc.balanceOf(other.address)).to.equal(0);
+      expect(await frbc.locked(other.address)).to.equal(0);
+    }
   });
 
-  /*
-    _canProposeUpgrade
-    _canProposeRemoval
-    proposeParticipantRemoval(
-      address participant,
-      uint8 removalFee,
-      bytes[] calldata signatures,
-      bytes32 info
-    )
-    _participantRemoval(address participant)
-  */
+  // TODO: parent removals + triggerRemoval
+
+  // TODO: _canProposeUpgrade and _canProposeRemoval hooks. Thread does test the latter
 
   // Doesn't test _completeSpecificProposal is called as it's implicitly
   // tested to be successfully called by the Frabric/Thread tests

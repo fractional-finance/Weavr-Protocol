@@ -8,12 +8,12 @@ import "../common/IComposable.sol";
 // for auction. This is done with the following listing API which is separated out
 // for greater flexibility in the future
 interface IAuctionCore is IComposable {
-  // Indexes the ID as expected, the token so people can find auctions by the token being sold,
-  // and the seller so someone can find their auctions which they need to complete
+  // Indexes the ID as expected, the seller so someone can find their own auctions
+  // which they need to complete, and the token so people can find auctions by the token being sold
   event NewAuction(
     uint256 indexed id,
-    address indexed token,
     address indexed seller,
+    address indexed token,
     address traded,
     uint256 amount,
     uint64 start,

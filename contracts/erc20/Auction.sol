@@ -68,7 +68,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     }
 
     uint256 startBal = IERC20(token).balanceOf(address(this));
-    IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+    IERC20(token).safeTransferFrom(seller, address(this), amount);
     amount = IERC20(token).balanceOf(address(this)) - startBal;
     if (amount == 0) {
       revert ZeroAmount();
@@ -99,7 +99,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       auction.start = start + uint64(i * length);
       auction.length = length;
       auction.end = start + length;
-      emit NewAuction(id, seller, token, traded, amount, auction.start, length);
+      emit NewAuction(id, seller, token, traded, batchAmount, auction.start, length);
 
       amount -= batchAmount;
     }
