@@ -158,7 +158,6 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   function proposeTokenAction(
     address token,
     address target,
-    // Redundant field for Threads which don't (at least currently) have minting
     bool mint,
     uint256 price,
     uint256 amount,
