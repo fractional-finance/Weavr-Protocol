@@ -55,6 +55,20 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   }
   mapping(uint256 => ThreadProposalProposal) private _threadProposals;
 
+  function validateUpgrade(uint256 _version, bytes calldata data) external view override {
+    if (_version != 2) {
+      revert InvalidVersion(_version, 2);
+    }
+
+    (address _bond, address _threadDeployer, ) = abi.decode(data, (address, address, address));
+    if (!_bond.supportsInterface(type(IBond).interfaceId)) {
+      revert UnsupportedInterface(_bond, type(IBond).interfaceId);
+    }
+    if (!_threadDeployer.supportsInterface(type(IThreadDeployer).interfaceId)) {
+      revert UnsupportedInterface(_threadDeployer, type(IThreadDeployer).interfaceId);
+    }
+  }
+
   function upgrade(uint256 _version, bytes calldata data) external override {
     address beacon = StorageSlot.getAddressSlot(
       // Beacon storage slot
@@ -86,19 +100,16 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     // Set bond, threadDeployer, and an initial KYC
     address kyc;
     (bond, threadDeployer, kyc) = abi.decode(data, (address, address, address));
-    if (!bond.supportsInterface(type(IBond).interfaceId)) {
-      revert UnsupportedInterface(bond, type(IBond).interfaceId);
-    }
-    if (!threadDeployer.supportsInterface(type(IThreadDeployer).interfaceId)) {
-      revert UnsupportedInterface(threadDeployer, type(IThreadDeployer).interfaceId);
-    }
 
     participant[kyc] = ParticipantType.KYC;
     emit ParticipantChange(kyc, ParticipantType.KYC);
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() Composable("Frabric") initializer {}
+  constructor() Composable("Frabric") initializer {
+    // Only set in the constructor as this has no value being in the live contract
+    supportsInterface[type(IUpgradeable).interfaceId] = true;
+  }
 
   function canPropose(address proposer) public view override(DAO, IDAOCore) returns (bool) {
     return uint256(participant[proposer]) > uint256(ParticipantType.Removed);

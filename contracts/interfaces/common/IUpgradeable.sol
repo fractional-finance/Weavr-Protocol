@@ -2,6 +2,7 @@
 pragma solidity >=0.8.9;
 
 interface IUpgradeable {
+  function validateUpgrade(uint256 version, bytes calldata data) external view;
   function upgrade(uint256 version, bytes calldata data) external;
 }
 

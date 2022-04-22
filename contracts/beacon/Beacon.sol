@@ -34,7 +34,7 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     releaseChannels = _releaseChannels;
   }
 
-  function implementation(address instance) public view override returns (address) {
+  function _implementation(address instance) private view returns (bool, address) {
     address impl = implementations[instance];
 
     // If this contract is tracking a release channel, follow it
@@ -42,7 +42,7 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     while (uint256(uint160(impl)) < releaseChannels) {
       // Either invalid or release channel 0 which was unset
       if (impl == implementations[impl]) {
-        return impl;
+        return (false, impl);
       }
       impl = implementations[impl];
     }
@@ -50,16 +50,22 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     // If this contract's impl is actually another Beacon, hand off to it
     if (impl.supportsInterface(type(IFrabricBeacon).interfaceId)) {
       // Uses IFrabricBeacon instead of IBeacon to get the variant which takes an address
-      return IFrabricBeacon(impl).implementation(instance);
+      return (true, IFrabricBeacon(impl).implementation(instance));
     }
 
-    return impl;
+    return (false, impl);
+  }
+
+  function implementation(address instance) public view override returns (address code) {
+    (, code) = _implementation(instance);
   }
 
   function upgradeData(address instance, uint256 version) public view override returns (bytes memory) {
     address prev = instance;
     address curr = implementations[instance];
     // Perform local resolution to the release channel level
+    // This will infinite loop if called for release channel 0 when 0 is unset
+    // It's not worth spending gas to handle such an invalid edge case
     while (uint256(uint160(curr)) < releaseChannels) {
       prev = curr;
       curr = implementations[curr];
@@ -114,7 +120,7 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     }
 
     // Ensure the new implementation is of the expected type
-    address resolved = implementation(instance);
+    (bool beacon, address resolved) = _implementation(instance);
     bytes32 implName = IComposable(resolved).contractName();
     if (
       // This check is decently pointless (especially as we've already called the
@@ -125,20 +131,31 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
       revert DifferentContract(implName, beaconName);
     }
 
-    // Doesn't validate version (beyond basic sanity) due to infeasibility
-    uint256 min = 2;
-    if (old == address(0)) {
-      min = 1;
+    if (old != address(0)) {
+      // We could actually check version is atomically incrementing here, yet it's a pain
+      // that won't successfully be feasible to continue if we ever beacon forward
+      // and limits recovery options if there ever is an issue with an upgrade path
+      // triggerUpgrade does enforce upgrades are only triggered for the relevant version
+      if (version < 2) {
+        // Technically, >= 2
+        revert InvalidVersion(version, 2);
+      }
+
+      // If this is beacon forwarding, the other beacon is expected to have verified
+      // the upgrade. We only check the version as we have further context
+      if (!beacon) {
+        if (!resolved.supportsInterface(type(IUpgradeable).interfaceId)) {
+          revert NotUpgrade(resolved);
+        }
+
+        // Validate this upgrade has proper data
+        IUpgradeable(resolved).validateUpgrade(version, data);
+      }
     }
 
-    if (version < min) {
-      // Technically, >= min
-      revert InvalidVersion(version, min);
-    }
-
-    // Considering the lack of validation around data, extensive care must be taken with it
-    // We could at least check this version wasn't already written to, yet that'd prevent
-    // recovery in the case invalid data did slip in
+    // This write is outside the above due to beacon forwarding needing this pattern
+    // While any forward beacon will presumably have original code, and enable making this change then,
+    // establishing it now at a slightly higher gas cost for a minimally run function is solid
     upgradeDatas[instance][version] = data;
     emit Upgrade(instance, impl, version, data);
   }
@@ -153,7 +170,8 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     // triggered for old versions, and while we keep the data around, the modern
     // code may not have the ability to handle the old data as needed
     // This must be carefully considered, yet is considered out of scope for
-    // this
+    // this. The fact that upgrade data may resolve differently as code changes
+    // is also deemed out of scope
 
     // Doesn't check for supportsInterface as the version being non-0 and non-max
     // signifies it's intended to be upgraded

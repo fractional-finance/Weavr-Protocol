@@ -43,6 +43,7 @@ error NotOwner(address caller, address owner);
 error NotUpgradeAuthority(address caller, address instance);
 error DifferentContract(bytes32 oldName, bytes32 newName);
 error InvalidVersion(uint256 version, uint256 expectedVersion);
+error NotUpgrade(address code);
 
 // Errors used by SingleBeacon
 // SingleBeacons only allow its singular release channel to be upgraded

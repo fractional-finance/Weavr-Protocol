@@ -1,17 +1,38 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
-let signer, auction, beacon;
+let signer, junk;
+let auction, beacon, forwarded, owned;
+let TestUpgradeable, dataless;
+let data = (new ethers.utils.AbiCoder()).encode(
+  ["address", "bytes"],
+  ["0x0000000000000000000000000000000000000003", "0x" + Buffer.from("Upgrade Data").toString("hex")]
+)
+
+function upgradeable(version, data) {
+  return TestUpgradeable.deploy(version, data);
+}
 
 describe("Beacon", () => {
   before(async () => {
     signer = (await ethers.getSigners())[0];
+    // Junk address used for testing reversions and unset data
+    junk = (await ethers.getSigners()).splice(1, 1)[0].address;
 
     // This needs to have a valid piece of code and Auction is trivial to deploy
     auction = (await (await ethers.getContractFactory("Auction")).deploy()).address;
     const Beacon = await ethers.getContractFactory("Beacon");
     beacon = await Beacon.deploy(ethers.utils.id("Auction"), 2);
     beacon.implementation = beacon["implementation(address)"];
+
+    forwarded = await Beacon.deploy(ethers.utils.id("Auction"), 2);
+    forwarded.implementation = forwarded["implementation(address)"];
+
+    owned = await (await ethers.getContractFactory("TestOwnable")).deploy();
+    expect(await owned.owner()).to.equal(signer.address);
+
+    TestUpgradeable = await ethers.getContractFactory("TestUpgradeable");
+    dataless = await upgradeable(2, false);
   });
 
   it("should have the right name and version", async () => {
@@ -26,53 +47,106 @@ describe("Beacon", () => {
 
   it("should allow upgrading release channel 0", async () => {
     await expect(
-      beacon.upgrade(ethers.constants.AddressZero, auction, 2, "0x")
-    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, auction, 2, "0x");
+      await beacon.upgrade(ethers.constants.AddressZero, auction, 1, "0x")
+    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, auction, 1, "0x");
 
-    // TODO: Verify implementation and implementations were correctly updated
+    expect(await beacon.implementations(ethers.constants.AddressZero)).to.equal(auction);
+    expect(await beacon.implementation(ethers.constants.AddressZero)).to.equal(auction);
   });
 
   it("should resolve release channel 1 via release channel 0", async () => {
-    expect(
-      await beacon.implementation(ethers.constants.AddressZero)
-    ).to.equal(auction);
+    expect(await beacon.implementations("0x0000000000000000000000000000000000000001")).to.equal(ethers.constants.AddressZero);
+    expect(await beacon.implementation("0x0000000000000000000000000000000000000001")).to.equal(auction);
   });
 
   it("should resolve an address via release channel 0", async () => {
-    expect(
-      await beacon.implementation(signer.address)
-    ).to.equal(auction);
+    expect(await beacon.implementations(junk)).to.equal(ethers.constants.AddressZero);
+    expect(await beacon.implementation(junk)).to.equal(auction);
   });
 
-  it("should let you set you own code", async () => {
-    // TODO
+  it("should let your set you own code", async () => {
+    await expect(
+      await beacon.upgrade(signer.address, dataless.address, 2, "0x")
+    ).to.emit(beacon, "Upgrade").withArgs(signer.address, dataless.address, 2, "0x");
   });
 
   it("should let you set code of contracts you own", async () => {
-    // TODO
+    await expect(
+      // This owned contract has a name of TestOwnable, yet that doesn't matter
+      // as the Beacon only checks beacon name == new code name. Any instance
+      // actually using this beacon will therefore have a name matching as it
+      // will be using code specified by this beacon. While we could further
+      // check, why waste gas on legitimate calls to prevent instances which
+      // don't even use this beacon from having code set which is a non-issue
+      await beacon.upgrade(owned.address, dataless.address, 2, "0x")
+    ).to.emit(beacon, "Upgrade").withArgs(owned.address, dataless.address, 2, "0x");
   });
 
-  it("shouldn't let you set code of contracts you don't own", async () => {
-    // TODO
-  });
+  it("shouldn't let you set code of contracts you don't own, even as the owner", async () => {
+    // Doesn't exist
+    await expect(
+      beacon.upgrade(junk, dataless.address, 2, "0x")
+    ).to.be.revertedWith(`NotUpgradeAuthority("${signer.address}", "${junk}")`);
 
-  it("should support beacon forwarding", async () => {
-    // TODO
+    // No owner
+    await expect(
+      beacon.upgrade(auction, dataless.address, 2, "0x")
+    ).to.be.revertedWith(`NotUpgradeAuthority("${signer.address}", "${auction}")`);
+
+    // Different owner
+    // Any other address will use, and auction will be distinct and not < releaseChannels
+    await owned.transferOwnership(junk);
+    await expect(
+      beacon.upgrade(owned.address, dataless.address, 2, "0x")
+    ).to.be.revertedWith(`NotUpgradeAuthority("${signer.address}", "${owned.address}")`);
   });
 
   it("should support upgrading with data", async () => {
-    // TODO
+    let u = await upgradeable(3, true);
+    await expect(
+      await beacon.upgrade(ethers.constants.AddressZero, u.address, 3, data)
+    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, u.address, 3, data);
+    expect(await beacon.upgradeDatas(ethers.constants.AddressZero, 3)).to.equal(data);
+    expect(await beacon.upgradeData(ethers.constants.AddressZero, 3)).to.equal(data);
+
+    // Test resolution
+    expect(await beacon.upgradeDatas(junk, 3)).to.equal("0x");
+    expect(await beacon.upgradeData(junk, 3)).to.equal(data);
   });
 
-  it("should support resolving upgrade data", async () => {
-    // TODO
+  it("should support beacon forwarding", async () => {
+    // Set a new implementation on the new beacon
+    let u = await upgradeable(4, true);
+    await expect(
+      await forwarded.upgrade(ethers.constants.AddressZero, u.address, 4, data)
+    ).to.emit(forwarded, "Upgrade").withArgs(ethers.constants.AddressZero, u.address, 4, data);
+    expect(await forwarded.implementation(ethers.constants.AddressZero)).to.equal(u.address);
+    expect(await forwarded.upgradeDatas(ethers.constants.AddressZero, 4)).to.equal(data);
+    expect(await forwarded.upgradeData(ethers.constants.AddressZero, 4)).to.equal(data);
 
-    // TODO with beacon forwarding
+    await expect(
+      await beacon.upgrade(ethers.constants.AddressZero, forwarded.address, 4, "0x")
+    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, forwarded.address, 4, "0x");
+    expect(await beacon.implementations(ethers.constants.AddressZero)).to.equal(forwarded.address);
+    expect(await beacon.implementation(ethers.constants.AddressZero)).to.equal(u.address);
+  });
+
+  it("should support resolving upgrade data across beacon forwarding", async () => {
+    expect(await beacon.upgradeData(ethers.constants.AddressZero, 4)).to.equal(data);
+    expect(await beacon.upgradeData(junk, 4)).to.equal(data);
   });
 
   it("should support triggering upgrades", async () => {
-    // TODO
+    let u = await upgradeable(3, true);
+    await expect(
+      await beacon.triggerUpgrade(u.address, 4)
+    ).to.emit(u, "Triggered").withArgs(4, data);
+  });
 
-    // TODO with beacon forwarding
+  it("shouldn't support triggering upgrades for the wrong version", async () => {
+    let u = await upgradeable(4, true);
+    await expect(
+      beacon.triggerUpgrade(u.address, 4)
+    ).to.be.revertedWith("InvalidVersion(4, 3)");
   });
 });
