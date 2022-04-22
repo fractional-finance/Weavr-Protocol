@@ -78,13 +78,14 @@ module.exports = {
     // a human and it's honestly unsafe to call them sufficient until either
     // waffle corrects it OR withArgs is completely replaced
     // TODO
-    const tx = dao["propose" + proposal](...args, info);
+    const tx = await dao["propose" + proposal](...args, info);
     await expect(tx).to.emit(dao, "NewProposal").withArgs(
       id,
       ProposalType[proposal],
       dao.signer.address,
       info
     );
+    await expect(tx).to.emit(dao, "ProposalStateChanged").withArgs(id, module.exports.ProposalState.Active);
 
     if ((typeof(args[args.length - 1]) === "object") && (!args[args.length - 1].hasOwnProperty("_isBigNumber"))) {
       args.pop();
@@ -98,7 +99,7 @@ module.exports = {
       }
     }
     if (proposal !== "Paper") {
-      await expect(tx).to.emit(dao, proposal + "Proposed").withArgs(id, ...ordered);
+      await expect(await tx).to.emit(dao, proposal + "Proposed").withArgs(id, ...ordered);
     }
 
     return { id, tx };
@@ -109,13 +110,15 @@ module.exports = {
     module.exports.increaseTime(parseInt(await dao.votingPeriod()) + 1);
 
     // Queue the proposal
-    await dao.queueProposal(id);
+    await expect(await dao.queueProposal(id)).to.emit(dao, "ProposalStateChanged").withArgs(id, module.exports.ProposalState.Queued);
 
     // Advance the clock 48 hours
     module.exports.increaseTime(2 * 24 * 60 * 60 + 1);
 
     // Complete it
-    return await dao.completeProposal(id);
+    const tx = await dao.completeProposal(id);
+    await expect(tx).to.emit(dao, "ProposalStateChanged").withArgs(id, module.exports.ProposalState.Executed);
+    return tx;
   },
 
   proposal: async (dao, proposal, args, order) => {
