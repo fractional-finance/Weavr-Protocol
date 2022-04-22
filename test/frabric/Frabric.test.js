@@ -8,7 +8,7 @@ const { FrabricProposalType, ParticipantType, GovernorStatus, proposal, queueAnd
 let signers, deployer, kyc, genesis, governor;
 let usd, pair;
 let bond, threadDeployer;
-let frbc, frabric, nextID;
+let frbc, frabric;
 
 // TODO: Test supermajority is used where it should be
 
@@ -28,9 +28,6 @@ describe("Frabric", accounts => {
     bond = bond.connect(governor);
     frbc = frbc.connect(genesis);
     frabric = frabric.connect(genesis);
-
-    // First was the genesis participants, second was the upgrade
-    nextID = 2;
   });
 
   it("should have the expected bond/threadDeployer", async () => {
@@ -54,10 +51,8 @@ describe("Frabric", accounts => {
 
   it("should let you add KYC agencies", async () => {
     const [ kyc ] = signers.splice(0, 1);
-    const pID = nextID;
-    nextID++;
     await expect(
-      await proposal(frabric, "Participants", pID, [ParticipantType.KYC, kyc.address.toLowerCase() + "000000000000000000000000"])
+      (await proposal(frabric, "Participants", [ParticipantType.KYC, kyc.address.toLowerCase() + "000000000000000000000000"])).tx
     ).to.emit(frabric, "ParticipantChange").withArgs(kyc.address, ParticipantType.KYC);
 
     // Verify they were successfully added
@@ -79,12 +74,7 @@ describe("Frabric", accounts => {
       );
 
       // Perform the proposal
-      // We could keep using nextID and increment when we're done with it, yet
-      // then, if this test fails, it will never be incremented and bork the
-      // rest of these test cases
-      const pID = nextID;
-      nextID++;
-      await proposal(frabric, "Participants", pID, [pType, merkle.getHexRoot()])
+      const { id } = await proposal(frabric, "Participants", [pType, merkle.getHexRoot()])
 
       const signArgs = [
         {
@@ -115,7 +105,7 @@ describe("Frabric", accounts => {
       // Approve the participant
       await expect(
         await frabric.approve(
-          pID,
+          id,
           signArgs[2].participant,
           signArgs[2].kycHash,
           merkle.getHexProof(signArgs[2].participant + "000000000000000000000000"),
@@ -132,9 +122,7 @@ describe("Frabric", accounts => {
   });
 
   it("should let you add a governor", async () => {
-    const pID = nextID;
-    nextID++;
-    await proposal(frabric, "Participants", pID, [ParticipantType.Governor, governor.address.toLowerCase() + "000000000000000000000000"]);
+    const { id } = await proposal(frabric, "Participants", [ParticipantType.Governor, governor.address.toLowerCase() + "000000000000000000000000"]);
     expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Unverified);
 
     const signArgs = [
@@ -166,7 +154,7 @@ describe("Frabric", accounts => {
     // Approve the participant
     await expect(
       await frabric.approve(
-        pID,
+        id,
         signArgs[2].participant,
         signArgs[2].kycHash,
         [],
@@ -194,19 +182,15 @@ describe("Frabric", accounts => {
   });
 
   it("should let you remove bond", async () => {
-    const pID = nextID;
-    nextID++;
     await expect(
-      await proposal(frabric, "RemoveBond", pID, [governor.address, false, 3333])
+      (await proposal(frabric, "RemoveBond", [governor.address, false, 3333])).tx
     ).to.emit(bond, "Unbond").withArgs(governor.address, 3333);
     expect(await pair.balanceOf(governor.address)).to.equal(3333);
   });
 
   it("should let you slash bond", async () => {
-    const pID = nextID;
-    nextID++;
     await expect(
-      await proposal(frabric, "RemoveBond", pID, [governor.address, true, 5667])
+      (await proposal(frabric, "RemoveBond", [governor.address, true, 5667])).tx
     ).to.emit(bond, "Slash").withArgs(governor.address, 5667);
     expect(await pair.balanceOf(frabric.address)).to.equal(5667);
   });
@@ -218,13 +202,9 @@ describe("Frabric", accounts => {
       [usd.address, 1000]
     );
 
-    const pID = nextID;
-    nextID++;
-
-    const tx = await proposal(
+    const { tx } = await proposal(
       frabric,
       "Thread",
-      pID,
       [0, "Test Thread", "TTHR", descriptor, governor.address, data],
       [0, 4, 1, 2, 3, 5]
     );
@@ -246,11 +226,9 @@ describe("Frabric", accounts => {
   // defines a hook
   it("should correctly handle participant removals", async () => {
     // Remove the governor as they have additional code in the hook, making them
-    // the single complete case
-    const pID = nextID;
-    nextID++;
+    // the singular complete case
     await expect(
-      await proposal(frabric, "ParticipantRemoval", pID, [governor.address, 0, []])
+      (await proposal(frabric, "ParticipantRemoval", [governor.address, 0, []])).tx
     ).to.emit(frabric, "ParticipantChange").withArgs(governor.address, ParticipantType.Removed);
     expect(await frbc.info(governor.address)).to.equal(ethers.constants.HashZero);
     expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Removed);

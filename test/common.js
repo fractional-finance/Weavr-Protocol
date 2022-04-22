@@ -53,7 +53,7 @@ module.exports = {
   revert: (id) => waffle.provider.send("evm_revert", [id]),
   increaseTime: (time) => waffle.provider.send("evm_increaseTime", [time]),
 
-  propose: async (dao, proposal, id, args, order) => {
+  propose: async (dao, proposal, args, order) => {
     let ProposalType;
     if (module.exports.CommonProposalType.hasOwnProperty(proposal)) {
       ProposalType = module.exports.CommonProposalType;
@@ -62,6 +62,8 @@ module.exports = {
     } else {
       ProposalType = module.exports.ThreadProposalType;
     }
+
+    const id = await dao.nextProposalID();
 
     const info = ethers.utils.id(proposal);
     // Don't chain due to https://github.com/TrueFiEng/Waffle/issues/595 and
@@ -89,9 +91,11 @@ module.exports = {
         ordered.push(args[i]);
       }
     }
-    await expect(tx).to.emit(dao, proposal + "Proposed").withArgs(id, ...ordered);
+    if (proposal !== "Paper") {
+      await expect(tx).to.emit(dao, proposal + "Proposed").withArgs(id, ...ordered);
+    }
 
-    return tx;
+    return { id, tx };
   },
 
   queueAndComplete: async (dao, id) => {
@@ -108,9 +112,8 @@ module.exports = {
     return await dao.completeProposal(id);
   },
 
-  proposal: async (dao, proposal, id, args, order) => {
-    await module.exports.propose(dao, proposal, id, args, order);
-    const tx = await module.exports.queueAndComplete(dao, id);
-    return tx;
+  proposal: async (dao, proposal, args, order) => {
+    const { id } = await module.exports.propose(dao, proposal, args, order);
+    return { id, tx: await module.exports.queueAndComplete(dao, id) };
   }
 }

@@ -46,6 +46,8 @@ interface IDAO is IDAOCore {
   function queueProposal(uint256 id) external;
   function cancelProposal(uint256 id, address[] calldata voters) external;
 
+  function nextProposalID() external view returns (uint256);
+
   // Will only work for proposals pre-finalization
   function proposalVoteBlock(uint256 id) external view returns (uint64);
   function proposalVotes(uint256 id) external view returns (int128);

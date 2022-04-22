@@ -376,6 +376,12 @@ abstract contract DAO is Composable, IDAO {
     emit ProposalStateChanged(id, ProposalState.Cancelled);
   }
 
+  // Next proposal ID. Mainly useful for tests, yet also a quick way to get the
+  // amount of proposals created
+  function nextProposalID() external view override returns (uint256) {
+    return _nextProposalID;
+  }
+
   // Will only work with proposals which have yet to complete in some form
   // After that, the sole information available onchain is passed and proposalVote
   // as mappings aren't deleted

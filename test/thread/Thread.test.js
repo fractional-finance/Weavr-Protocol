@@ -7,14 +7,14 @@ const { GovernorStatus, ThreadProposalType } = common;
 
 let signers, governor, participant;
 let frabric, token;
-let erc20, thread, nextID;
+let erc20, thread;
 
 // TODO: Test supermajority is used where it should be
 
 // Test only the governor can complete this proposal
-async function onlyGovernor(thread, proposal, id, args, governor) {
+async function onlyGovernor(thread, proposal, args, governor) {
   // Propose it
-  await common.propose(thread, proposal, id, args);
+  const { id } = await common.propose(thread, proposal, args);
   // Queue it, and attempt completion with the default signer
   await expect(
     common.queueAndComplete(thread, id)
@@ -41,8 +41,6 @@ describe("Thread", async () => {
     await token.transfer(participant.address, await token.balanceOf(owner.address));
     await erc20.transfer(participant.address, (await erc20.balanceOf(owner.address)).sub(1));
     thread = thread.connect(participant);
-
-    nextID = 0;
   });
 
   it("shouldn't let anyone propose", async () => {
@@ -79,12 +77,10 @@ describe("Thread", async () => {
   });
 
   it("should allow changing the descriptor", async () => {
-    const pID = nextID;
-    nextID++;
     const oldDescriptor = await thread.descriptor();
     const newDescriptor = "0x" + (new Buffer.from("new IPFS").toString("hex")).repeat(4);
     await expect(
-      await common.proposal(thread, "DescriptorChange", pID, [newDescriptor])
+      (await common.proposal(thread, "DescriptorChange", [newDescriptor])).tx
     ).to.emit(thread, "DescriptorChanged").withArgs(oldDescriptor, newDescriptor);
     expect(await thread.descriptor()).to.equal(newDescriptor);
   });
@@ -93,16 +89,13 @@ describe("Thread", async () => {
     // Take a snapshot so we can continue using the existing TestFrabric
     let snapshot = await common.snapshot();
 
-    const pID = nextID;
-    // Doesn't increment nextID due to using a snapshot
-
     try {
       otherFrabric = await (await ethers.getContractFactory("TestFrabric")).deploy();
       otherFrabric.setGovernor(signers[0].address, GovernorStatus.Active);
 
       // Make sure the new governor is the only party which can execute this
       // This signals their consent
-      const tx = await onlyGovernor(thread, "FrabricChange", pID, [otherFrabric.address, signers[0].address], signers[0]);
+      const tx = await onlyGovernor(thread, "FrabricChange", [otherFrabric.address, signers[0].address], signers[0]);
       await expect(tx).to.emit(thread, "FrabricChanged").withArgs(frabric.address, otherFrabric.address)
       await expect(tx).to.emit(thread, "GovernorChanged").withArgs(governor.address, signers[0].address);
       await expect(await thread.frabric()).to.equal(otherFrabric.address);
@@ -116,13 +109,10 @@ describe("Thread", async () => {
   });
 
   it("should allow changing the Governor", async () => {
-    const pID = nextID;
-    nextID++;
-
     frabric.setGovernor(signers[0].address, GovernorStatus.Active);
 
     await expect(
-      onlyGovernor(thread, "GovernorChange", pID, [signers[0].address], signers[0])
+      onlyGovernor(thread, "GovernorChange", [signers[0].address], signers[0])
     ).to.emit(thread, "GovernorChanged").withArgs(governor.address, signers[0].address);
     expect(await thread.governor()).to.equal(signers[0].address);
 
@@ -134,9 +124,6 @@ describe("Thread", async () => {
   });
 
   it("should allow dissolving", async () => {
-    const pID = nextID;
-    nextID++;
-
     await token.connect(participant).approve(thread.address, 777);
 
     // Make sure the governor is the only party which can executes this
@@ -144,7 +131,7 @@ describe("Thread", async () => {
     // They may refuse to, without being malicious, if this process was sabotaged
     // In that case, the Frabric would arbitrate
 
-    const tx = await onlyGovernor(thread, "Dissolution", pID, [token.address, 777], governor);
+    const tx = await onlyGovernor(thread, "Dissolution", [token.address, 777], governor);
     // The Transfer events fail to match due to waffle's incompetency
     // There doesn't seem to be a specifically matching open issue and I don't
     // have time to debug this right now
