@@ -298,11 +298,16 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
           IIntegratedLimitOrderDEXCore(action.token).cancelOrder(action.price);
         } else {
           bool auction = action.target == IFrabricERC20(erc20).auction();
-          if (action.mint) {
-            IFrabricERC20(erc20).mint(action.target, action.amount);
-          // The ILO DEX doesn't require transfer or even approve
-          } else if ((action.price == 0) && (!auction)) {
-            IERC20(action.token).safeTransfer(action.target, action.amount);
+          if (!auction) {
+            if (action.mint) {
+              IFrabricERC20(erc20).mint(action.target, action.amount);
+            // The ILO DEX doesn't require transfer or even approve
+            } else if (action.price == 0) {
+              IERC20(action.token).safeTransfer(action.target, action.amount);
+            }
+          } else if (action.mint) {
+            // If minting to sell at Auction, mint to sell as the Auction contract uses transferFrom
+            IFrabricERC20(erc20).mint(address(this), action.amount);
           }
 
           // Not else to allow direct mint + sell

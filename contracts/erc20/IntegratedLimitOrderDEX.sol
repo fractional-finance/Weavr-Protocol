@@ -75,7 +75,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
   // Since this balance cannot be used for buying, it has no use in here
   // Allow anyone to trigger a withdraw for anyone accordingly
-  function withdrawDEXToken(address trader) public override nonReentrant {
+  function _withdrawDEXToken(address trader) private {
     uint256 amount = tradeTokenBalances[trader];
     if (amount == 0) {
       return;
@@ -90,8 +90,12 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     tradeTokenBalance = IERC20(tradeToken).balanceOf(address(this));
   }
 
+  function withdrawDEXToken(address trader) external override nonReentrant {
+    _withdrawDEXToken(trader);
+  }
+
   // Fill orders
-  function fill(
+  function _fill(
     address trader,
     uint256 price,
     uint256 amount,
@@ -174,7 +178,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
   // Returns the amount of tokens filled and the position of the created order, if one exists
   // If the amount filled is equivalent to the amount, the position will be 0
-  function action(
+  function _action(
     OrderType current,
     OrderType other,
     address trader,
@@ -211,7 +215,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     PricePoint storage point = _points[price];
     // If there's counter orders at this price, fill them
     if (point.orderType == other) {
-      filled = fill(trader, price, amount, point);
+      filled = _fill(trader, price, amount, point);
       // Return if fully filled
       if (filled == amount) {
         return (filled, 0);
@@ -273,7 +277,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
       tradeTokenBalances[trader] += dust;
     }
 
-    return action(OrderType.Buy, OrderType.Sell, trader, price, amount);
+    return _action(OrderType.Buy, OrderType.Sell, trader, price, amount);
   }
 
   // price and amount is per/in whole tokens
@@ -285,17 +289,15 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     if (balanceOf(msg.sender) < locked[msg.sender]) {
       revert NotEnoughFunds(locked[msg.sender], balanceOf(msg.sender));
     }
-    (filled, id) = action(OrderType.Sell, OrderType.Buy, msg.sender, price, amount);
+    (filled, id) = _action(OrderType.Sell, OrderType.Buy, msg.sender, price, amount);
     // Trigger a withdraw for any tokens from filled orders
-    withdrawDEXToken(msg.sender);
+    _withdrawDEXToken(msg.sender);
   }
 
   function cancelOrder(uint256 price) external override nonReentrant {
     PricePoint storage point = _points[price];
 
-    // This may be slightly more efficient if done in reverse order
-    // by potentially reducing shift count yet it's not worth the complexity
-    for (uint256 i = 0; i < point.orders.length; i++) {
+    for (uint256 i = point.orders.length - 1;; i--) {
       Order storage order = point.orders[i];
 
       // If they are no longer whitelisted, remove them
@@ -323,15 +325,12 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
         emit CancelledOrder(order.trader, price, order.amount);
 
-        // If this is not the last order, shift the last order down
-        if (i != (point.orders.length - 1)) {
-          point.orders[i] = point.orders[point.orders.length - 1];
-        }
         // Delete the order
         point.orders.pop();
+      }
 
-        // Decrement i so this order index is checked again
-        i--;
+      if (i == 0) {
+        break;
       }
     }
 
@@ -341,7 +340,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     }
 
     // Withdraw our own funds to prevent the need for another transaction
-    withdrawDEXToken(msg.sender);
+    _withdrawDEXToken(msg.sender);
   }
 
   function getPointType(uint256 price) external view override returns (OrderType) {

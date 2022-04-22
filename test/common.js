@@ -2,6 +2,12 @@ const { waffle } = require("hardhat");
 const { expect } = require("chai");
 
 module.exports = {
+  OrderType: {
+    Null: 0,
+    Buy: 1,
+    Sell: 2
+  },
+
   ProposalState: {
     Null: 0,
     Active: 1,
@@ -80,7 +86,7 @@ module.exports = {
       info
     );
 
-    if (typeof(args[args.length - 1]) === "object") {
+    if ((typeof(args[args.length - 1]) === "object") && (!args[args.length - 1].hasOwnProperty("_isBigNumber"))) {
       args.pop();
     }
 

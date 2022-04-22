@@ -60,7 +60,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     uint256 batches,
     uint64 start,
     uint32 length
-  ) external override nonReentrant returns (uint256 id ) {
+  ) external override nonReentrant returns (uint256 id) {
     // Require the caller to either be the token itself, forcing a sale, or the
     // seller
     if ((msg.sender != token) && (msg.sender != seller)) {
