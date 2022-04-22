@@ -78,7 +78,8 @@ abstract contract DAO is Composable, IDAO {
   function requiredParticipation() public view returns (uint128) {
     // Uses the current total supply instead of the historical total supply in
     // order to represent the current community
-    return uint128(IERC20(erc20).totalSupply()) / 10;
+    // Subtracts any reserves held by the DAO itself as those can't be voted with
+    return uint128(IERC20(erc20).totalSupply() - IERC20(erc20).balanceOf(address(this))) / 10;
   }
 
   function canPropose(address proposer) public virtual view returns (bool);
@@ -154,8 +155,7 @@ abstract contract DAO is Composable, IDAO {
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
     // 10% isn't requiredParticipation, despite currently having the same value,
     // yet rather a number with some legal consideration
-    // We could grab the historic total supply yet it's not worth the gas given cancelProposal
-    // will successfully handling different proposal results due to this edge case
+    // requiredParticipation was also moved to circulating supply while this remains total
     int128 tenPercent = int128(uint128(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
     if (absVotes > tenPercent) {
       votes = tenPercent * (votes / absVotes);
