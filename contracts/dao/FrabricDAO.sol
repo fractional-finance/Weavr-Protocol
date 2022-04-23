@@ -162,6 +162,11 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     bool supermajority = false;
 
     if (mint) {
+      // All of this mint code should work and will be reviewed by auditors to confirm that
+      // That said, at this time, we are not launching with any form of minting enabled
+      // Solely commented during development to enable running tests on this code
+      // revert NotMintable();
+
       supermajority = true;
       if (token != erc20) {
         revert MintingDifferentToken(token, erc20);
@@ -169,16 +174,6 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       if (!IFrabricERC20(erc20).mintable()) {
         revert NotMintable();
       }
-
-      // All of this mint code should work and will be reviewed by auditors to confirm that
-      // That said, at this time, we are not launching with any form of minting enabled
-      // FRBC's mintable property being set to true is a byproduct of the setup
-      // and a bit of laid groundwork, just as all this code is
-
-      // Placed at the end, despite being slightly more expensive (if this branch
-      // is taken, which it shouldn't be, thanks to this), to silence warnings
-      // about unreachable code
-      revert NotMintable();
     }
 
     if (price != 0) {
