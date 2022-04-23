@@ -57,6 +57,14 @@ module.exports = {
 
   snapshot: () => waffle.provider.send("evm_snapshot", []),
   revert: (id) => waffle.provider.send("evm_revert", [id]),
+  mine: async (blocks) => {
+    for (let i = 0; i < blocks; i++) {
+      await waffle.provider.send(
+        "evm_mine",
+        [(await waffle.provider.getBlock("latest")).timestamp + 13]
+      );
+    }
+  },
   increaseTime: (time) => waffle.provider.send("evm_increaseTime", [time]),
 
   propose: async (dao, proposal, args, order) => {

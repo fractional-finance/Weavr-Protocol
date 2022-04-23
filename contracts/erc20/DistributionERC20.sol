@@ -26,7 +26,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   // This was including the monotonic uint256 increment
   uint256 private _nextID;
   mapping(uint256 => Distribution) private _distributions;
-  mapping(address => mapping(uint256 => bool)) public override claimedDistribution;
+  mapping(uint256 => mapping(address => bool)) public override claimed;
 
   uint256[100] private __gap;
 
@@ -47,7 +47,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     super._afterTokenTransfer(from, to, amount);
     // Delegate to self to track voting power, if it isn't already tracked
     if (delegates(to) == address(0x0)) {
-      _delegate(to, to);
+      super._delegate(to, to);
     }
   }
 
@@ -58,12 +58,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   // code now to keep ERC20Votes' private variables for votes as, truly, votes. It's better
   // to just duplicate it in the future if we need to, which also gives us more control
   // over the process
-  function delegate(address) public pure override(IVotesUpgradeable, ERC20VotesUpgradeable) {
-    revert Delegation();
-  }
-  function delegateBySig(
-    address, uint256, uint256, uint8, bytes32, bytes32
-  ) public pure override(IVotesUpgradeable, ERC20VotesUpgradeable) {
+  function _delegate(address, address) internal pure override {
     revert Delegation();
   }
 
@@ -95,11 +90,11 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     _distribute(token, amount);
   }
 
-  function claim(address person, uint256 id) external override {
-    if (claimedDistribution[person][id]) {
-      revert AlreadyClaimed(id);
+  function claim(uint256 id, address person) external override {
+    if (claimed[id][person]) {
+      revert AlreadyClaimed(id, person);
     }
-    claimedDistribution[person][id] = true;
+    claimed[id][person] = true;
 
     Distribution storage distribution = _distributions[id];
     uint256 amount = distribution.amount * getPastVotes(person, distribution.block) / getPastTotalSupply(distribution.block);

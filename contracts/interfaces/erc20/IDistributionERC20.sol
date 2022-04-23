@@ -11,12 +11,12 @@ interface IDistributionERC20 is IVotesUpgradeable, IERC20, IComposable {
   event Distributed(uint256 indexed id, address indexed token, uint256 amount);
   event Claimed(uint256 indexed id, address indexed person, uint256 amount);
 
-  function claimedDistribution(address person, uint256 id) external view returns (bool);
+  function claimed(uint256 id, address person) external view returns (bool);
 
   function distribute(address token, uint256 amount) external;
-  function claim(address person, uint256 id) external;
+  function claim(uint256 id, address person) external;
 }
 
 error Delegation();
 error FeeOnTransfer(address token);
-error AlreadyClaimed(uint256 id);
+error AlreadyClaimed(uint256 id, address person);

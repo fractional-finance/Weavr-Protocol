@@ -144,6 +144,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     // If a fee on transfer is toggled mid raise, withdraw will work without issue,
     // unless the target is actually reached, in which case we continue
     // If the governor can't complete the acquisition given the transfer fee, they can refund what's available
+    // This refund will go through _distribute. While distribute does ban fee on transfer,
+    // _distribute will not.
     // Rebase tokens also exist, and will also screw this over, yet there's only so much we can do
     // This contract can also be blacklisted and have all its funds frozen
     // Such cases are deemed as incredibly out of scope for discussion here (and elsewhere)
