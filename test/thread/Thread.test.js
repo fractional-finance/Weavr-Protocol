@@ -6,6 +6,7 @@ const common = require("../common.js")
 const { GovernorStatus, ThreadProposalType } = common;
 
 let signers, governor, participant;
+// Actually a TestFrabric
 let frabric, token;
 let erc20, thread;
 
@@ -28,12 +29,9 @@ describe("Thread", async () => {
     signers = await ethers.getSigners();
     const owner = signers.splice(0, 1)[0];
     governor = signers.splice(0, 1)[0];
-    // { token, frabric, erc20, beacon, thread }
-    const contracts = await deployTestThread(governor.address); // TODO: Verify init
-    frabric = contracts.frabric; // Actually a TestFrabric
-    token = contracts.token;
-    erc20 = contracts.erc20;
-    thread = contracts.thread;
+
+    ({ token, frabric, erc20, beacon, thread } = await deployTestThread(governor.address)); // TODO: Verify init
+    beacon.implementation = beacon["implementation(address)"];
 
     // Move the balance from the owner (deployer)
     participant = signers.splice(1, 1)[0];
@@ -64,6 +62,19 @@ describe("Thread", async () => {
     // Not whitelisted yet holder
     await frabric.remove(listTest.address);
     assert(!(await thread.canPropose(listTest.address)));
+  });
+
+  it("should let you upgrade to the current piece of code", async () => {
+    const impl = await beacon.implementation(thread.address);
+    expect(await beacon.implementations(thread.address)).to.equal(ethers.constants.AddressZero);
+    await expect(
+      await common.proposal(
+        thread,
+        "Upgrade",
+        [beacon.address, thread.address, 1, impl, "0x"]
+      )
+    );
+    expect(await beacon.implementations(thread.address)).to.equal(impl);
   });
 
   // This is actually a test on the legitimacy of the deployment which specifies

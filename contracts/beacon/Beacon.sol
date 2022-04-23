@@ -106,7 +106,8 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
       revert DifferentContract(implName, beaconName);
     }
 
-    if (old != address(0)) {
+    // Initial code set or moving off release channel
+    if ((old != address(0)) && (old != impl)) {
       // We could actually check version is atomically incrementing here, yet it's a pain
       // that won't successfully be feasible to continue if we ever beacon forward
       // and limits recovery options if there ever is an issue with an upgrade path
