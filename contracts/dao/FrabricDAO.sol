@@ -121,10 +121,6 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
       revert UnsupportedInterface(beacon, type(IFrabricBeacon).interfaceId);
     }
-
-    if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
-      revert UnsupportedInterface(impl, type(IComposable).interfaceId);
-    }
     bytes32 beaconName = IFrabricBeacon(beacon).beaconName();
 
     if (!impl.supportsInterface(type(IComposable).interfaceId)) {
