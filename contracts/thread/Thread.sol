@@ -142,7 +142,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   ) internal view override returns (bool) {
     return (
       // If upgrades are enabled, all good
-      (block.timestamp >= upgradesEnabled) ||
+      (block.timestamp <= upgradesEnabled) ||
       // Upgrades to the current code/release channels are always allowed
       // This prevents the Frabric from forcing an update onto Threads and allows
       // switching between versions presumably published by the Frabric

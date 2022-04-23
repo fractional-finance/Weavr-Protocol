@@ -64,17 +64,31 @@ describe("Thread", async () => {
     assert(!(await thread.canPropose(listTest.address)));
   });
 
+  it("shouldn't let you upgrade to an independent piece of code before leaving", async () => {
+    const newCode = await (await ethers.getContractFactory("Thread")).deploy();
+    await expect(
+      thread.proposeUpgrade(
+        beacon.address,
+        thread.address,
+        1,
+        newCode.address,
+        "0x",
+        ethers.utils.id("Upgrade Independent")
+      )
+    ).to.be.revertedWith(`ProposingUpgrade("${beacon.address}", "${thread.address}", "${newCode.address}")`);
+  });
+
   it("should let you upgrade to the current piece of code", async () => {
-    const impl = await beacon.implementation(thread.address);
+    const code = await beacon.implementation(thread.address);
     expect(await beacon.implementations(thread.address)).to.equal(ethers.constants.AddressZero);
     await expect(
       await common.proposal(
         thread,
         "Upgrade",
-        [beacon.address, thread.address, 1, impl, "0x"]
+        [beacon.address, thread.address, 1, code, "0x"]
       )
     );
-    expect(await beacon.implementations(thread.address)).to.equal(impl);
+    expect(await beacon.implementations(thread.address)).to.equal(code);
   });
 
   // This is actually a test on the legitimacy of the deployment which specifies

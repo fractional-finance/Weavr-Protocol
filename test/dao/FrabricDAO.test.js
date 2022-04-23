@@ -75,8 +75,8 @@ describe("FrabricDAO", accounts => {
     expect(await frbc.balanceOf(auction.address)).to.equal(ethers.utils.parseUnits("1"));
   });
 
-  // The following tests pass if you uncomment the NotMintable line of FrabricDAO
-  // which forces all mint proposals to fail
+  // The following tests pass if the NotMintable line of FrabricDAO which forces
+  // all mint proposals to fail is commented
   it("should allow minting tokens", async () => {
     const other = signers.splice(0, 1)[0].address;
     await fDAO.whitelist(other);
@@ -188,9 +188,7 @@ describe("FrabricDAO", accounts => {
     }
   });
 
-  // TODO: parent removals + triggerRemoval
-
-  // TODO: _canProposeUpgrade and _canProposeRemoval hooks. Thread does test the latter
+  // TODO: _canProposeUpgrade and _canProposeRemoval hooks. Thread does tests both
 
   // Doesn't test _completeSpecificProposal is called as it's implicitly
   // tested to be successfully called by the Frabric/Thread tests
