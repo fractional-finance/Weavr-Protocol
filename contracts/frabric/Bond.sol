@@ -32,6 +32,7 @@ contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
 
     __Composable_init("Bond", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
+    supportsInterface[type(IBondCore).interfaceId] = true;
     supportsInterface[type(IBond).interfaceId] = true;
 
     // Tracks USD now to enable bond value detection in the future without shifting storage

@@ -1,21 +1,27 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.9;
 
-import "../frabric/IFrabric.sol";
-
 import "../common/IComposable.sol";
 
-interface IBond is IComposable {
-  event Bond(address governor, uint256 amount);
+import "../erc20/IDistributionERC20.sol";
+
+import "../frabric/IFrabric.sol";
+
+interface IBondCore is IComposable {
   event Unbond(address governor, uint256 amount);
   event Slash(address governor, uint256 amount);
+
+  function unbond(address bonder, uint256 amount) external;
+  function slash(address bonder, uint256 amount) external;
+}
+
+interface IBond is IBondCore, IDistributionERC20 {
+  event Bond(address governor, uint256 amount);
 
   function usd() external view returns (address);
   function bondToken() external view returns (address);
 
   function bond(uint256 amount) external;
-  function unbond(address bonder, uint256 amount) external;
-  function slash(address bonder, uint256 amount) external;
 
   function recover(address token) external;
 }

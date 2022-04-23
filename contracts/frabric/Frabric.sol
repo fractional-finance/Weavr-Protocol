@@ -61,8 +61,8 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
 
     (address _bond, address _threadDeployer, ) = abi.decode(data, (address, address, address));
-    if (!_bond.supportsInterface(type(IBond).interfaceId)) {
-      revert UnsupportedInterface(_bond, type(IBond).interfaceId);
+    if (!_bond.supportsInterface(type(IBondCore).interfaceId)) {
+      revert UnsupportedInterface(_bond, type(IBondCore).interfaceId);
     }
     if (!_threadDeployer.supportsInterface(type(IThreadDeployer).interfaceId)) {
       revert UnsupportedInterface(_threadDeployer, type(IThreadDeployer).interfaceId);
@@ -319,9 +319,9 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
       RemoveBondProposal storage remove = _removeBonds[id];
       if (remove.slash) {
-        IBond(bond).slash(remove.governor, remove.amount);
+        IBondCore(bond).slash(remove.governor, remove.amount);
       } else {
-        IBond(bond).unbond(remove.governor, remove.amount);
+        IBondCore(bond).unbond(remove.governor, remove.amount);
       }
       delete _removeBonds[id];
 
