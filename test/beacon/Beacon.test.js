@@ -51,11 +51,6 @@ describe("Beacon", () => {
     expect(await beacon.implementation(ethers.constants.AddressZero)).to.equal(auction);
   });
 
-  it("should resolve release channel 1 via release channel 0", async () => {
-    expect(await beacon.implementations("0x0000000000000000000000000000000000000001")).to.equal(ethers.constants.AddressZero);
-    expect(await beacon.implementation("0x0000000000000000000000000000000000000001")).to.equal(auction);
-  });
-
   it("should resolve an address via release channel 0", async () => {
     expect(await beacon.implementations(junk)).to.equal(ethers.constants.AddressZero);
     expect(await beacon.implementation(junk)).to.equal(auction);
@@ -96,16 +91,6 @@ describe("Beacon", () => {
     await expect(
       beacon.upgrade(owned.address, dataless.address, 2, "0x")
     ).to.be.revertedWith(`NotUpgradeAuthority("${signer.address}", "${owned.address}")`);
-  });
-
-  // Instance -> secondary release channel -> default release channel -> code
-  it("should let you specify a resolution paths of I -> B -> A -> C", async () => {
-    // TODO
-  });
-
-  // It can fail by exceeding 30k gas
-  it("shouldn't let you specify resolution paths which cause supportsInterface to fail", async () => {
-    // TODO
   });
 
   it("should support upgrading with data", async () => {
