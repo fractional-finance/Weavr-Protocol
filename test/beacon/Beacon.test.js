@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
 let signer, junk;
-let auction, beacon, forwarded, owned;
+let auction, beacon, owned;
 let TestUpgradeable, dataless;
 let data = (new ethers.utils.AbiCoder()).encode(
   ["address", "bytes"],
@@ -24,9 +24,6 @@ describe("Beacon", () => {
     const Beacon = await ethers.getContractFactory("Beacon");
     beacon = await Beacon.deploy(ethers.utils.id("Auction"), 2);
     beacon.implementation = beacon["implementation(address)"];
-
-    forwarded = await Beacon.deploy(ethers.utils.id("Auction"), 2);
-    forwarded.implementation = forwarded["implementation(address)"];
 
     owned = await (await ethers.getContractFactory("TestOwnable")).deploy();
     expect(await owned.owner()).to.equal(signer.address);
@@ -101,6 +98,16 @@ describe("Beacon", () => {
     ).to.be.revertedWith(`NotUpgradeAuthority("${signer.address}", "${owned.address}")`);
   });
 
+  // Instance -> secondary release channel -> default release channel -> code
+  it("should let you specify a resolution paths of I -> B -> A -> C", async () => {
+    // TODO
+  });
+
+  // It can fail by exceeding 30k gas
+  it("shouldn't let you specify resolution paths which cause supportsInterface to fail", async () => {
+    // TODO
+  });
+
   it("should support upgrading with data", async () => {
     let u = await upgradeable(3, true);
     await expect(
@@ -114,39 +121,17 @@ describe("Beacon", () => {
     expect(await beacon.upgradeData(junk, 3)).to.equal(data);
   });
 
-  it("should support beacon forwarding", async () => {
-    // Set a new implementation on the new beacon
-    let u = await upgradeable(4, true);
-    await expect(
-      await forwarded.upgrade(ethers.constants.AddressZero, u.address, 4, data)
-    ).to.emit(forwarded, "Upgrade").withArgs(ethers.constants.AddressZero, u.address, 4, data);
-    expect(await forwarded.implementation(ethers.constants.AddressZero)).to.equal(u.address);
-    expect(await forwarded.upgradeDatas(ethers.constants.AddressZero, 4)).to.equal(data);
-    expect(await forwarded.upgradeData(ethers.constants.AddressZero, 4)).to.equal(data);
-
-    await expect(
-      await beacon.upgrade(ethers.constants.AddressZero, forwarded.address, 4, "0x")
-    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, forwarded.address, 4, "0x");
-    expect(await beacon.implementations(ethers.constants.AddressZero)).to.equal(forwarded.address);
-    expect(await beacon.implementation(ethers.constants.AddressZero)).to.equal(u.address);
-  });
-
-  it("should support resolving upgrade data across beacon forwarding", async () => {
-    expect(await beacon.upgradeData(ethers.constants.AddressZero, 4)).to.equal(data);
-    expect(await beacon.upgradeData(junk, 4)).to.equal(data);
-  });
-
   it("should support triggering upgrades", async () => {
-    let u = await upgradeable(3, true);
+    let u = await upgradeable(2, true);
     await expect(
-      await beacon.triggerUpgrade(u.address, 4)
-    ).to.emit(u, "Triggered").withArgs(4, data);
+      await beacon.triggerUpgrade(u.address, 3)
+    ).to.emit(u, "Triggered").withArgs(3, data);
   });
 
   it("shouldn't support triggering upgrades for the wrong version", async () => {
-    let u = await upgradeable(4, true);
+    let u = await upgradeable(3, true);
     await expect(
-      beacon.triggerUpgrade(u.address, 4)
-    ).to.be.revertedWith("InvalidVersion(4, 3)");
+      beacon.triggerUpgrade(u.address, 3)
+    ).to.be.revertedWith("InvalidVersion(3, 2)");
   });
 });

@@ -42,6 +42,7 @@ error InvalidCode(address code);
 error NotOwner(address caller, address owner);
 error NotUpgradeAuthority(address caller, address instance);
 error DifferentContract(bytes32 oldName, bytes32 newName);
+error ResolutionTooDeep(address instance, address code, address resolved);
 error InvalidVersion(uint256 version, uint256 expectedVersion);
 error NotUpgrade(address code);
 

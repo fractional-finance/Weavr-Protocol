@@ -34,7 +34,7 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     releaseChannels = _releaseChannels;
   }
 
-  function _implementation(address instance) private view returns (bool, address) {
+  function implementation(address instance) public view override returns (address) {
     address impl = implementations[instance];
 
     // If this contract is tracking a release channel, follow it
@@ -42,28 +42,18 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     while (uint256(uint160(impl)) < releaseChannels) {
       // Either invalid or release channel 0 which was unset
       if (impl == implementations[impl]) {
-        return (false, impl);
+        return impl;
       }
       impl = implementations[impl];
     }
 
-    // If this contract's impl is actually another Beacon, hand off to it
-    if (impl.supportsInterface(type(IFrabricBeacon).interfaceId)) {
-      // Uses IFrabricBeacon instead of IBeacon to get the variant which takes an address
-      return (true, IFrabricBeacon(impl).implementation(instance));
-    }
-
-    return (false, impl);
-  }
-
-  function implementation(address instance) public view override returns (address code) {
-    (, code) = _implementation(instance);
+    return impl;
   }
 
   function upgradeData(address instance, uint256 version) public view override returns (bytes memory) {
     address prev = instance;
     address curr = implementations[instance];
-    // Perform local resolution to the release channel level
+    // Perform local resolution to the release channel/instance level
     // This will infinite loop if called for release channel 0 when 0 is unset
     // It's not worth spending gas to handle such an invalid edge case
     while (uint256(uint160(curr)) < releaseChannels) {
@@ -71,14 +61,7 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
       curr = implementations[curr];
     }
 
-    // prev is now the final release channel tracked. curr is the actual code
-    // If the actual code is a Beacon, hand off to their upgradeData
-    if (curr.supportsInterface(type(IFrabricBeacon).interfaceId)) {
-      return IFrabricBeacon(curr).upgradeData(instance, version);
-    }
-
-    // Since the actual code is not a Beacon, use the data specified for the release channel
-    // If a contract explicitly upgrades to a specific piece of code, its instance address will be in prev
+    // Use the data specified for the release channel/instance
     return upgradeDatas[prev][version];
   }
 
@@ -120,7 +103,7 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     }
 
     // Ensure the new implementation is of the expected type
-    (bool beacon, address resolved) = _implementation(instance);
+    address resolved = implementation(instance);
     bytes32 implName = IComposable(resolved).contractName();
     if (
       // This check is decently pointless (especially as we've already called the
@@ -130,6 +113,11 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     ) {
       revert DifferentContract(implName, beaconName);
     }
+
+    // Check that the new impl definition, which may affect the timing of
+    // implementation, doesn't cause the instance to take more than 30k gas to
+    // execute supportsInterface
+    instance.supportsInterface(type(IComposable).interfaceId);
 
     if (old != address(0)) {
       // We could actually check version is atomically incrementing here, yet it's a pain
@@ -141,22 +129,17 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
         revert InvalidVersion(version, 2);
       }
 
-      // If this is beacon forwarding, the other beacon is expected to have verified
-      // the upgrade. We only check the version as we have further context
-      if (!beacon) {
-        if (!resolved.supportsInterface(type(IUpgradeable).interfaceId)) {
-          revert NotUpgrade(resolved);
-        }
-
-        // Validate this upgrade has proper data
-        IUpgradeable(resolved).validateUpgrade(version, data);
+      if (!resolved.supportsInterface(type(IUpgradeable).interfaceId)) {
+        revert NotUpgrade(resolved);
       }
+
+      // Validate this upgrade has proper data
+      IUpgradeable(resolved).validateUpgrade(version, data);
+
+      // Write the data
+      upgradeDatas[instance][version] = data;
     }
 
-    // This write is outside the above due to beacon forwarding needing this pattern
-    // While any forward beacon will presumably have original code, and enable making this change then,
-    // establishing it now at a slightly higher gas cost for a minimally run function is solid
-    upgradeDatas[instance][version] = data;
     emit Upgrade(instance, impl, version, data);
   }
 
