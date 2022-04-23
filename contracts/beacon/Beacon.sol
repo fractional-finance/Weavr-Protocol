@@ -35,23 +35,23 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
   }
 
   function implementation(address instance) public view override returns (address) {
-    address impl = implementations[instance];
+    address code = implementations[instance];
 
     // If this contract is tracking a release channel, follow it
-    if (uint256(uint160(impl)) < releaseChannels) {
-      impl = implementations[impl];
+    if (uint256(uint160(code)) < releaseChannels) {
+      code = implementations[code];
     }
 
-    return impl;
+    return code;
   }
 
   function upgradeData(address instance, uint256 version) public view override returns (bytes memory) {
     address dataIndex = instance;
 
     // If this is following a release channel, use its data
-    address impl = implementations[dataIndex];
-    if (uint256(uint160(impl)) < releaseChannels) {
-      dataIndex = impl;
+    address code = implementations[dataIndex];
+    if (uint256(uint160(code)) < releaseChannels) {
+      dataIndex = code;
     }
 
     return upgradeDatas[dataIndex][version];
@@ -64,8 +64,8 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
   // virtual so SingleBeacon can lock it down
   function upgrade(
     address instance,
-    address impl,
     uint256 version,
+    address code,
     bytes calldata data
   ) public override virtual {
     address old = implementation(instance);
@@ -76,11 +76,11 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
       if (msg.sender != owner()) {
         revert NotOwner(msg.sender, owner());
       }
-      implementations[instance] = impl;
+      implementations[instance] = code;
 
-    // Specific impl/other beacon
+    // Specific instance
     } else {
-      // The impl for a specific contract can only be upgraded by itself or its owner
+      // The code for a specific contract can only be upgraded by itself or its owner
       // Relies on short circuiting so even non-owned contracts can call this
       if (!(
         (msg.sender == instance) ||
@@ -91,26 +91,25 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
         revert NotUpgradeAuthority(msg.sender, instance);
       }
 
-      implementations[instance] = impl;
+      implementations[instance] = code;
     }
 
     // Ensure the new implementation is of the expected type
     address resolved = implementation(instance);
-    bytes32 implName = IComposable(resolved).contractName();
+    bytes32 codeName = IComposable(resolved).contractName();
     if (
       // This check is decently pointless (especially as we've already called the
       // function in question), yet it at least ensures IComposable
       (!resolved.supportsInterface(type(IComposable).interfaceId)) ||
-      (implName != beaconName)
+      (codeName != beaconName)
     ) {
-      revert DifferentContract(implName, beaconName);
+      revert DifferentContract(codeName, beaconName);
     }
 
     // Initial code set or moving off release channel
-    if ((old != address(0)) && (old != impl)) {
+    if ((old != address(0)) && (old != code)) {
       // We could actually check version is atomically incrementing here, yet it's a pain
-      // that won't successfully be feasible to continue if we ever beacon forward
-      // and limits recovery options if there ever is an issue with an upgrade path
+      // that limits recovery options if there ever is an issue with an upgrade path
       // triggerUpgrade does enforce upgrades are only triggered for the relevant version
       if (version < 2) {
         // Technically, >= 2
@@ -130,7 +129,7 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
       revert UpgradeDataForInitial(instance);
     }
 
-    emit Upgrade(instance, impl, version, data);
+    emit Upgrade(instance, version, code, data);
   }
 
   function triggerUpgrade(address instance, uint256 version) public override {

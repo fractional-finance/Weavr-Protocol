@@ -44,8 +44,8 @@ describe("Beacon", () => {
 
   it("should allow upgrading release channel 0", async () => {
     await expect(
-      await beacon.upgrade(ethers.constants.AddressZero, auction, 1, "0x")
-    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, auction, 1, "0x");
+      await beacon.upgrade(ethers.constants.AddressZero, 1, auction, "0x")
+    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, 1, auction, "0x");
 
     expect(await beacon.implementations(ethers.constants.AddressZero)).to.equal(auction);
     expect(await beacon.implementation(ethers.constants.AddressZero)).to.equal(auction);
@@ -58,8 +58,8 @@ describe("Beacon", () => {
 
   it("should let your set you own code", async () => {
     await expect(
-      await beacon.upgrade(signer.address, dataless.address, 2, "0x")
-    ).to.emit(beacon, "Upgrade").withArgs(signer.address, dataless.address, 2, "0x");
+      await beacon.upgrade(signer.address, 2, dataless.address, "0x")
+    ).to.emit(beacon, "Upgrade").withArgs(signer.address, 2, dataless.address, "0x");
   });
 
   it("should let you set code of contracts you own", async () => {
@@ -70,34 +70,34 @@ describe("Beacon", () => {
       // will be using code specified by this beacon. While we could further
       // check, why waste gas on legitimate calls to prevent instances which
       // don't even use this beacon from having code set which is a non-issue
-      await beacon.upgrade(owned.address, dataless.address, 2, "0x")
-    ).to.emit(beacon, "Upgrade").withArgs(owned.address, dataless.address, 2, "0x");
+      await beacon.upgrade(owned.address, 2, dataless.address, "0x")
+    ).to.emit(beacon, "Upgrade").withArgs(owned.address, 2, dataless.address, "0x");
   });
 
   it("shouldn't let you set code of contracts you don't own, even as the owner", async () => {
     // Doesn't exist
     await expect(
-      beacon.upgrade(junk, dataless.address, 2, "0x")
+      beacon.upgrade(junk, 2, dataless.address, "0x")
     ).to.be.revertedWith(`NotUpgradeAuthority("${signer.address}", "${junk}")`);
 
     // No owner
     await expect(
-      beacon.upgrade(auction, dataless.address, 2, "0x")
+      beacon.upgrade(auction, 2, dataless.address, "0x")
     ).to.be.revertedWith(`NotUpgradeAuthority("${signer.address}", "${auction}")`);
 
     // Different owner
     // Any other address will use, and auction will be distinct and not < releaseChannels
     await owned.transferOwnership(junk);
     await expect(
-      beacon.upgrade(owned.address, dataless.address, 2, "0x")
+      beacon.upgrade(owned.address, 2, dataless.address, "0x")
     ).to.be.revertedWith(`NotUpgradeAuthority("${signer.address}", "${owned.address}")`);
   });
 
   it("should support upgrading with data", async () => {
     let u = await upgradeable(3, true);
     await expect(
-      await beacon.upgrade(ethers.constants.AddressZero, u.address, 3, data)
-    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, u.address, 3, data);
+      await beacon.upgrade(ethers.constants.AddressZero, 3, u.address, data)
+    ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, 3, u.address, data);
     expect(await beacon.upgradeDatas(ethers.constants.AddressZero, 3)).to.equal(data);
     expect(await beacon.upgradeData(ethers.constants.AddressZero, 3)).to.equal(data);
 

@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import "../common/IComposable.sol";
 
 interface IFrabricBeacon is IBeacon, IComposable {
-  event Upgrade(address indexed instance, address indexed code, uint256 indexed version, bytes data);
+  event Upgrade(address indexed instance, uint256 indexed version, address indexed code, bytes data);
 
   // Name of the contract this beacon points to
   function beaconName() external view returns (bytes32);
@@ -29,7 +29,7 @@ interface IFrabricBeacon is IBeacon, IComposable {
   function upgradeData(address instance, uint256 version) external view returns (bytes memory);
 
   // Upgrade to different code/forward to a different beacon
-  function upgrade(address instance, address code, uint256 version, bytes calldata data) external;
+  function upgrade(address instance, uint256 version, address code, bytes calldata data) external;
 
   // Trigger an upgrade for the specified contract
   function triggerUpgrade(address instance, uint256 version) external;

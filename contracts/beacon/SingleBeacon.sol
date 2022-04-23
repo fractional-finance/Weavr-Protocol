@@ -11,13 +11,13 @@ contract SingleBeacon is Beacon {
 
   function upgrade(
     address instance,
-    address impl,
     uint256 version,
+    address code,
     bytes calldata data
   ) public override {
     if (instance != address(0)) {
       revert UpgradingInstance(instance);
     }
-    super.upgrade(instance, impl, version, data);
+    super.upgrade(instance, version, code, data);
   }
 }

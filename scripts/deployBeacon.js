@@ -17,7 +17,7 @@ module.exports = async (releaseChannels, codeFactory) => {
   }
 
   // Any other release channels will default to this one for now
-  await beacon.upgrade(ethers.constants.AddressZero, code.address, 1, "0x");
+  await beacon.upgrade(ethers.constants.AddressZero, 1, code.address, "0x");
 
   // Wait for two additional confirms due to issues otherwise
   // Only do this on actual networks (not the hardhat network)

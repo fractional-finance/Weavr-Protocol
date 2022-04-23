@@ -38,7 +38,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   struct Upgrade {
     address beacon;
     address instance;
-    address impl;
+    address code;
     uint256 version;
     bytes data;
   }
@@ -95,7 +95,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   function _canProposeUpgrade(
     address /*beacon*/,
     address /*instance*/,
-    address /*impl*/
+    address /*code*/
   ) internal view virtual returns (bool) {
     return true;
   }
@@ -114,7 +114,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     address beacon,
     address instance,
     uint256 version,
-    address impl,
+    address code,
     bytes calldata data,
     bytes32 info
   ) external override returns (uint256 id) {
@@ -123,32 +123,32 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     }
     bytes32 beaconName = IFrabricBeacon(beacon).beaconName();
 
-    if (!impl.supportsInterface(type(IComposable).interfaceId)) {
-      revert UnsupportedInterface(impl, type(IComposable).interfaceId);
+    if (!code.supportsInterface(type(IComposable).interfaceId)) {
+      revert UnsupportedInterface(code, type(IComposable).interfaceId);
     }
-    bytes32 implName = IComposable(impl).contractName();
+    bytes32 codeName = IComposable(code).contractName();
 
     // This check is also performed by the Beacon itself when calling upgrade
     // It's just optimal to prevent this proposal from ever existing and being pending if it's not valid
     // Since this doesn't check instance's contractName, it could be setting an implementation of X
     // on beacon X, yet this is pointless. Because the instance is X, its actual beacon must be X,
     // and it will never accept this implementation (which isn't even being passed to it)
-    if (beaconName != implName) {
-      revert DifferentContract(beaconName, implName);
+    if (beaconName != codeName) {
+      revert DifferentContract(beaconName, codeName);
     }
 
-    if (!_canProposeUpgrade(beacon, instance, impl)) {
-      revert ProposingUpgrade(beacon, instance, impl);
+    if (!_canProposeUpgrade(beacon, instance, code)) {
+      revert ProposingUpgrade(beacon, instance, code);
     }
 
     id = _createProposal(uint16(CommonProposalType.Upgrade) | commonProposalBit, true, info);
-    _upgrades[id] = Upgrade(beacon, instance, impl, version, data);
-    // Doesn't index impl as parsing the Beacon's logs for its indexed impl argument
+    _upgrades[id] = Upgrade(beacon, instance, code, version, data);
+    // Doesn't index code as parsing the Beacon's logs for its indexed code argument
     // will return every time a contract upgraded to it
     // This combination of options should be competent for almost all use cases
     // The only missing indexing case is when it's proposed to upgrade, yet that never passes/executes
     // This should be minimally considerable and coverable by outside solutions if truly needed
-    emit UpgradeProposed(id, beacon, instance, version, impl, data);
+    emit UpgradeProposed(id, beacon, instance, version, code, data);
   }
 
   function proposeTokenAction(
@@ -281,7 +281,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
       } else if (pType == CommonProposalType.Upgrade) {
         Upgrade storage upgrade = _upgrades[id];
-        IFrabricBeacon(upgrade.beacon).upgrade(upgrade.instance, upgrade.impl, upgrade.version, upgrade.data);
+        IFrabricBeacon(upgrade.beacon).upgrade(upgrade.instance, upgrade.version, upgrade.code, upgrade.data);
         delete _upgrades[id];
 
       } else if (pType == CommonProposalType.TokenAction) {
