@@ -35,7 +35,7 @@ describe("Thread", async () => {
 
     // Move the balance from the owner (deployer)
     participant = signers.splice(1, 1)[0];
-    await frabric.setWhitelisted(participant.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frabric.whitelist(participant.address);
     await token.transfer(participant.address, await token.balanceOf(owner.address));
     await erc20.transfer(participant.address, (await erc20.balanceOf(owner.address)).sub(1));
     thread = thread.connect(participant);
@@ -53,7 +53,7 @@ describe("Thread", async () => {
   it("should let whitelisted token holders propose", async () => {
     // signers[0] will be burnt so remove them from signers
     const listTest = signers.splice(0, 1)[0];
-    await frabric.setWhitelisted(listTest.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frabric.whitelist(listTest.address);
     // Whitelisted yet not holder
     assert(!(await thread.canPropose(listTest.address)));
     await erc20.transfer(listTest.address, 1);

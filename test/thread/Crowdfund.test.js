@@ -27,10 +27,10 @@ describe("Crowdfund", async () => {
     // Add the governor and whitelist the signers
     signers = await ethers.getSigners();
     [ deployer, governor ] = signers.splice(0, 2);
-    await frabric.setWhitelisted(governor.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frabric.whitelist(governor.address);
     await frabric.setGovernor(governor.address, 2);
     for (let i = 0; i < 3; i++) {
-      await frabric.setWhitelisted(signers[i].address, "0x0000000000000000000000000000000000000000000000000000000000000002");
+      await frabric.whitelist(signers[i].address);
     }
 
     // Deploy the ThreadDeployer

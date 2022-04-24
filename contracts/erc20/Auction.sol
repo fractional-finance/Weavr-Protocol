@@ -67,6 +67,9 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       revert Unauthorized(msg.sender, seller);
     }
 
+    // Traditionally vulnerable pattern, hence nonReentrant
+    // You can call complete/withdraw during this yet that'd solely decrease the
+    // balance, which isn't advantageous
     uint256 startBal = IERC20(token).balanceOf(address(this));
     IERC20(token).safeTransferFrom(seller, address(this), amount);
     amount = IERC20(token).balanceOf(address(this)) - startBal;
@@ -75,9 +78,15 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     }
 
     // If amount is microscopic, list it in a single batch
+    // This following line also prevents batches from equaling 0
     uint256 batchAmount = amount / batches;
     if (batchAmount == 0) {
       batches = 1;
+    }
+
+    // If a start wasn't specified (or has already passed), use now
+    if (start < block.timestamp) {
+      start = uint64(block.timestamp);
     }
 
     for (uint256 i = 0; i < batches; i++) {
@@ -98,7 +107,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       auction.amount = batchAmount;
       auction.start = start + uint64(i * length);
       auction.length = length;
-      auction.end = start + length;
+      auction.end = auction.start + length;
       emit NewAuction(id, seller, token, traded, batchAmount, auction.start, length);
 
       amount -= batchAmount;
@@ -165,6 +174,11 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       revert NotWhitelisted(msg.sender);
     }
 
+    // Make sure they're not already the high bidder for some reason
+    if (auction.bidder == msg.sender) {
+      revert HighBidder(msg.sender);
+    }
+
     // Return funds
     // Uses an internal mapping in case the transfer back fails for whatever reason,
     // preventing further bids and enabling a cheap win
@@ -211,12 +225,11 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       } else {
         balances[auction.token][auction.seller] += auction.amount;
       }
-      return;
+    } else {
+      // Else, transfer to the bidder
+      balances[auction.token][auction.bidder] += auction.amount;
+      balances[auction.traded][auction.seller] += auction.bid;
     }
-
-    // Else, transfer to the bidder
-    balances[auction.token][auction.bidder] += auction.amount;
-    balances[auction.traded][auction.seller] += auction.bid;
 
     emit AuctionCompleted(id);
   }
@@ -227,16 +240,16 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     IERC20(token).safeTransfer(trader, amount);
   }
 
-  function auctionActive(uint256 id) external view override returns (bool) {
+  function active(uint256 id) external view override returns (bool) {
     return (_auctions[id].start <= block.timestamp) && (block.timestamp <= _auctions[id].end);
   }
-  function getCurrentBidder(uint256 id) external view override returns (address) {
+  function highestBidder(uint256 id) external view override returns (address) {
     return _auctions[id].bidder;
   }
-  function getCurrentBid(uint256 id) external view override returns (uint256) {
+  function highestBid(uint256 id) external view override returns (uint256) {
     return _auctions[id].bid;
   }
-  function getEndTime(uint256 id) external view override returns (uint64) {
+  function end(uint256 id) external view override returns (uint64) {
     return _auctions[id].end;
   }
 }

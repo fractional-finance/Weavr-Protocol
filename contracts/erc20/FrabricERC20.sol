@@ -21,6 +21,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   bool public override mintable;
   address public override auction;
 
+  bool private _burning;
+
   mapping(address => uint64) public override frozenUntil;
   mapping(address => uint8) public override removalFee;
   bool private _removal;
@@ -103,7 +105,9 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   }
 
   function burn(uint256 amount) external override {
+    _burning = true;
     _burn(msg.sender, amount);
+    _burning = false;
   }
 
   function freeze(address person, uint64 until) external override onlyOwner {
@@ -264,7 +268,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
       // could be outside this block without issue. If it wasn't whitelisted,
       // anyone could call remove on it, which would be exceptionally problematic
       // (and it couldn't transfer tokens to auction winners)
-      if (!whitelisted(to)) {
+      if ((!whitelisted(to)) && (!_burning)) {
         revert NotWhitelisted(to);
       }
 

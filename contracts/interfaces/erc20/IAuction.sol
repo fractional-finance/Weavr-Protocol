@@ -41,10 +41,10 @@ interface IAuction is IAuctionCore {
   function complete(uint256 id) external;
   function withdraw(address token, address trader) external;
 
-  function auctionActive(uint256 id) external view returns (bool);
-  function getCurrentBidder(uint256 id) external view returns (address);
-  function getCurrentBid(uint256 id) external view returns (uint256);
-  function getEndTime(uint256 id) external view returns (uint64);
+  function active(uint256 id) external view returns (bool);
+  function highestBidder(uint256 id) external view returns (address);
+  function highestBid(uint256 id) external view returns (uint256);
+  function end(uint256 id) external view returns (uint64);
 }
 
 interface IAuctionInitializable is IAuction {
@@ -55,4 +55,5 @@ error Unauthorized(address caller, address user);
 error AuctionPending(uint256 time, uint256 start);
 error AuctionOver(uint256 time, uint256 end);
 error BidTooLow(uint256 bid, uint256 currentBid);
+error HighBidder(address bidder);
 error AuctionActive(uint256 time, uint256 end);
