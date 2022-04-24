@@ -1,5 +1,5 @@
 const { ethers, waffle } = require("hardhat");
-const { expect } = require("chai");
+const { assert, expect } = require("chai");
 
 const { snapshot, revert, mine } = require("../common.js");
 
@@ -94,7 +94,7 @@ describe("DistributionERC20", accounts => {
     await expect(tx).to.emit(token, "Claimed").withArgs(0, deployer.address, ethers.utils.parseUnits("100"));
     await expect(tx).to.emit(other, "Transfer").withArgs(token.address, deployer.address, ethers.utils.parseUnits("100"));
     expect(await other.balanceOf(token.address)).to.equal(0);
-    expect(await token.claimed(0, deployer.address)).to.equal(true);
+    assert(await token.claimed(0, deployer.address));
   });
 
   it("shouldn't allow claiming multiple times", async () => {
@@ -110,7 +110,7 @@ describe("DistributionERC20", accounts => {
       "333333333333333333333333",
       "333333333333333333333334"
     ];
-    const sub = (await ethers.getSigners()).slice(1, 4);
+    const sub = signers.slice(0, 3);
     await token.transfer(sub[0].address, amounts[0]);
     await token.transfer(sub[1].address, amounts[1]);
     await token.transfer(sub[2].address, amounts[2]);
@@ -128,7 +128,7 @@ describe("DistributionERC20", accounts => {
       const tx = await token.claim(1, address);
       await expect(tx).to.emit(token, "Claimed").withArgs(1, address, amount);
       await expect(tx).to.emit(other, "Transfer").withArgs(token.address, address, amount);
-      expect(await token.claimed(1, address)).to.equal(true);
+      assert(await token.claimed(1, address));
       expect(await other.balanceOf(address)).to.equal(amount);
     }
     expect(await other.balanceOf(token.address)).to.equal(1);

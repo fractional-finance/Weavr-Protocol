@@ -145,7 +145,7 @@ describe("FrabricDAO", accounts => {
       }
 
       const { id, tx: freeze } = await propose(fDAO, "ParticipantRemoval", [other.address, removalFee, signatures]);
-      if (i == 2) {
+      if (i === 2) {
         let frozenUntil = (await waffle.provider.getBlock("latest")).timestamp + WEEK + (3 * 24 * 60 * 60);
         await expect(freeze).to.emit(frbc, "Freeze").withArgs(other.address, frozenUntil);
         expect(await frbc.frozenUntil(other.address)).to.equal(frozenUntil);
@@ -160,7 +160,7 @@ describe("FrabricDAO", accounts => {
         "0x0000000000000000000000000000000000000000000000000000000000000001",
         "0x0000000000000000000000000000000000000000000000000000000000000000"
       );
-      if (removalFee != 0) {
+      if (removalFee !== 0) {
         await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, fDAO.address, removalFee);
       }
       await expect(tx).to.emit(frbc, "Approval").withArgs(other.address, auction.address, 100 - removalFee);
@@ -173,7 +173,7 @@ describe("FrabricDAO", accounts => {
           other.address,
           frbc.address,
           usd.address,
-          i == 0 ? 25 : (b != 3 ? 23 : 26),
+          i === 0 ? 25 : (b !== 3 ? 23 : 26),
           start,
           WEEK
         );

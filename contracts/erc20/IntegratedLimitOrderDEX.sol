@@ -343,19 +343,19 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     _withdrawDEXToken(msg.sender);
   }
 
-  function getPointType(uint256 price) external view override returns (OrderType) {
+  function pointType(uint256 price) external view override returns (OrderType) {
     return _points[price].orderType;
   }
 
-  function getOrderQuantity(uint256 price) external view override returns (uint256) {
+  function orderQuantity(uint256 price) external view override returns (uint256) {
     return _points[price].orders.length;
   }
 
-  function getOrderTrader(uint256 price, uint256 i) external view override returns (address) {
+  function orderTrader(uint256 price, uint256 i) external view override returns (address) {
     return _points[price].orders[i].trader;
   }
 
-  function getOrderAmount(uint256 price, uint256 i) external view override returns (uint256) {
+  function orderAmount(uint256 price, uint256 i) external view override returns (uint256) {
     Order memory order = _points[price].orders[i];
     // The FrabricERC20 whitelisted function will check both whitelisted and removed
     // When this order is actioned, if they're no longer whitelisted yet have yet to be removed,

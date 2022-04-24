@@ -173,7 +173,7 @@ describe("Thread", async () => {
         event = erc20.interface.parseLog(event);
       } catch { continue; }
 
-      if (event.name == "Transfer") {
+      if (event.name === "Transfer") {
         expect(event.args.from).to.equal(expected[0][0]);
         expect(event.args.to).to.equal(expected[0][1]);
         expect(event.args.value).to.equal(expected[0][2]);

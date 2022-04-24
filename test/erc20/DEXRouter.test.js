@@ -27,6 +27,6 @@ describe("DEXRouter", accounts => {
   });
 
   it("should use the msg.sender as the trader", async () => {
-    expect(await frbc.getOrderTrader(2, 0)).to.equal(deployer.address);
+    expect(await frbc.orderTrader(2, 0)).to.equal(deployer.address);
   });
 });

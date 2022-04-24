@@ -37,10 +37,10 @@ interface IIntegratedLimitOrderDEX is IComposable, IIntegratedLimitOrderDEXCore 
     uint256 minimumAmount
   ) external returns (uint256, uint256);
 
-  function getPointType(uint256 price) external view returns (IIntegratedLimitOrderDEXCore.OrderType);
-  function getOrderQuantity(uint256 price) external view returns (uint256);
-  function getOrderTrader(uint256 price, uint256 i) external view returns (address);
-  function getOrderAmount(uint256 price, uint256 i) external view returns (uint256);
+  function pointType(uint256 price) external view returns (IIntegratedLimitOrderDEXCore.OrderType);
+  function orderQuantity(uint256 price) external view returns (uint256);
+  function orderTrader(uint256 price, uint256 i) external view returns (address);
+  function orderAmount(uint256 price, uint256 i) external view returns (uint256);
 }
 
 error LessThanMinimumAmount(uint256 amount, uint256 minimumAmount);

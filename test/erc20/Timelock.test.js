@@ -54,7 +54,7 @@ describe("Timelock", accounts => {
   it("should allow claiming when the lock expires", async () => {
     let sum = 0;
     let remaining = await timelock.remainingMonths(token.address)
-    while (remaining != 0) {
+    while (remaining !== 0) {
       await increaseTime(MONTH);
 
       // Verify it sent the amount remaining divided by the amount of remaining months

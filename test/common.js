@@ -71,7 +71,7 @@ module.exports = {
     let ProposalType;
     if (module.exports.CommonProposalType.hasOwnProperty(proposal)) {
       ProposalType = module.exports.CommonProposalType;
-    } else if ((await dao.contractName()) == ethers.utils.id("Frabric")) {
+    } else if ((await dao.contractName()) === ethers.utils.id("Frabric")) {
       ProposalType = module.exports.FrabricProposalType;
     } else {
       ProposalType = module.exports.ThreadProposalType;
