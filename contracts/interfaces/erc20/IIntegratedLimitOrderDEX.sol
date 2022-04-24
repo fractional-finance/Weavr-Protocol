@@ -10,10 +10,10 @@ interface IIntegratedLimitOrderDEXCore {
   event Filled(address indexed executor, address indexed orderer, uint256 indexed price, uint256 amount);
   event NewOrder(OrderType indexed orderType, uint256 indexed price);
   event OrderIncrease(address indexed trader, uint256 indexed price, uint256 amount);
-  event CancelledOrder(address indexed trader, uint256 indexed price, uint256 amount);
+  event OrderCancellation(address indexed trader, uint256 indexed price, uint256 amount);
 
   // Part of core to symbolize amount should always be whole while price is atomic
-  function atomic(uint256 amount) external returns (uint256);
+  function atomic(uint256 amount) external view returns (uint256);
 
   function tradeToken() external view returns (address);
 
@@ -29,7 +29,7 @@ interface IIntegratedLimitOrderDEX is IComposable, IIntegratedLimitOrderDEXCore 
   function tradeTokenBalances(address trader) external view returns (uint256);
   function locked(address trader) external view returns (uint256);
 
-  function withdrawDEXToken(address trader) external;
+  function withdrawTradeToken(address trader) external;
 
   function buy(
     address trader,
