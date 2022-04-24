@@ -17,11 +17,17 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   // Whitelist used for the entire Frabric platform
   address public override parent;
   // Intended to point to a hash of the whitelisted party's personal info
+  // This will NOT resolve to its parent's info if no info is set here
   mapping(address => bytes32) public override info;
   // List of people removed from the whitelist
   mapping(address => bool) private _removed;
 
   uint256[100] private __gap;
+
+  function _setGlobal() internal {
+    global = true;
+    emit GlobalAcceptance();
+  }
 
   function _setParent(address _parent) internal {
     if ((_parent != address(0)) && (!_parent.supportsInterface(type(IWhitelist).interfaceId))) {
@@ -60,7 +66,11 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
       revert Removed(person);
     }
 
-    emit WhitelistUpdate(person, info[person], dataHash);
+    if (info[person] == bytes32(0)) {
+      emit Whitelisted(person, true);
+    }
+
+    emit InfoChange(person, info[person], dataHash);
     info[person] = dataHash;
   }
 
@@ -70,8 +80,11 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
     }
     _removed[person] = true;
 
-    emit WhitelistUpdate(person, info[person], bytes32(0));
-    info[person] = bytes32(0);
+    emit Whitelisted(person, false);
+  }
+
+  function explicitlyWhitelisted(address person) public view override returns (bool) {
+    return (info[person] != bytes32(0)) && (!_removed[person]);
   }
 
   function whitelisted(address person) public view virtual override returns (bool) {
@@ -81,12 +94,8 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
       // Check the parent whitelist (actually relevant check most of the time)
       ((parent != address(0)) && IWhitelist(parent).whitelisted(person)) ||
       // Global or explicitly whitelisted
-      global || (info[person] != bytes32(0))
+      global || explicitlyWhitelisted(person)
     );
-  }
-
-  function explicitlyWhitelisted(address person) public view override returns (bool) {
-    return info[person] != bytes32(0);
   }
 
   function removed(address person) public view virtual override returns (bool) {

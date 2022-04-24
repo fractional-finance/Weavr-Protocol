@@ -155,11 +155,7 @@ describe("FrabricDAO", accounts => {
       }
 
       const tx = await queueAndComplete(fDAO, id);
-      await expect(tx).to.emit(frbc, "WhitelistUpdate").withArgs(
-        other.address,
-        "0x0000000000000000000000000000000000000000000000000000000000000001",
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
-      );
+      await expect(tx).to.emit(frbc, "Whitelisted").withArgs(other.address, false);
       if (removalFee !== 0) {
         await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, fDAO.address, removalFee);
       }

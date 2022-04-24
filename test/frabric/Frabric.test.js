@@ -230,7 +230,7 @@ describe("Frabric", accounts => {
     await expect(
       (await proposal(frabric, "ParticipantRemoval", [governor.address, 0, []])).tx
     ).to.emit(frabric, "ParticipantChange").withArgs(governor.address, ParticipantType.Removed);
-    expect(await frbc.info(governor.address)).to.equal(ethers.constants.HashZero);
+    expect(await frbc.whitelisted(governor.address)).to.equal(false);
     expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Removed);
     expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Removed);
     assert(!(await frabric.canPropose(governor.address)));

@@ -226,7 +226,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   function triggerRemoval(address person) public override nonReentrant {
     // Check they were actually removed from the whitelist
     if (whitelisted(person)) {
-      revert Whitelisted(person);
+      revert NotRemoved(person);
     }
 
     // Check they actually used this contract in some point

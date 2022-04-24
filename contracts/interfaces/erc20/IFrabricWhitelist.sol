@@ -5,6 +5,8 @@ import "../common/Errors.sol";
 import "../common/IComposable.sol";
 
 interface IWhitelist {
+  event Whitelisted(address indexed person, bool indexed whitelisted);
+
   function whitelisted(address person) external view returns (bool);
 }
 
@@ -13,7 +15,7 @@ interface IFrabricWhitelist is IComposable, IWhitelist {
   // Info shouldn't be indexed when you consider it's unique per-person
   // Indexing it does allow retrieving the address of a person by their KYC however
   // It's also just 750 gas on an infrequent operation
-  event WhitelistUpdate(address indexed person, bytes32 indexed oldInfo, bytes32 indexed newInfo);
+  event InfoChange(address indexed person, bytes32 indexed oldInfo, bytes32 indexed newInfo);
   event GlobalAcceptance();
 
   function global() external view returns (bool);
@@ -28,4 +30,4 @@ interface IFrabricWhitelist is IComposable, IWhitelist {
 error WhitelistingWithZero(address person);
 error Removed(address person);
 error NotWhitelisted(address person);
-error Whitelisted(address person);
+error NotRemoved(address person);
