@@ -66,7 +66,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
   // Validates a variant and byte data
   function validate(uint8 variant, bytes calldata data) external override pure {
     if (variant == 0) {
-      abi.decode(data, (address, uint256));
+      abi.decode(data, (address, uint112));
     } else {
       revert UnknownVariant(variant);
     }
@@ -164,7 +164,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
       revert UnknownVariant(variant);
     }
 
-    (address tradeToken, uint256 target) = abi.decode(data, (address, uint256));
+    (address tradeToken, uint112 target) = abi.decode(data, (address, uint112));
 
     // Don't initialize the ERC20/Crowdfund yet
     // It may be advantageous to utilize CREATE2 here, yet probably doesn't matter

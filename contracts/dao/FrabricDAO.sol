@@ -229,11 +229,11 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
       // If the votes of these holders doesn't meet the required participation threshold, throw
       // Guaranteed to be positive as all votes have been for so far
-      if (uint128(proposalVotes(id)) < requiredParticipation()) {
+      if (uint112(proposalVotes(id)) < requiredParticipation()) {
         // Uses an ID of type(uint256).max since this proposal doesn't have an ID yet
         // While we have an id variable, if this transaction reverts, it'll no longer be valid
         // We could also use 0 yet that would overlap with an actual proposal
-        revert NotEnoughParticipation(type(uint256).max, uint128(proposalVotes(id)), requiredParticipation());
+        revert NotEnoughParticipation(type(uint256).max, uint112(proposalVotes(id)), requiredParticipation());
       }
 
       // Freeze the token until this proposal completes, with an extra 1 day buffer

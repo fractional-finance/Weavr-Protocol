@@ -17,13 +17,17 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
 
   struct Distribution {
     address token;
-    uint64 block;
-    uint256 amount;
+    uint32 block;
+    // 8 bytes left ^
+    // 4 bytes left v
+    uint112 amount; // If Uniswap can do it... also fine for our use case
+    uint112 supply; // Bounds descendants into not minting past uint112
   }
   // This could be an array yet gas testing on an isolate contract showed writing
   // new structs was roughly 200 gas more expensive while reading to memory was
   // roughly 2000 gas cheaper
   // This was including the monotonic uint256 increment
+  // It's also better to use a mapping as we can extend the struct later if needed
   uint256 private _nextID;
   mapping(uint256 => Distribution) private _distributions;
   mapping(uint256 => mapping(address => bool)) public override claimed;
@@ -63,17 +67,23 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   }
 
   // Distribution implementation
-  function _distribute(address token, uint256 amount) internal {
+  function _distribute(address token, uint112 amount) internal {
     if (amount == 0) {
       revert ZeroAmount();
     }
 
-    _distributions[_nextID] = Distribution(token, uint64(block.number), amount);
+    _distributions[_nextID] = Distribution(
+      token,
+      uint32(block.number - 1),
+      amount,
+      // Cache the supply so each claim doesn't have to repeat this binary search
+      uint112(getPastTotalSupply(block.number - 1))
+    );
     emit NewDistribution(_nextID, token, amount);
     _nextID++;
   }
 
-  function distribute(address token, uint256 amount) public override nonReentrant {
+  function distribute(address token, uint112 amount) public override nonReentrant {
     uint256 balance = IERC20(token).balanceOf(address(this));
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     // This does mean USDT distributions could theoretically break at some point
@@ -97,13 +107,16 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     claimed[id][person] = true;
 
     Distribution storage distribution = _distributions[id];
-    uint256 amount = distribution.amount * getPastVotes(person, distribution.block) / getPastTotalSupply(distribution.block);
+    // Since amount will never exceed distribution.amount, which is a uint112, this is proper
+    uint112 amount = uint112(
+      uint256(distribution.amount) * getPastVotes(person, distribution.block) / distribution.supply
+    );
     // Also verifies this is an actual distribution and not an unset ID
     if (amount == 0) {
       revert ZeroAmount();
     }
 
-    IERC20(distribution.token).safeTransfer(person, amount);
+    IERC20(distribution.token).safeTransfer(person, uint112(amount));
     emit Claimed(id, person, amount);
   }
 }

@@ -31,7 +31,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   struct Dissolution {
     address purchaser;
     address token;
-    uint256 price;
+    uint112 price;
   }
   mapping(uint256 => Dissolution) private _dissolutions;
 
@@ -232,7 +232,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
   function proposeDissolution(
     address token,
-    uint256 price,
+    uint112 price,
     bytes32 info
   ) external override returns (uint256 id) {
     if (price == 0) {

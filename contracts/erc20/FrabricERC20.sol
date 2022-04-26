@@ -83,10 +83,13 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     // Make sure the supply is within bounds
     // The DAO code sets an upper bound of signed<int>.max
     // Uniswap and more frequently use uint112 which is a perfectly functional bound
-    // The DAO code accordingly uses int128 which maintains storage efficiency
-    // while supporting the full uint112 range
-    if (totalSupply() > uint256(type(uint112).max)) {
-      revert SupplyExceedsUInt112(totalSupply(), type(uint112).max);
+    // DistributionERC20 optimized into a bound of uint128 and with that push decided
+    // to lock down all the way to uint112
+    // Therefore, this can't exceed uint112. Specifically, it binds to int112
+    // as it's still perfectly functional yet prevents the DAO from needing to use
+    // uint120
+    if (totalSupply() > uint256(uint112(type(int112).max))) {
+      revert SupplyExceedsInt112(totalSupply(), type(int112).max);
     }
   }
 

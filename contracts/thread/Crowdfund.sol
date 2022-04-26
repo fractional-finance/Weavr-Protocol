@@ -26,13 +26,14 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   State public state;
   address public override thread;
   address public override token;
-  uint256 public override target;
+  uint112 public override target;
 
   // Amount of tokens which have yet to be converted to Thread tokens
   // Equivalent to the amount of funds deposited and not withdrawn if none have
   // been burnt yet
-  function outstanding() public view override returns (uint256) {
-    return totalSupply();
+  function outstanding() public view override returns (uint112) {
+    // Safe cast as mintage matches target and target is uint112
+    return uint112(totalSupply());
   }
 
   function initialize(
@@ -42,7 +43,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     address _governor,
     address _thread,
     address _token,
-    uint256 _target
+    uint112 _target
   ) external override initializer {
     __DistributionERC20_init(
       string(abi.encodePacked("Crowdfund ", name)),
@@ -66,7 +67,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     emit NewCrowdfund(governor, thread, token, target);
     emit StateChange(state);
 
-    // Normalize 1 of the raise token to the thread token to ensure normalization won't fail
+    // Normalize 1 of the raise token to the Thread token to ensure normalization won't fail
     normalizeRaiseToThread(1);
   }
 
@@ -116,7 +117,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     transferAllowed = false;
   }
 
-  function deposit(uint256 amount) external override {
+  function deposit(uint112 amount) external override {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
@@ -133,6 +134,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
 
     // Mint before transferring to prevent re-entrancy causing the Crowdfund to exceed its target
     transferAllowed = true;
+    // Proper since this only runs up to target which is a uint112
     _mint(msg.sender, amount);
     transferAllowed = false;
 
@@ -158,7 +160,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   }
 
   // Enable withdrawing funds before the target is reached
-  function withdraw(uint256 amount) external override {
+  function withdraw(uint112 amount) external override {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
@@ -183,7 +185,15 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
 
     // Set the State to refunding
     state = State.Refunding;
-    _distribute(token, IERC20(token).balanceOf(address(this)));
+    uint256 balance = IERC20(token).balanceOf(address(this));
+    // This should never happen, yet since anyone can transfer to this contract...
+    // it theoretically can. This ensures that the maximum possible amount will
+    // be paid out. While some may still be trapped, an amount >= target will be
+    // refunded, as intended
+    if (balance > type(uint112).max) {
+      balance = type(uint112).max;
+    }
+    _distribute(token, uint112(balance));
     emit StateChange(state);
   }
 
@@ -205,7 +215,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   }
 
   // Take a executing Crowdfund which externally failed and return the leftover funds
-  function refund(uint256 amount) external override {
+  function refund(uint112 amount) external override {
     if (msg.sender != governor) {
       revert NotGovernor(msg.sender, governor);
     }

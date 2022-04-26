@@ -46,7 +46,7 @@ interface IFrabricERC20Initializable is IFrabricERC20 {
   ) external;
 }
 
-error SupplyExceedsUInt112(uint256 supply, uint112 max);
+error SupplyExceedsInt112(uint256 supply, int112 max);
 error Frozen(address person);
 error NothingToRemove(address person);
 // Not Paused due to an overlap with the event

@@ -8,7 +8,7 @@ interface IThread is IFrabricDAO {
   event FrabricChangeProposed(uint256 indexed id, address indexed frabric, address indexed governor);
   event GovernorChangeProposed(uint256 indexed id, address indexed governor);
   event EcosystemLeaveWithUpgradesProposed(uint256 indexed id, address indexed frabric, address indexed governor);
-  event DissolutionProposed(uint256 indexed id, address indexed token, uint256 amount);
+  event DissolutionProposed(uint256 indexed id, address indexed token, uint256 price);
 
   event DescriptorChange(bytes32 indexed oldDescriptor, bytes32 indexed newDescriptor);
   event FrabricChange(address indexed oldGovernor, address indexed newGovernor);
@@ -48,7 +48,7 @@ interface IThread is IFrabricDAO {
   ) external returns (uint256);
   function proposeDissolution(
     address token,
-    uint256 purchaseAmount,
+    uint112 price,
     bytes32 info
   ) external returns (uint256);
 }

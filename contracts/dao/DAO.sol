@@ -31,20 +31,19 @@ abstract contract DAO is Composable, IDAO {
     // The following are exposed via getters
     // This won't be deleted yet this struct is used in _proposals which atomically increments keys
     // Therefore, this usage is safe
-    mapping(address => int128) voters;
-    // Safe due to the FrabricERC20 being uint112
-    // This could be 112 as well, if the FrabricERC20 was limited to int112
-    // instead of uint112, which would save 32 bits. If we move voteBlock into
-    // this storage slot, which would last for 68 years if in seconds, yet ~884
-    // years since it's in blocks, we would save an entire strorage slot
-    // This is just a level of optimization not worth it
-    int128 votes;
-    uint128 totalVotes;
-
-    // We have 24 bytes left in this storage slot and it'd more gas efficient to
-    // turn this into a uint256. Keeping it as uint64 gives us the option to pack
-    // more in this slot in the future though
-    uint64 voteBlock;
+    mapping(address => int112) voters;
+    // Safe due to the FrabricERC20 being int112 as well
+    int112 votes;
+    uint112 totalVotes;
+    // This would be the 2038 problem if this was denominated in seconds, which
+    // wouldn't be acceptable. Instead, since it's denominated in blocks, we have
+    // not 68 years from the epoch yet ~884 years from the start of Ethereum
+    // Accepting the protocol's forced upgrade/death at that point to save
+    // a decent amount of gas now is worth it
+    // It may be much sooner if the block time decreases significantly yet
+    // this is solely used in maps, which means we can extend this struct without
+    // issue
+    uint32 voteBlock;
   }
 
   address public override erc20;
@@ -80,11 +79,11 @@ abstract contract DAO is Composable, IDAO {
     emit ProposalStateChange(id, ProposalState.Executed);
   }
 
-  function requiredParticipation() public view returns (uint128) {
+  function requiredParticipation() public view returns (uint112) {
     // Uses the current total supply instead of the historical total supply in
     // order to represent the current community
     // Subtracts any reserves held by the DAO itself as those can't be voted with
-    return uint128(IERC20(erc20).totalSupply() - IERC20(erc20).balanceOf(address(this))) / 10;
+    return uint112(IERC20(erc20).totalSupply() - IERC20(erc20).balanceOf(address(this))) / 10;
   }
 
   function canPropose(address proposer) public virtual view returns (bool);
@@ -137,7 +136,7 @@ abstract contract DAO is Composable, IDAO {
     // Use the previous block as it's finalized
     // While the creator could have sold in this block, they can also sell over the next few weeks
     // This is why cancelProposal exists
-    proposal.voteBlock = uint64(block.number) - 1;
+    proposal.voteBlock = uint32(block.number) - 1;
     proposal.pType = proposalType;
     proposal.supermajority = supermajority;
 
@@ -147,7 +146,7 @@ abstract contract DAO is Composable, IDAO {
     emit ProposalStateChange(id, proposal.state);
 
     // Automatically vote in favor for the creator if they have votes and are actively whitelisted
-    int128 votes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
+    int112 votes = int112(uint112(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
     if ((votes != 0) && IWhitelist(erc20).whitelisted(msg.sender)) {
       _voteUnsafe(msg.sender, id, proposal, votes, votes);
     }
@@ -155,26 +154,26 @@ abstract contract DAO is Composable, IDAO {
 
   // Labelled unsafe due to its split checks with the various callers and lack of guarantees
   // on what checks it'll perform. This can only be used in a carefully designed, cohesive ecosystemm
-  function _voteUnsafe(address voter, uint256 id, Proposal storage proposal, int128 votes, int128 absVotes) private {
+  function _voteUnsafe(address voter, uint256 id, Proposal storage proposal, int112 votes, int112 absVotes) private {
     // Cap voting power per user at 10% of the current total supply
     // This will hopefully not be executed 99% of the time and then only for select Threads
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
     // 10% isn't requiredParticipation, despite currently having the same value,
     // yet rather a number with some legal consideration
     // requiredParticipation was also moved to circulating supply while this remains total
-    int128 tenPercent = int128(uint128(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
+    int112 tenPercent = int112(uint112(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
     if (absVotes > tenPercent) {
       votes = tenPercent * (votes / absVotes);
       absVotes = tenPercent;
     }
 
     // Remove old votes
-    int128 standing = proposal.voters[voter];
+    int112 standing = proposal.voters[voter];
     if (standing != 0) {
       proposal.votes -= standing;
     } else {
       // If they had previously abstained, increase the amount of total votes
-      proposal.totalVotes += uint128(absVotes);
+      proposal.totalVotes += uint112(absVotes);
     }
 
     // Set new votes
@@ -188,16 +187,16 @@ abstract contract DAO is Composable, IDAO {
       // If they're now abstaining, decrease the amount of total votes
       // While abstaining could be considered valid as participation,
       // it'd require an extra variable to properly track and requiring opinionation is fine
-      proposal.totalVotes -= uint128(absVotes);
+      proposal.totalVotes -= uint112(absVotes);
       direction = VoteDirection.Abstain;
     }
 
-    emit Vote(id, direction, voter, uint128(absVotes));
+    emit Vote(id, direction, voter, uint112(absVotes));
   }
 
   function _voteUnsafe(uint256 id, address voter) internal {
     Proposal storage proposal = _proposals[id];
-    int128 votes = int128(uint128(IVotes(erc20).getPastVotes(voter, proposal.voteBlock)));
+    int112 votes = int112(uint112(IVotes(erc20).getPastVotes(voter, proposal.voteBlock)));
     if ((votes != 0) && IWhitelist(erc20).whitelisted(voter)) {
       _voteUnsafe(voter, id, proposal, votes, votes);
     }
@@ -206,7 +205,7 @@ abstract contract DAO is Composable, IDAO {
   // While it's not expected for this to be called in batch due to UX complexities,
   // it's a very minor gas cost which does offer savings when multiple proposals
   // are voted on at the same time
-  function vote(uint256[] memory ids, int128[] memory votes) external override {
+  function vote(uint256[] memory ids, int112[] memory votes) external override {
     // Requires the caller to also be whitelisted. While the below NoVotes error
     // should prevent this from happening, when the Frabric removes someone,
     // Threads keep token balances until someone calls remove on them
@@ -218,7 +217,7 @@ abstract contract DAO is Composable, IDAO {
 
     for (uint256 i = 0; i < ids.length; i++) {
       Proposal storage proposal = activeProposal(ids[i]);
-      int128 actualVotes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
+      int112 actualVotes = int112(uint112(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
       if (actualVotes == 0) {
         return;
       }
@@ -226,17 +225,17 @@ abstract contract DAO is Composable, IDAO {
       // Since Solidity arrays are bounds checked, this will simply error if votes
       // is too short. If it's too long, it ignores the extras, and the actually processed
       // data doesn't suffer from any mutability
-      int128 votesI = votes[i];
+      int112 votesI = votes[i];
 
       // If they're abstaining, don't check if they have enough votes
       // 0 will be less than (or equal to) whatever amount they do have
-      int128 absVotes;
+      int112 absVotes;
       if (votesI == 0) {
         absVotes = 0;
       } else {
         absVotes = votesI > 0 ? votesI : -votesI;
         // If they're voting with more votes then they actually have, correct votes
-        // Also allows UIs to simply vote with type(int128).max
+        // Also allows UIs to simply vote with type(int112).max
         if (absVotes > actualVotes) {
           // votesI / absVotes will return 1 or -1, representing the vote direction
           votesI = actualVotes * (votesI / absVotes);
@@ -263,12 +262,12 @@ abstract contract DAO is Composable, IDAO {
     }
 
     // Proposal should've gotten enough votes to pass
-    int128 passingVotes = 0;
+    int112 passingVotes = 0;
     if (proposal.supermajority) {
       // Utilize a 66% supermajority requirement
       // If 0 represents 50%, a further 16% of votes must be positive
       // Doesn't add 1 to handle rounding due to the following if statement
-      passingVotes = int128(proposal.totalVotes / 6);
+      passingVotes = int112(proposal.totalVotes / 6);
     }
 
     // In case of a tie, err on the side of caution and fail the proposal
@@ -282,7 +281,7 @@ abstract contract DAO is Composable, IDAO {
     }
 
     proposal.state = ProposalState.Queued;
-    proposal.stateStartTime = uint64(block.timestamp);
+    proposal.stateStartTime = uint32(block.timestamp);
     emit ProposalStateChange(id, proposal.state);
   }
 
@@ -293,7 +292,7 @@ abstract contract DAO is Composable, IDAO {
       revert NotQueued(id, proposal.state);
     }
 
-    int128 newVotes = proposal.votes;
+    int112 newVotes = proposal.votes;
     uint160 prevVoter = 0;
     for (uint i = 0; i < voters.length; i++) {
       address voter = voters[i];
@@ -304,16 +303,16 @@ abstract contract DAO is Composable, IDAO {
 
       // If a voter who voted against this proposal (or abstained) is included,
       // whoever wrote JS to handle this has a broken script which isn't working as intended
-      int128 voted = proposal.voters[voter];
+      int112 voted = proposal.voters[voter];
       if (voted <= 0) {
         revert NotYesVote(id, voter);
       }
 
-      int128 votes = int128(uint128(IERC20(erc20).balanceOf(voter)));
+      int112 votes = int112(uint112(IERC20(erc20).balanceOf(voter)));
       // If the supply has shrunk, this will potentially apply a value greater than the modern 10%
       // If the supply has expanded, this will use the historic vote cap which is smaller than the modern 10%
       // The latter is more accurate and more likely
-      int128 tenPercent = int128(uint128(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
+      int112 tenPercent = int112(uint112(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
       if (votes > tenPercent) {
         votes = tenPercent;
       }
@@ -330,9 +329,9 @@ abstract contract DAO is Composable, IDAO {
       newVotes -= voted - votes;
     }
 
-    int128 passingVotes = 0;
+    int112 passingVotes = 0;
     if (proposal.supermajority) {
-      passingVotes = int128(proposal.totalVotes / 6);
+      passingVotes = int112(proposal.totalVotes / 6);
     }
 
     // If votes are tied, it would've failed queueProposal
@@ -400,17 +399,17 @@ abstract contract DAO is Composable, IDAO {
   // Will only work with proposals which have yet to complete in some form
   // After that, the sole information available onchain is passed and proposalVote
   // as mappings aren't deleted
-  function proposalVoteBlock(uint256 id) external view override returns (uint64) {
+  function proposalVoteBlock(uint256 id) external view override returns (uint32) {
     return _proposals[id].voteBlock;
   }
-  function proposalVotes(uint256 id) public view override returns (int128) {
+  function proposalVotes(uint256 id) public view override returns (int112) {
     return _proposals[id].votes;
   }
-  function proposalTotalVotes(uint256 id) external view override returns (uint128) {
+  function proposalTotalVotes(uint256 id) external view override returns (uint112) {
     return _proposals[id].totalVotes;
   }
 
-  function proposalVote(uint256 id, address voter) external view override returns (int128) {
+  function proposalVote(uint256 id, address voter) external view override returns (int112) {
     return _proposals[id].voters[voter];
   }
 }

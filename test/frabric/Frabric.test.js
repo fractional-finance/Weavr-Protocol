@@ -198,7 +198,7 @@ describe("Frabric", accounts => {
   it("should let you create a Thread", async () => {
     const descriptor = "0x" + (new Buffer.from("ipfs").toString("hex")).repeat(8);
     const data = (new ethers.utils.AbiCoder()).encode(
-      ["address", "uint256"],
+      ["address", "uint112"],
       [usd.address, 1000]
     );
 

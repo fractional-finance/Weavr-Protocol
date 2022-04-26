@@ -48,7 +48,7 @@ describe("FrabricERC20", () => {
       // Our test values therefore need to be below that to test our error
       frbc.mint(deployer.address, ethers.constants.MaxUint256.mask(224).sub(2))
     ).to.be.revertedWith(
-      `SupplyExceedsUInt112(${ethers.constants.MaxUint256.mask(224).sub(1)}, 5192296858534827628530496329220095)`
+      `SupplyExceedsInt112(${ethers.constants.MaxUint256.mask(224).sub(1)}, 2596148429267413814265248164610047)`
     );
   });
 

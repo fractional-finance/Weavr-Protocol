@@ -12,7 +12,7 @@ interface IThreadDeployer is IComposable {
     bytes32 descriptor
   );
 
-  event CrowdfundedThread(address indexed thread, address indexed token, address indexed crowdfund, uint256 target);
+  event CrowdfundedThread(address indexed thread, address indexed token, address indexed crowdfund, uint112 target);
 
   function percentage() external view returns (uint8);
   function crowdfundProxy() external view returns (address);

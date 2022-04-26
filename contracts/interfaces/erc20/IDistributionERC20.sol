@@ -8,12 +8,12 @@ import "../common/Errors.sol";
 import "../common/IComposable.sol";
 
 interface IDistributionERC20 is IVotesUpgradeable, IERC20, IComposable {
-  event NewDistribution(uint256 indexed id, address indexed token, uint256 amount);
-  event Claimed(uint256 indexed id, address indexed person, uint256 amount);
+  event NewDistribution(uint256 indexed id, address indexed token, uint112 amount);
+  event Claimed(uint256 indexed id, address indexed person, uint112 amount);
 
   function claimed(uint256 id, address person) external view returns (bool);
 
-  function distribute(address token, uint256 amount) external;
+  function distribute(address token, uint112 amount) external;
   function claim(uint256 id, address person) external;
 }
 

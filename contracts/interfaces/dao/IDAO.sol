@@ -38,24 +38,24 @@ interface IDAO is IDAOCore {
     No
   }
 
-  event Vote(uint256 indexed id, VoteDirection indexed direction, address indexed voter, uint128 votes);
+  event Vote(uint256 indexed id, VoteDirection indexed direction, address indexed voter, uint112 votes);
 
   function queuePeriod() external view returns (uint64);
-  function requiredParticipation() external view returns (uint128);
+  function requiredParticipation() external view returns (uint112);
 
-  function vote(uint256[] calldata id, int128[] calldata votes) external;
+  function vote(uint256[] calldata id, int112[] calldata votes) external;
   function queueProposal(uint256 id) external;
   function cancelProposal(uint256 id, address[] calldata voters) external;
 
   function nextProposalID() external view returns (uint256);
 
   // Will only work for proposals pre-finalization
-  function proposalVoteBlock(uint256 id) external view returns (uint64);
-  function proposalVotes(uint256 id) external view returns (int128);
-  function proposalTotalVotes(uint256 id) external view returns (uint128);
+  function proposalVoteBlock(uint256 id) external view returns (uint32);
+  function proposalVotes(uint256 id) external view returns (int112);
+  function proposalTotalVotes(uint256 id) external view returns (uint112);
 
   // Will work even with finalized proposals (cancelled/completed)
-  function proposalVote(uint256 id, address voter) external view returns (int128);
+  function proposalVote(uint256 id, address voter) external view returns (int112);
 }
 
 error InactiveProposal(uint256 id);

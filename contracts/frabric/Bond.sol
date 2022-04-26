@@ -65,6 +65,10 @@ contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
     }
     // Safe usage since Uniswap v2 tokens aren't fee on transfer nor 777
     IERC20(bondToken).safeTransferFrom(msg.sender, address(this), amount);
+    // Proper since Uniswap LP tokens won't have their supply exceed uint112
+    // Specifically, they won't have their balance of either token exceed uint112
+    // The LP token quantity is the sqrt of a * b, so even if both balances are
+    // uint112.max, the LP token supply will only be uint112.max
     _mint(msg.sender, amount);
     emit Bond(msg.sender, amount);
   }
