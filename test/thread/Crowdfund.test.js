@@ -95,7 +95,7 @@ describe("Crowdfund", async () => {
     const balance = await erc20.balanceOf(crowdfund.address);
     const tx = await crowdfund.connect(governor).cancel();
     await expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Refunding);
-    await expect(tx).to.emit(crowdfund, "Distributed").withArgs(0, erc20.address, balance);
+    await expect(tx).to.emit(crowdfund, "NewDistribution").withArgs(0, erc20.address, balance);
     // TODO: check state is actually updated
   });
 
@@ -180,7 +180,7 @@ describe("Crowdfund", async () => {
     await erc20.connect(governor).approve(crowdfund.address, target);
     const tx = await crowdfund.connect(governor).refund(target);
     await expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Refunding);
-    await expect(tx).to.emit(crowdfund, "Distributed").withArgs(0, erc20.address, target);
+    await expect(tx).to.emit(crowdfund, "NewDistribution").withArgs(0, erc20.address, target);
   });
 
   // Does not test depositing when refunding as cancelled and refunding have the
