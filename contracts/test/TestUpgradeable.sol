@@ -12,9 +12,9 @@ contract TestUpgradeable is IUpgradeable, Composable {
   function validateUpgrade(uint256 _version, bytes calldata _data) public view override {
     if (data) {
       (address x, bytes memory y) = abi.decode(_data, (address, bytes));
-      require(_version == version);
-      require(x == address(3));
-      require(keccak256(y) == keccak256(bytes("Upgrade Data")));
+      require(_version == version, "1");
+      require(x == address(3), "2");
+      require(keccak256(y) == keccak256(bytes("Upgrade Data")), "3");
     }
   }
 

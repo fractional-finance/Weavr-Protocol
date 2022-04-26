@@ -4,7 +4,8 @@ const { expect } = require("chai");
 let signer, junk;
 let auction, beacon, owned;
 let TestUpgradeable, dataless;
-let data = (new ethers.utils.AbiCoder()).encode(
+
+const data = (new ethers.utils.AbiCoder()).encode(
   ["address", "bytes"],
   ["0x0000000000000000000000000000000000000003", "0x" + Buffer.from("Upgrade Data").toString("hex")]
 )
@@ -94,7 +95,7 @@ describe("Beacon", () => {
   });
 
   it("should support upgrading with data", async () => {
-    let u = await upgradeable(3, true);
+    const u = await upgradeable(3, true);
     await expect(
       await beacon.upgrade(ethers.constants.AddressZero, 3, u.address, data)
     ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, 3, u.address, data);
@@ -107,16 +108,40 @@ describe("Beacon", () => {
   });
 
   it("should support triggering upgrades", async () => {
-    let u = await upgradeable(2, true);
+    const u = await upgradeable(2, true);
     await expect(
       await beacon.triggerUpgrade(u.address, 3)
     ).to.emit(u, "Triggered").withArgs(3, data);
   });
 
   it("shouldn't support triggering upgrades for the wrong version", async () => {
-    let u = await upgradeable(3, true);
+    const u = await upgradeable(3, true);
     await expect(
       beacon.triggerUpgrade(u.address, 3)
     ).to.be.revertedWith("InvalidVersion(3, 2)");
+  });
+
+  // Does verify the upgrade data is properly verified by TestUpgradeable as expected
+  it("should hit full code coverage on TestUpgradeable", async () => {
+    const u = await upgradeable(3, true);
+    expect(u.validateUpgrade(2, data)).to.be.revertedWith("1");
+    expect(
+      u.validateUpgrade(3, (new ethers.utils.AbiCoder()).encode(
+        ["address", "bytes"],
+        [
+          "0x0000000000000000000000000000000000000002",
+          "0x" + Buffer.from("Upgrade Data").toString("hex")
+        ]
+      ))
+    ).to.be.revertedWith("2");
+    expect(
+      u.validateUpgrade(3, (new ethers.utils.AbiCoder()).encode(
+        ["address", "bytes"],
+        [
+          "0x0000000000000000000000000000000000000003",
+          "0x" + Buffer.from("Different Upgrade Data").toString("hex")
+        ]
+      ))
+    ).to.be.revertedWith("3");
   });
 });
