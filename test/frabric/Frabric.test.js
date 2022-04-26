@@ -183,14 +183,14 @@ describe("Frabric", accounts => {
 
   it("should let you remove bond", async () => {
     await expect(
-      (await proposal(frabric, "RemoveBond", [governor.address, false, 3333])).tx
+      (await proposal(frabric, "BondRemoval", [governor.address, false, 3333])).tx
     ).to.emit(bond, "Unbond").withArgs(governor.address, 3333);
     expect(await pair.balanceOf(governor.address)).to.equal(3333);
   });
 
   it("should let you slash bond", async () => {
     await expect(
-      (await proposal(frabric, "RemoveBond", [governor.address, true, 5667])).tx
+      (await proposal(frabric, "BondRemoval", [governor.address, true, 5667])).tx
     ).to.emit(bond, "Slash").withArgs(governor.address, 5667);
     expect(await pair.balanceOf(frabric.address)).to.equal(5667);
   });

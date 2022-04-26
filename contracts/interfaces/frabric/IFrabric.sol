@@ -36,18 +36,18 @@ interface IFrabric is IFrabricCore {
     Corporation
   }
 
-  event ParticipantsProposed(
+  event ParticipantsProposal(
     uint256 indexed id,
     ParticipantType indexed participantType,
     bytes32 participants
   );
-  event RemoveBondProposed(
+  event BondRemovalProposal(
     uint256 indexed id,
     address indexed participant,
     bool indexed slash,
     uint256 amount
   );
-  event ThreadProposed(
+  event ThreadProposal(
     uint256 indexed id,
     uint256 indexed variant,
     address indexed governor,
@@ -56,7 +56,7 @@ interface IFrabric is IFrabricCore {
     bytes32 descriptor,
     bytes data
   );
-  event ThreadProposalProposed(
+  event ThreadProposalProposal(
     uint256 indexed id,
     address indexed thread,
     uint256 indexed proposalType,
@@ -74,7 +74,7 @@ interface IFrabric is IFrabricCore {
     bytes32 participants,
     bytes32 info
   ) external returns (uint256);
-  function proposeRemoveBond(
+  function proposeBondRemoval(
     address governor,
     bool slash,
     uint256 amount,

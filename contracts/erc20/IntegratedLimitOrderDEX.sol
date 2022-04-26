@@ -27,7 +27,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   // Locked funds of the token this is integrated into
   mapping(address => uint256) public override locked;
 
-  struct Order {
+  struct OrderStruct {
     address trader;
     // Right now, we don't allow removed parties to be added back due to leftover
     // data such as DEX orders. With a versioning system, this could be effectively
@@ -41,7 +41,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
   struct PricePoint {
     OrderType orderType;
-    Order[] orders;
+    OrderStruct[] orders;
   }
 
   // Indexed by price
@@ -113,7 +113,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
       // This function is view meaning its only risk is calling the DEX and viewing
       // an invalid partial state to make its decision on if the trader is whitelisted
       // This function is trusted code, and here it is trusted to not be idiotic
-      Order storage order = point.orders[h];
+      OrderStruct storage order = point.orders[h];
       while (!whitelisted(order.trader)) {
         _removeUnsafe(order.trader, 0);
 
@@ -143,7 +143,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
       order.amount -= thisAmount;
       filled += thisAmount;
       amount -= thisAmount;
-      emit Filled(trader, order.trader, price, thisAmount);
+      emit OrderFill(trader, order.trader, price, thisAmount);
 
       uint256 atomicAmount = atomic(thisAmount);
       if (buying) {
@@ -230,12 +230,12 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     // If there's nothing at this price point, naturally or due to filling orders, set it
     if (point.orderType == OrderType.Null) {
       point.orderType = current;
-      emit NewOrder(current, price);
+      emit Order(current, price);
     }
 
     // Add the new order
     // We could also merge orders here, if an existing order for this trader at this price point existed
-    point.orders.push(Order(trader, 0, amount));
+    point.orders.push(OrderStruct(trader, 0, amount));
     emit OrderIncrease(trader, price, amount);
 
     return (filled, point.orders.length - 1);
@@ -303,7 +303,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
     // Will error if there are no errors at this price point
     for (uint256 i = point.orders.length - 1;; i--) {
-      Order storage order = point.orders[i];
+      OrderStruct storage order = point.orders[i];
 
       // If they are no longer whitelisted, remove them
       if (!whitelisted(order.trader)) {
@@ -365,7 +365,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   }
 
   function orderAmount(uint256 price, uint256 i) external view override returns (uint256) {
-    Order memory order = _points[price].orders[i];
+    OrderStruct memory order = _points[price].orders[i];
     // The FrabricERC20 whitelisted function will check both whitelisted and removed
     // When this order is actioned, if they're no longer whitelisted yet have yet to be removed,
     // they will be removed, hence why either case has the order amount be effectively 0

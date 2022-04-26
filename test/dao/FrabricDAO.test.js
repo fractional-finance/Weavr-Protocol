@@ -54,7 +54,7 @@ describe("FrabricDAO", accounts => {
 
   it("should allow selling tokens on their DEX", async () => {
     const tx = (await proposal(fDAO, "TokenAction", [frbc.address, fDAO.address, false, 2, ethers.utils.parseUnits("1")])).tx;
-    await expect(tx).to.emit(frbc, "NewOrder").withArgs(OrderType.Sell, 2);
+    await expect(tx).to.emit(frbc, "Order").withArgs(OrderType.Sell, 2);
     await expect(tx).to.emit(frbc, "OrderIncrease").withArgs(fDAO.address, 2, 1);
     expect(await frbc.locked(fDAO.address)).to.equal(ethers.utils.parseUnits("1"));
   });
@@ -70,7 +70,7 @@ describe("FrabricDAO", accounts => {
     const time = (await waffle.provider.getBlock("latest")).timestamp;
     await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("1"));
     await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("1"));
-    await expect(tx).to.emit(auction, "NewAuction").withArgs(0, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("1"), time, WEEK);
+    await expect(tx).to.emit(auction, "Listing").withArgs(0, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("1"), time, WEEK);
     expect(await frbc.balanceOf(fDAO.address)).to.equal(0);
     expect(await frbc.balanceOf(auction.address)).to.equal(ethers.utils.parseUnits("1"));
   });
@@ -91,7 +91,7 @@ describe("FrabricDAO", accounts => {
   it("should allow minting and selling on the DEX", async () => {
     const tx = (await proposal(fDAO, "TokenAction", [frbc.address, fDAO.address, true, 2, ethers.utils.parseUnits("2")])).tx;
     await expect(tx).to.emit(frbc, "Transfer").withArgs(ethers.constants.AddressZero, fDAO.address, ethers.utils.parseUnits("2"));
-    await expect(tx).to.emit(frbc, "NewOrder").withArgs(OrderType.Sell, 2);
+    await expect(tx).to.emit(frbc, "Order").withArgs(OrderType.Sell, 2);
     await expect(tx).to.emit(frbc, "OrderIncrease").withArgs(fDAO.address, 2, 2);
     expect(await frbc.locked(fDAO.address)).to.equal(ethers.utils.parseUnits("2"));
   });
@@ -102,7 +102,7 @@ describe("FrabricDAO", accounts => {
     await expect(tx).to.emit(frbc, "Transfer").withArgs(ethers.constants.AddressZero, fDAO.address, ethers.utils.parseUnits("2"));
     await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("2"));
     await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("2"));
-    await expect(tx).to.emit(auction, "NewAuction").withArgs(1, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("2"), time, WEEK);
+    await expect(tx).to.emit(auction, "Listing").withArgs(1, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("2"), time, WEEK);
     expect(await frbc.balanceOf(auction.address)).to.equal(ethers.utils.parseUnits("3"));
   });
 
@@ -164,7 +164,7 @@ describe("FrabricDAO", accounts => {
 
       let start = (await waffle.provider.getBlock("latest")).timestamp;
       for (let b = 0; b < 4; b++) {
-        await expect(tx).to.emit(auction, "NewAuction").withArgs(
+        await expect(tx).to.emit(auction, "Listing").withArgs(
           2 + (i * 4) + b,
           other.address,
           frbc.address,

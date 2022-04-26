@@ -7,9 +7,9 @@ import "../common/IComposable.sol";
 interface IIntegratedLimitOrderDEXCore {
   enum OrderType { Null, Buy, Sell }
 
-  event Filled(address indexed executor, address indexed orderer, uint256 indexed price, uint256 amount);
-  event NewOrder(OrderType indexed orderType, uint256 indexed price);
+  event Order(OrderType indexed orderType, uint256 indexed price);
   event OrderIncrease(address indexed trader, uint256 indexed price, uint256 amount);
+  event OrderFill(address indexed executor, address indexed orderer, uint256 indexed price, uint256 amount);
   event OrderCancellation(address indexed trader, uint256 indexed price, uint256 amount);
 
   // Part of core to symbolize amount should always be whole while price is atomic

@@ -12,7 +12,7 @@ import "../interfaces/dao/IDAO.sol";
 
 // DAO around a FrabricERC20
 abstract contract DAO is Composable, IDAO {
-  struct Proposal {
+  struct ProposalStruct {
     // The following are embedded into easily accessible events
     address creator;
     ProposalState state;
@@ -51,7 +51,7 @@ abstract contract DAO is Composable, IDAO {
   uint64 public override queuePeriod;
 
   uint256 private _nextProposalID;
-  mapping(uint256 => Proposal) private _proposals;
+  mapping(uint256 => ProposalStruct) private _proposals;
 
   mapping(uint256 => bool) public override passed;
 
@@ -73,7 +73,7 @@ abstract contract DAO is Composable, IDAO {
     id = _nextProposalID;
     _nextProposalID++;
 
-    emit NewProposal(id, proposalType, address(0), info);
+    emit Proposal(id, proposalType, address(0), info);
     emit ProposalStateChange(id, ProposalState.Active);
     emit ProposalStateChange(id, ProposalState.Queued);
     emit ProposalStateChange(id, ProposalState.Executed);
@@ -96,7 +96,7 @@ abstract contract DAO is Composable, IDAO {
   }
 
   // Uses storage as all proposals checked for activity are storage
-  function proposalActive(Proposal storage proposal) private view returns (bool) {
+  function proposalActive(ProposalStruct storage proposal) private view returns (bool) {
     return (
       (proposal.state == ProposalState.Active) &&
       (block.timestamp < (proposal.stateStartTime + votingPeriod))
@@ -113,7 +113,7 @@ abstract contract DAO is Composable, IDAO {
   // Used to be a modifier yet that caused the modifier to perform a map read,
   // just for the function to do the same. By making this an private function
   // returning the storage reference, it maintains performance and functions the same
-  function activeProposal(uint256 id) private view returns (Proposal storage proposal) {
+  function activeProposal(uint256 id) private view returns (ProposalStruct storage proposal) {
     proposal = _proposals[id];
     if (!proposalActive(proposal)) {
       // Doesn't include the inactivity reason as proposalActive doesn't return it
@@ -129,7 +129,7 @@ abstract contract DAO is Composable, IDAO {
     id = _nextProposalID;
     _nextProposalID++;
 
-    Proposal storage proposal = _proposals[id];
+    ProposalStruct storage proposal = _proposals[id];
     proposal.creator = msg.sender;
     proposal.state = ProposalState.Active;
     proposal.stateStartTime = uint64(block.timestamp);
@@ -142,7 +142,7 @@ abstract contract DAO is Composable, IDAO {
 
     // Separate event to allow indexing by type/creator while maintaining state machine consistency
     // Also exposes info
-    emit NewProposal(id, proposalType, proposal.creator, info);
+    emit Proposal(id, proposalType, proposal.creator, info);
     emit ProposalStateChange(id, proposal.state);
 
     // Automatically vote in favor for the creator if they have votes and are actively whitelisted
@@ -154,7 +154,7 @@ abstract contract DAO is Composable, IDAO {
 
   // Labelled unsafe due to its split checks with the various callers and lack of guarantees
   // on what checks it'll perform. This can only be used in a carefully designed, cohesive ecosystemm
-  function _voteUnsafe(address voter, uint256 id, Proposal storage proposal, int112 votes, int112 absVotes) private {
+  function _voteUnsafe(address voter, uint256 id, ProposalStruct storage proposal, int112 votes, int112 absVotes) private {
     // Cap voting power per user at 10% of the current total supply
     // This will hopefully not be executed 99% of the time and then only for select Threads
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
@@ -195,7 +195,7 @@ abstract contract DAO is Composable, IDAO {
   }
 
   function _voteUnsafe(uint256 id, address voter) internal {
-    Proposal storage proposal = _proposals[id];
+    ProposalStruct storage proposal = _proposals[id];
     int112 votes = int112(uint112(IVotes(erc20).getPastVotes(voter, proposal.voteBlock)));
     if ((votes != 0) && IWhitelist(erc20).whitelisted(voter)) {
       _voteUnsafe(voter, id, proposal, votes, votes);
@@ -216,7 +216,7 @@ abstract contract DAO is Composable, IDAO {
     }
 
     for (uint256 i = 0; i < ids.length; i++) {
-      Proposal storage proposal = activeProposal(ids[i]);
+      ProposalStruct storage proposal = activeProposal(ids[i]);
       int112 actualVotes = int112(uint112(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
       if (actualVotes == 0) {
         return;
@@ -248,7 +248,7 @@ abstract contract DAO is Composable, IDAO {
   }
 
   function queueProposal(uint256 id) external override {
-    Proposal storage proposal = _proposals[id];
+    ProposalStruct storage proposal = _proposals[id];
 
     // Proposal should be Active to be queued
     if (proposal.state != ProposalState.Active) {
@@ -287,7 +287,7 @@ abstract contract DAO is Composable, IDAO {
 
   function cancelProposal(uint256 id, address[] calldata voters) external override {
     // Must be queued. Even if it's completable, if it has yet to be completed, allow this
-    Proposal storage proposal = _proposals[id];
+    ProposalStruct storage proposal = _proposals[id];
     if (proposal.state != ProposalState.Queued) {
       revert NotQueued(id, proposal.state);
     }
@@ -354,7 +354,7 @@ abstract contract DAO is Composable, IDAO {
     // Safe against re-entrancy (regarding multiple execution of the same proposal)
     // as long as this block is untouched. While multiple proposals can be executed
     // simultaneously, that should not be an issue
-    Proposal storage proposal = _proposals[id];
+    ProposalStruct storage proposal = _proposals[id];
     // Cheaper than copying the entire thing into memory
     uint16 pType = proposal.pType;
     if (proposal.state != ProposalState.Queued) {
@@ -376,7 +376,7 @@ abstract contract DAO is Composable, IDAO {
 
   // Enables withdrawing a proposal
   function withdrawProposal(uint256 id) external override {
-    Proposal storage proposal = _proposals[id];
+    ProposalStruct storage proposal = _proposals[id];
     // A proposal which didn't pass will pass this check
     // It's not worth checking the timestamp when marking the proposal as Cancelled is more accurate than Active anyways
     if ((proposal.state != ProposalState.Active) && (proposal.state != ProposalState.Queued)) {

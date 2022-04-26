@@ -164,7 +164,7 @@ describe("Thread", async () => {
     //await expect(tx).to.emit(erc20, "Transfer").withArgs(participant.address, thread.address, 777);
     await expect(tx).to.emit(erc20, "Paused");
     //await expect(tx).to.emit(erc20, "Transfer").withArgs(thread.address, erc20.address, 777);
-    await expect(tx).to.emit(erc20, "NewDistribution").withArgs(0, token.address, 777);
+    await expect(tx).to.emit(erc20, "Distribution").withArgs(0, token.address, 777);
 
     // Compensate for waffle's incompetency
     let expected = [[participant.address, thread.address, 777], [thread.address, erc20.address, 777]];

@@ -30,14 +30,14 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   // The proposal structs are private as their events are easily grabbed and contain the needed information
   mapping(uint256 => Participants) private _participants;
 
-  struct RemoveBondProposal {
+  struct BondRemoval {
     address governor;
     bool slash;
     uint256 amount;
   }
-  mapping(uint256 => RemoveBondProposal) private _removeBonds;
+  mapping(uint256 => BondRemoval) private _bondRemovals;
 
-  struct ThreadProposal {
+  struct Thread {
     uint8 variant;
     address governor;
     // This may not actually pack yet it's small enough to theoretically
@@ -46,14 +46,14 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     string name;
     bytes data;
   }
-  mapping(uint256 => ThreadProposal) private _threads;
+  mapping(uint256 => Thread) private _threads;
 
-  struct ThreadProposalProposal {
+  struct ThreadProposalStruct {
     address thread;
     bytes4 selector;
     bytes data;
   }
-  mapping(uint256 => ThreadProposalProposal) private _threadProposals;
+  mapping(uint256 => ThreadProposalStruct) private _threadProposals;
 
   function validateUpgrade(uint256 _version, bytes calldata data) external view override {
     if (_version != 2) {
@@ -142,24 +142,24 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     Participants storage pStruct = _participants[id];
     pStruct.pType = participantType;
     pStruct.participants = participants;
-    emit ParticipantsProposed(id, participantType, participants);
+    emit ParticipantsProposal(id, participantType, participants);
   }
 
-  function proposeRemoveBond(
+  function proposeBondRemoval(
     address _governor,
     bool slash,
     uint256 amount,
     bytes32 info
   ) external override returns (uint256 id) {
     id = _createProposal(uint16(FrabricProposalType.RemoveBond), false, info);
-    _removeBonds[id] = RemoveBondProposal(_governor, slash, amount);
+    _bondRemovals[id] = BondRemoval(_governor, slash, amount);
     if (governor[_governor] < GovernorStatus.Active) {
       // Arguably a misuse as this actually checks they were never an active governor
       // Not that they aren't currently an active governor, which the error name suggests
       // This should be better to handle from an integration perspective however
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
-    emit RemoveBondProposed(id, _governor, slash, amount);
+    emit BondRemovalProposal(id, _governor, slash, amount);
   }
 
   function proposeThread(
@@ -192,14 +192,14 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     IThreadDeployer(threadDeployer).validate(variant, data);
 
     id = _createProposal(uint16(FrabricProposalType.Thread), false, info);
-    ThreadProposal storage proposal = _threads[id];
+    Thread storage proposal = _threads[id];
     proposal.variant = variant;
     proposal.name = name;
     proposal.symbol = symbol;
     proposal.descriptor = descriptor;
     proposal.governor = _governor;
     proposal.data = data;
-    emit ThreadProposed(id, variant, _governor, name, symbol, descriptor, data);
+    emit ThreadProposal(id, variant, _governor, name, symbol, descriptor, data);
   }
 
   // This does assume the Thread's API meets expectations compiled into the Frabric
@@ -261,8 +261,8 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
 
     id = _createProposal(uint16(FrabricProposalType.ThreadProposal), false, info);
-    _threadProposals[id] = ThreadProposalProposal(thread, selector, data);
-    emit ThreadProposalProposed(id, thread, _proposalType, info);
+    _threadProposals[id] = ThreadProposalStruct(thread, selector, data);
+    emit ThreadProposalProposal(id, thread, _proposalType, info);
   }
 
   function _participantRemoval(address _participant) internal override {
@@ -317,16 +317,16 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
         revert NotUpgraded(version, 2);
       }
 
-      RemoveBondProposal storage remove = _removeBonds[id];
+      BondRemoval storage remove = _bondRemovals[id];
       if (remove.slash) {
         IBondCore(bond).slash(remove.governor, remove.amount);
       } else {
         IBondCore(bond).unbond(remove.governor, remove.amount);
       }
-      delete _removeBonds[id];
+      delete _bondRemovals[id];
 
     } else if (pType == FrabricProposalType.Thread) {
-      ThreadProposal storage proposal = _threads[id];
+      Thread storage proposal = _threads[id];
       // This governor may no longer be viable for usage yet the Thread will check
       // When proposing this proposal type, we validate we upgraded which means this has been set
       IThreadDeployer(threadDeployer).deploy(
@@ -335,7 +335,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       delete _threads[id];
 
     } else if (pType == FrabricProposalType.ThreadProposal) {
-      ThreadProposalProposal storage proposal = _threadProposals[id];
+      ThreadProposalStruct storage proposal = _threadProposals[id];
       (bool success, bytes memory data) = proposal.thread.call(
         abi.encodeWithSelector(proposal.selector, proposal.data)
       );

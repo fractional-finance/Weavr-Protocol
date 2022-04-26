@@ -11,7 +11,7 @@ interface IFrabricDAO is IDAO {
     ParticipantRemoval
   }
 
-  event UpgradeProposed(
+  event UpgradeProposal(
     uint256 indexed id,
     address indexed beacon,
     address indexed instance,
@@ -19,7 +19,7 @@ interface IFrabricDAO is IDAO {
     address code,
     bytes data
   );
-  event TokenActionProposed(
+  event TokenActionProposal(
     uint256 indexed id,
     address indexed token,
     address indexed target,
@@ -27,7 +27,7 @@ interface IFrabricDAO is IDAO {
     uint256 price,
     uint256 amount
   );
-  event ParticipantRemovalProposed(uint256 indexed id, address participant, uint8 fee);
+  event ParticipantRemovalProposal(uint256 indexed id, address participant, uint8 fee);
 
   function commonProposalBit() external view returns (uint16);
   function maxRemovalFee() external view returns (uint8);

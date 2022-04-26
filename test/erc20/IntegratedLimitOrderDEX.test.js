@@ -59,7 +59,7 @@ async function action(type, trader, price, amount) {
           filled = amount;
           book[price].orders[i].amount = order.amount.sub(filled);
         }
-        events.push([[frbc, "Filled"], [trader, order.trader, price, filled]]);
+        events.push([[frbc, "OrderFill"], [trader, order.trader, price, filled]]);
         events.push(
           await bought(
             (type === OrderType.Buy) ? trader : order.trader,
@@ -90,7 +90,7 @@ async function action(type, trader, price, amount) {
       type: type,
       orders: [{ trader, amount }]
     };
-    events.push([[frbc, "NewOrder"], [type, price]]);
+    events.push([[frbc, "Order"], [type, price]]);
     events.push([[frbc, "OrderIncrease"], [trader, price, amount]]);
   }
 

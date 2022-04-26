@@ -129,7 +129,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     // This combination of options should be competent for almost all use cases
     // The only missing indexing case is when it's proposed to upgrade, yet that never passes/executes
     // This should be minimally considerable and coverable by outside solutions if truly needed
-    emit UpgradeProposed(id, beacon, instance, version, code, data);
+    emit UpgradeProposal(id, beacon, instance, version, code, data);
   }
 
   function proposeTokenAction(
@@ -178,7 +178,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
     id = _createProposal(uint16(CommonProposalType.TokenAction) | commonProposalBit, supermajority, info);
     _tokenActions[id] = TokenAction(token, target, mint, price, amount);
-    emit TokenActionProposed(id, token, target, mint, price, amount);
+    emit TokenActionProposal(id, token, target, mint, price, amount);
   }
 
   function proposeParticipantRemoval(
@@ -193,7 +193,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
     id =  _createProposal(uint16(CommonProposalType.ParticipantRemoval) | commonProposalBit, false, info);
     _removals[id] = Removal(participant, removalFee);
-    emit ParticipantRemovalProposed(id, participant, removalFee);
+    emit ParticipantRemovalProposal(id, participant, removalFee);
 
     // If signatures were provided, then the purpose is to freeze this participant's
     // funds for the duration of the proposal. This will not affect any existing

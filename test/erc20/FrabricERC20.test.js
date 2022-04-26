@@ -149,7 +149,7 @@ describe("FrabricERC20", () => {
       }
       let start = (await waffle.provider.getBlock("latest")).timestamp;
       for (let b = 0; b < 4; b++) {
-        await expect(tx).to.emit(auction, "NewAuction").withArgs(
+        await expect(tx).to.emit(auction, "Listing").withArgs(
           b,
           other.address,
           frbc.address,
@@ -202,7 +202,7 @@ describe("FrabricERC20", () => {
     await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, deployer.address, removalFee);
     let start = (await waffle.provider.getBlock("latest")).timestamp;
     for (let b = 0; b < 4; b++) {
-      await expect(tx).to.emit(auction, "NewAuction").withArgs(
+      await expect(tx).to.emit(auction, "Listing").withArgs(
         b,
         other.address,
         frbc.address,

@@ -15,7 +15,7 @@ interface IInitialFrabric is IFrabricDAO {
     Genesis
   }
 
-  event ParticipantsProposed(
+  event ParticipantsProposal(
     uint256 indexed id,
     ParticipantType indexed participantType,
     bytes32 participants

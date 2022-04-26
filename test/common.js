@@ -31,7 +31,7 @@ module.exports = {
 
   FrabricProposalType: {
     Participants: 0,
-    RemoveBond: 1,
+    BondRemoval: 1,
     Thread: 2,
     ThreadProposal: 3
   },
@@ -93,7 +93,7 @@ module.exports = {
     // waffle corrects it OR withArgs is completely replaced
     // TODO
     const tx = await dao["propose" + proposal](...args, info);
-    await expect(tx).to.emit(dao, "NewProposal").withArgs(
+    await expect(tx).to.emit(dao, "Proposal").withArgs(
       id,
       ProposalType[proposal],
       dao.signer.address,
@@ -117,7 +117,7 @@ module.exports = {
       }
     }
     if (proposal !== "Paper") {
-      await expect(tx).to.emit(dao, proposal + "Proposed").withArgs(id, ...ordered);
+      await expect(tx).to.emit(dao, proposal + "Proposal").withArgs(id, ...ordered);
     }
 
     return { id, tx };

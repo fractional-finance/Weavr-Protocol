@@ -59,7 +59,7 @@ async function list(id, args) {
       args.amount += last;
     }
 
-    await expect(tx).to.emit(auction, "NewAuction").withArgs(id + i, ...override(args, false));
+    await expect(tx).to.emit(auction, "Listing").withArgs(id + i, ...override(args, false));
     expect(await auction.active(id + i)).to.equal(args.start <= time);
     expect(await auction.highestBidder(id + i)).to.equal(ethers.constants.AddressZero);
     expect(await auction.highestBid(id + i)).to.equal(0);

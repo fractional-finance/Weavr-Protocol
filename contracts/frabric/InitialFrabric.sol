@@ -21,13 +21,13 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
 
     // Simulate a full DAO proposal to add the genesis participants
     uint256 id = _fakeProposal(uint16(FrabricProposalType.Participants), keccak256("Genesis Participants"));
-    emit ParticipantsProposed(id, ParticipantType.Genesis, genesisMerkle);
+    emit ParticipantsProposal(id, ParticipantType.Genesis, genesisMerkle);
     // Actually add the genesis participants
     for (uint256 i = 0; i < genesis.length; i++) {
       participant[genesis[i]] = ParticipantType.Genesis;
       // Now that this event is here, which it wasn't when the full DAO proposal
       // simulation code was added, said code is decently pointless. That said,
-      // it does make ParticipantsProposed complete which may be considered beneficial
+      // it does make ParticipantsProposal complete which may be considered beneficial
       // At the very least, there's something romantic about a DAO's first proposal
       // being the people who are there for its start
       emit ParticipantChange(genesis[i], ParticipantType.Genesis);

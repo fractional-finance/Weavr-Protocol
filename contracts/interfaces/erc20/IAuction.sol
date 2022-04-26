@@ -10,7 +10,7 @@ import "../common/IComposable.sol";
 interface IAuctionCore is IComposable {
   // Indexes the ID as expected, the seller so someone can find their own auctions
   // which they need to complete, and the token so people can find auctions by the token being sold
-  event NewAuction(
+  event Listing(
     uint256 indexed id,
     address indexed seller,
     address indexed token,

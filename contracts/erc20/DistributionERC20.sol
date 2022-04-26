@@ -15,7 +15,7 @@ import "../interfaces/erc20/IDistributionERC20.sol";
 abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpgradeable, Composable, IDistributionERC20 {
   using SafeERC20 for IERC20;
 
-  struct Distribution {
+  struct DistributionStruct {
     address token;
     uint32 block;
     // 8 bytes left ^
@@ -29,7 +29,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   // This was including the monotonic uint256 increment
   // It's also better to use a mapping as we can extend the struct later if needed
   uint256 private _nextID;
-  mapping(uint256 => Distribution) private _distributions;
+  mapping(uint256 => DistributionStruct) private _distributions;
   mapping(uint256 => mapping(address => bool)) public override claimed;
 
   uint256[100] private __gap;
@@ -72,14 +72,14 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
       revert ZeroAmount();
     }
 
-    _distributions[_nextID] = Distribution(
+    _distributions[_nextID] = DistributionStruct(
       token,
       uint32(block.number - 1),
       amount,
       // Cache the supply so each claim doesn't have to repeat this binary search
       uint112(getPastTotalSupply(block.number - 1))
     );
-    emit NewDistribution(_nextID, token, amount);
+    emit Distribution(_nextID, token, amount);
     _nextID++;
   }
 
@@ -106,7 +106,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     }
     claimed[id][person] = true;
 
-    Distribution storage distribution = _distributions[id];
+    DistributionStruct storage distribution = _distributions[id];
     // Since amount will never exceed distribution.amount, which is a uint112, this is proper
     uint112 amount = uint112(
       uint256(distribution.amount) * getPastVotes(person, distribution.block) / distribution.supply
@@ -117,6 +117,6 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     }
 
     IERC20(distribution.token).safeTransfer(person, uint112(amount));
-    emit Claimed(id, person, amount);
+    emit Claim(id, person, amount);
   }
 }

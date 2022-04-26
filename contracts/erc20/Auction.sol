@@ -108,7 +108,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       auction.start = start + uint64(i * length);
       auction.length = length;
       auction.end = auction.start + length;
-      emit NewAuction(id, seller, token, traded, batchAmount, auction.start, length);
+      emit Listing(id, seller, token, traded, batchAmount, auction.start, length);
 
       amount -= batchAmount;
     }

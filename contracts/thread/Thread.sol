@@ -176,7 +176,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   ) external override returns (uint256 id) {
     id = _createProposal(uint16(ThreadProposalType.DescriptorChange), false, info);
     _descriptors[id] = _descriptor;
-    emit DescriptorChangeProposed(id, _descriptor);
+    emit DescriptorChangeProposal(id, _descriptor);
   }
 
   function proposeFrabricChange(
@@ -188,7 +188,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     // This could use a struct yet this is straightforward and simple
     _frabrics[id] = _frabric;
     _governors[id] = _governor;
-    emit FrabricChangeProposed(id, _frabric, _governor);
+    emit FrabricChangeProposal(id, _frabric, _governor);
   }
 
   function proposeGovernorChange(
@@ -197,7 +197,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   ) external override viableGovernor(_governor) returns (uint256 id) {
     id = _createProposal(uint16(ThreadProposalType.GovernorChange), true, info);
     _governors[id] = _governor;
-    emit GovernorChangeProposed(id, _governor);
+    emit GovernorChangeProposal(id, _governor);
   }
 
   // Leave the ecosystem, setting a new Frabric and governor, while also enabling upgrades
@@ -227,7 +227,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     id = _createProposal(uint16(ThreadProposalType.EcosystemLeaveWithUpgrades), true, info);
     _frabrics[id] = _frabric;
     _governors[id] = _governor;
-    emit EcosystemLeaveWithUpgradesProposed(id, _frabric, _governor);
+    emit EcosystemLeaveWithUpgradesProposal(id, _frabric, _governor);
   }
 
   function proposeDissolution(
@@ -241,7 +241,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
     id = _createProposal(uint16(ThreadProposalType.Dissolution), true, info);
     _dissolutions[id] = Dissolution(msg.sender, token, price);
-    emit DissolutionProposed(id, token, price);
+    emit DissolutionProposal(id, token, price);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {

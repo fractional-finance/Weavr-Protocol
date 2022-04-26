@@ -54,7 +54,7 @@ describe("DAO", () => {
     await frbc.transfer(other.address, 8);
 
     const tx = await dao.propose(type, false, info);
-    await expect(tx).to.emit(dao, "NewProposal").withArgs(0, type, deployer.address, info);
+    await expect(tx).to.emit(dao, "Proposal").withArgs(0, type, deployer.address, info);
     await expect(tx).to.emit(dao, "ProposalStateChange", 0, ProposalState.Active);
     // 10, not 92, due to the 10% vote cap
     await expect(tx).to.emit(dao, "Vote").withArgs(0, VoteDirection.Yes, deployer.address, 10);
@@ -70,7 +70,7 @@ describe("DAO", () => {
 
   it("should create proposals requiring a supermajority", async () => {
     const tx = await dao.propose(type, true, info);
-    await expect(tx).to.emit(dao, "NewProposal").withArgs(1, type, deployer.address, info);
+    await expect(tx).to.emit(dao, "Proposal").withArgs(1, type, deployer.address, info);
     await expect(tx).to.emit(dao, "ProposalStateChange", 1, ProposalState.Active);
     await expect(tx).to.emit(dao, "Vote").withArgs(1, VoteDirection.Yes, deployer.address, 10);
   });

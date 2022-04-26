@@ -15,7 +15,7 @@ interface IDAOCore is IComposable {
     Cancelled
   }
 
-  event NewProposal(uint256 indexed id, uint256 indexed proposalType, address indexed creator, bytes32 info);
+  event Proposal(uint256 indexed id, uint256 indexed proposalType, address indexed creator, bytes32 info);
   event ProposalStateChange(uint256 indexed id, ProposalState indexed state);
 
   function erc20() external view returns (address);

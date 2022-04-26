@@ -85,13 +85,13 @@ describe("DistributionERC20", accounts => {
 
     await expect(
       await token.distribute(other.address, ethers.utils.parseUnits("100"))
-    ).to.emit(token, "NewDistribution").withArgs(0, other.address, ethers.utils.parseUnits("100"));
+    ).to.emit(token, "Distribution").withArgs(0, other.address, ethers.utils.parseUnits("100"));
 
     expect(await token.claimed(0, deployer.address)).to.equal(false);
 
     // Connect with a different address to verify anyone can trigger a claim for anyone
     const tx = await token.connect(signers[0]).claim(0, deployer.address);
-    await expect(tx).to.emit(token, "Claimed").withArgs(0, deployer.address, ethers.utils.parseUnits("100"));
+    await expect(tx).to.emit(token, "Claim").withArgs(0, deployer.address, ethers.utils.parseUnits("100"));
     await expect(tx).to.emit(other, "Transfer").withArgs(token.address, deployer.address, ethers.utils.parseUnits("100"));
     expect(await other.balanceOf(token.address)).to.equal(0);
     assert(await token.claimed(0, deployer.address));
@@ -119,14 +119,14 @@ describe("DistributionERC20", accounts => {
     await other.approve(token.address, ethers.utils.parseUnits("1000"));
     await expect(
       await token.distribute(other.address, ethers.utils.parseUnits("1000"))
-    ).to.emit(token, "NewDistribution").withArgs(1, other.address, ethers.utils.parseUnits("1000"));
+    ).to.emit(token, "Distribution").withArgs(1, other.address, ethers.utils.parseUnits("1000"));
 
     for (let i = 0; i < 3; i++) {
       let address = sub[i].address;
       let amount = ethers.BigNumber.from(amounts[1]).div("1000");
       expect(amount).to.equal("333333333333333333333");
       const tx = await token.claim(1, address);
-      await expect(tx).to.emit(token, "Claimed").withArgs(1, address, amount);
+      await expect(tx).to.emit(token, "Claim").withArgs(1, address, amount);
       await expect(tx).to.emit(other, "Transfer").withArgs(token.address, address, amount);
       assert(await token.claimed(1, address));
       expect(await other.balanceOf(address)).to.equal(amount);

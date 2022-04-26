@@ -4,11 +4,11 @@ pragma solidity >=0.8.9;
 import "../dao/IFrabricDAO.sol";
 
 interface IThread is IFrabricDAO {
-  event DescriptorChangeProposed(uint256 id, bytes32 indexed descriptor);
-  event FrabricChangeProposed(uint256 indexed id, address indexed frabric, address indexed governor);
-  event GovernorChangeProposed(uint256 indexed id, address indexed governor);
-  event EcosystemLeaveWithUpgradesProposed(uint256 indexed id, address indexed frabric, address indexed governor);
-  event DissolutionProposed(uint256 indexed id, address indexed token, uint256 price);
+  event DescriptorChangeProposal(uint256 id, bytes32 indexed descriptor);
+  event FrabricChangeProposal(uint256 indexed id, address indexed frabric, address indexed governor);
+  event GovernorChangeProposal(uint256 indexed id, address indexed governor);
+  event EcosystemLeaveWithUpgradesProposal(uint256 indexed id, address indexed frabric, address indexed governor);
+  event DissolutionProposal(uint256 indexed id, address indexed token, uint256 price);
 
   event DescriptorChange(bytes32 indexed oldDescriptor, bytes32 indexed newDescriptor);
   event FrabricChange(address indexed oldGovernor, address indexed newGovernor);
