@@ -21,11 +21,11 @@ describe("FrabricWhitelist", accounts => {
     parent = await FrabricWhitelist.deploy(ethers.constants.AddressZero);
     whitelist = await FrabricWhitelist.deploy(parent.address);
 
-    // Verify it emitted ParentWhitelistChange on initialization
-    let change = (await parent.queryFilter(parent.filters.ParentWhitelistChange()))[0].args;
+    // Verify it emitted ParentChange on initialization
+    let change = (await parent.queryFilter(parent.filters.ParentChange()))[0].args;
     expect(change.oldParent).to.equal(ethers.constants.AddressZero);
     expect(change.newParent).to.equal(ethers.constants.AddressZero);
-    change = (await whitelist.queryFilter(whitelist.filters.ParentWhitelistChange()))[0].args;
+    change = (await whitelist.queryFilter(whitelist.filters.ParentChange()))[0].args;
     expect(change.oldParent).to.equal(ethers.constants.AddressZero);
     expect(change.newParent).to.equal(parent.address);
     expect(await whitelist.parent()).to.equal(parent.address);
@@ -42,7 +42,7 @@ describe("FrabricWhitelist", accounts => {
     // This is already tested thanks to the before function
     await expect(
       await whitelist.setParent(parent.address)
-    ).to.emit(whitelist, "ParentWhitelistChange").withArgs(parent.address, parent.address);
+    ).to.emit(whitelist, "ParentChange").withArgs(parent.address, parent.address);
     expect(await whitelist.parent()).to.equal(parent.address);
   });
 

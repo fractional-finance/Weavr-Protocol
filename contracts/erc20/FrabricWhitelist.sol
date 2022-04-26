@@ -36,7 +36,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
 
     // Does still emit even if address 0 was changed to address 0
     // Used to signify address 0 as the parent is a conscious decision
-    emit ParentWhitelistChange(parent, _parent);
+    emit ParentChange(parent, _parent);
     parent = _parent;
   }
 

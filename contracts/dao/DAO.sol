@@ -33,6 +33,11 @@ abstract contract DAO is Composable, IDAO {
     // Therefore, this usage is safe
     mapping(address => int128) voters;
     // Safe due to the FrabricERC20 being uint112
+    // This could be 112 as well, if the FrabricERC20 was limited to int112
+    // instead of uint112, which would save 32 bits. If we move voteBlock into
+    // this storage slot, which would last for 68 years if in seconds, yet ~884
+    // years since it's in blocks, we would save an entire strorage slot
+    // This is just a level of optimization not worth it
     int128 votes;
     uint128 totalVotes;
 

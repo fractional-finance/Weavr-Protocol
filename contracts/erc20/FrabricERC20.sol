@@ -53,17 +53,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     // If the latter, this is intended behavior
     _setWhitelisted(msg.sender, keccak256("Initializer"));
 
-    // Make sure the supply is within bounds
-    // The DAO code sets an upper bound of signed<int>.max
-    // Uniswap and more frequently use uint112 which is a perfectly functional bound
-    // The DAO code accordingly uses int128 which maintains storage efficiency
-    // while supporting the full uint112 range
-    if (supply > uint256(type(uint112).max)) {
-      revert SupplyExceedsUInt112(supply);
-    }
-
     // Mint the supply
-    _mint(msg.sender, supply);
+    mint(msg.sender, supply);
 
     auction = _auction;
 
@@ -86,15 +77,16 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     return super.decimals();
   }
 
-  // Also define frozen so the DEX can prevent further orders from being placed
-  function frozen(address person) public view override(IFreeze, IntegratedLimitOrderDEX) returns (bool) {
-    return block.timestamp <= frozenUntil[person];
-  }
-
-  function mint(address to, uint256 amount) external override onlyOwner {
+  function mint(address to, uint256 amount) public override onlyOwner {
     _mint(to, amount);
+
+    // Make sure the supply is within bounds
+    // The DAO code sets an upper bound of signed<int>.max
+    // Uniswap and more frequently use uint112 which is a perfectly functional bound
+    // The DAO code accordingly uses int128 which maintains storage efficiency
+    // while supporting the full uint112 range
     if (totalSupply() > uint256(type(uint112).max)) {
-      revert SupplyExceedsUInt112(totalSupply());
+      revert SupplyExceedsUInt112(totalSupply(), type(uint112).max);
     }
   }
 
@@ -104,21 +96,33 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     _burning = false;
   }
 
-  function freeze(address person, uint64 until) external override onlyOwner {
+  // Helper function which simplifies calling and lets the ILO DEX abstract this away
+  function frozen(address person) public view override(IFreeze, IntegratedLimitOrderDEX) returns (bool) {
+    return block.timestamp <= frozenUntil[person];
+  }
+
+  function _freeze(address person, uint64 until) private {
+    // If they were already frozen to at least this time, keep the existing value
+    // Prevents multiple freeze triggers from overlapping and reducing the amount of time frozen
+    if (frozenUntil[person] >= until) {
+      return;
+    }
     frozenUntil[person] = until;
     emit Freeze(person, until);
+  }
+
+  function freeze(address person, uint64 until) external override onlyOwner {
+    _freeze(person, until);
   }
 
   function triggerFreeze(address person) external override {
     // Doesn't need an address 0 check as it's using supportsInterface
     // Even if this was address 0 and we somehow got 0 values out of it,
     // it wouldn't be an issue
-    if (parent.supportsInterface(type(IFreeze).interfaceId)) {
-      uint64 until = IFreeze(parent).frozenUntil(person);
-      if (until > frozenUntil[person]) {
-        frozenUntil[person] = until;
-      }
+    if (!parent.supportsInterface(type(IFreeze).interfaceId)) {
+      return;
     }
+    _freeze(person, IFreeze(parent).frozenUntil(person));
   }
 
   // Labelled unsafe due to its split checks with triggerRemoval and lack of
@@ -245,6 +249,11 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     super._beforeTokenTransfer(from, to, amount);
 
+    // Regarding !_removal, placed here (not just on from) as a gas optimization
+    // The Auction contract transferred to during removals is whitelisted so that
+    // occurs without issue. If it wasn't whitelisted, anyone could call remove
+    // on it, which would be exceptionally problematic (and it couldn't transfer
+    // tokens to auction winners)
     if ((!_removal) && (!_inDEX)) {
       // Whitelisted from or minting
       // A non-whitelisted actor may have tokens if they were removed from the whitelist
@@ -257,11 +266,6 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
         revert NotWhitelisted(from);
       }
 
-      // Regarding !_removal, placed here as a gas optimization
-      // The Auction contract transferred to during removals is whitelisted so this
-      // could be outside this block without issue. If it wasn't whitelisted,
-      // anyone could call remove on it, which would be exceptionally problematic
-      // (and it couldn't transfer tokens to auction winners)
       if ((!whitelisted(to)) && (!_burning)) {
         revert NotWhitelisted(to);
       }
@@ -283,7 +287,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     super._afterTokenTransfer(from, to, amount);
     // Require the balance of the sender be greater than the amount of tokens they have on the DEX
     if (balanceOf(from) < locked[from]) {
-      revert BalanceLocked(balanceOf(from), locked[from]);
+      revert Locked(from, balanceOf(from), locked[from]);
     }
   }
 }

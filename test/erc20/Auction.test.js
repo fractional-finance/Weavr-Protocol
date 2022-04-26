@@ -118,7 +118,7 @@ describe("Auction", accounts => {
     let beacon = await FrabricERC20.deployBeacon();
     ({ auction, erc20: frbc } = await FrabricERC20.deploy(
       beacon,
-      ["Test FrabricERC20", "FRBC", 0, true, whitelist.address, usd.address]
+      ["Test FrabricERC20", "FRBC", 0, whitelist.address, usd.address]
     ));
     await frbc.remove(deployer.address, 0);
 

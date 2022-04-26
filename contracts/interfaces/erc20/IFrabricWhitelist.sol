@@ -11,7 +11,7 @@ interface IWhitelist {
 }
 
 interface IFrabricWhitelist is IComposable, IWhitelist {
-  event ParentWhitelistChange(address oldParent, address newParent);
+  event ParentChange(address oldParent, address newParent);
   // Info shouldn't be indexed when you consider it's unique per-person
   // Indexing it does allow retrieving the address of a person by their KYC however
   // It's also just 750 gas on an infrequent operation

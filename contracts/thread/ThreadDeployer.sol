@@ -11,10 +11,10 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../interfaces/erc20/IFrabricERC20.sol";
+import { IFrabricERC20, IFrabricERC20Initializable } from "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/thread/IThread.sol";
 import "../interfaces/thread/ICrowdfund.sol";
-import "../interfaces/erc20/ITimelock.sol";
+import { ITimelock } from "../interfaces/erc20/ITimelock.sol";
 
 import "../common/Composable.sol";
 

@@ -39,7 +39,6 @@ module.exports = async () => {
     "1 Main Street",
     "TTHR",
     "100000000000000000000",
-    false,
     frabric.address,
     token.address,
     auction.address

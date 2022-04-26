@@ -11,9 +11,9 @@ interface IRemovalFee {
 
 interface IFreeze {
   function frozenUntil(address person) external view returns (uint64);
+  function frozen(address person) external returns (bool);
 
   function freeze(address person, uint64 until) external;
-  function frozen(address person) external returns (bool);
   function triggerFreeze(address person) external;
 }
 
@@ -46,9 +46,9 @@ interface IFrabricERC20Initializable is IFrabricERC20 {
   ) external;
 }
 
-error SupplyExceedsUInt112(uint256 supply);
+error SupplyExceedsUInt112(uint256 supply, uint112 max);
 error Frozen(address person);
 error NothingToRemove(address person);
 // Not Paused due to an overlap with the event
 error CurrentlyPaused();
-error BalanceLocked(uint256 balanceAfterTransfer, uint256 lockedBalance);
+error Locked(address person, uint256 balanceAfterTransfer, uint256 lockedBalance);

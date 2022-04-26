@@ -165,7 +165,7 @@ describe("FrabricDAO", accounts => {
       let start = (await waffle.provider.getBlock("latest")).timestamp;
       for (let b = 0; b < 4; b++) {
         await expect(tx).to.emit(auction, "NewAuction").withArgs(
-          (i * 4) + (b + 2),
+          2 + (i * 4) + b,
           other.address,
           frbc.address,
           usd.address,
