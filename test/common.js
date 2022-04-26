@@ -5,7 +5,8 @@ module.exports = {
   OrderType: {
     Null: 0,
     Buy: 1,
-    Sell: 2
+    Sell: 2,
+    counter: type => (type % 2) + 1
   },
 
   ProposalState: {

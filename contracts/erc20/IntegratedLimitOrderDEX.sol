@@ -122,6 +122,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
           tradeTokenBalances[order.trader] += price * order.amount;
         }
 
+        emit OrderCancellation(order.trader, price, order.amount);
         point.orders.pop();
 
         // If all orders were by people removed, exit
@@ -307,6 +308,8 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
       // If they are no longer whitelisted, remove them
       if (!whitelisted(order.trader)) {
+        // Uses a 0 fee as this didn't have remove called, its parent did
+        // This will cause the parent fee to carry
         _removeUnsafe(order.trader, 0);
       }
 
