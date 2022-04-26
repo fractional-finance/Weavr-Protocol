@@ -66,7 +66,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     // Update the parent whitelist as well, if we're not still initializing
     // If we are, the this erc20 hasn't had init called yet, and the ThreadDeployer
     // will set the parent when it calls init
-    if (IFrabricWhitelist(erc20).parent() != address(0)) {
+    if (IFrabricWhitelistCore(erc20).parent() != address(0)) {
       IFrabricERC20(erc20).setParent(IDAO(frabric).erc20());
     }
   }
@@ -125,7 +125,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     return (
       // Whitelisted token holder
       (
-        IWhitelist(erc20).whitelisted(proposer) &&
+        IFrabricWhitelistCore(erc20).whitelisted(proposer) &&
         (IERC20(erc20).balanceOf(proposer) != 0)
       ) ||
       // Governor

@@ -51,7 +51,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     // This is the Frabric's deployer/the ThreadDeployer
     // If the former, they should remove their own whitelisting
     // If the latter, this is intended behavior
-    _setWhitelisted(msg.sender, keccak256("Initializer"));
+    _whitelist(msg.sender);
 
     // Mint the supply
     mint(msg.sender, supply);
@@ -143,9 +143,9 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
     // If we didn't specify a fee, carry the parent's
    // Checks if it supports IRemovalFee, as that isn't actually a requirement on
-   // parent. Solely IWhitelist is, and doing this check keeps the parent bounds
-   // accordingly minimal and focused. It's also only a minor gas cost given how
-   // infrequent removals are
+   // parent. Solely IFrabricWhitelistCore is, and doing this check keeps the
+   // parent bounds accordingly minimal and focused. It's also only a minor gas
+   // cost given how infrequent removals are
     if (
       (fee == 0) &&
       // Redundant thanks to supportsInterface
@@ -199,13 +199,13 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   // Whitelist functions
   function whitelisted(
     address person
-  ) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IWhitelist) returns (bool) {
+  ) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IFrabricWhitelistCore) returns (bool) {
     return super.whitelisted(person);
   }
 
   function removed(
     address person
-  ) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IFrabricWhitelist) returns (bool) {
+  ) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IFrabricWhitelistCore) returns (bool) {
     return super.removed(person);
   }
 
@@ -213,8 +213,12 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     _setParent(_parent);
   }
 
-  function setWhitelisted(address person, bytes32 dataHash) external override onlyOwner nonReentrant {
-    _setWhitelisted(person, dataHash);
+  function whitelist(address person) external override onlyOwner {
+    _whitelist(person);
+  }
+
+  function setKYC(address person, bytes32 hash) external override onlyOwner {
+    _setKYC(person, hash);
   }
 
   // nonReentrant would be overkill given onlyOwner except this needs to not be the initial vector

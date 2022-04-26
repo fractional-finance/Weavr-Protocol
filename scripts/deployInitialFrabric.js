@@ -19,7 +19,7 @@ module.exports = async (usd, uniswap, genesis) => {
   const signer = (await ethers.getSigners())[0];
 
   const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
-  await frbc.setWhitelisted(auction.address, ethers.utils.id("Auction"));
+  await frbc.whitelist(auction.address);
 
   // Deploy the Uniswap pair to get the bond token
   uniswap = new ethers.Contract(
@@ -37,12 +37,12 @@ module.exports = async (usd, uniswap, genesis) => {
   // We're immediately creating a wrapped derivative token with no transfer limitations
   // That said, it's a derivative subject to reduced profit potential and unusable as FRBC
   // Considering the critical role Uniswap plays in the Ethereum ecosystem, we accordingly accept this effect
-  await frbc.setWhitelisted(pair, ethers.utils.id("Uniswap v2 FRBC-USD Pair"));
+  await frbc.whitelist(pair);
 
   // Process the genesis
   let genesisList = [];
   for (const person in genesis) {
-    await frbc.setWhitelisted(person, ethers.utils.id(genesis[person].info));
+    await frbc.whitelist(person);
     // Delay code from Beacon used to resolve consistent timing issues that make little sense
     if ((await waffle.provider.getNetwork()).chainId != 31337) {
       let block = await waffle.provider.getBlockNumber();
@@ -115,7 +115,7 @@ module.exports = async (usd, uniswap, genesis) => {
       root.substr(2) ? root : ethers.constants.HashZero
     ]
   );
-  await frbc.setWhitelisted(frabric.address, ethers.utils.id("Frabric"));
+  await frbc.whitelist(frabric.address);
 
   // Transfer ownership of everything to the Frabric
   // The Auction isn't owned as it doesn't need to be

@@ -114,7 +114,7 @@ describe("Frabric", accounts => {
       ).to.emit(frabric, "ParticipantChange").withArgs(signArgs[2].participant, pType);
 
       // Verify they were successfully added
-      expect(await frbc.info(signers[signersIndex + 1].address)).to.equal(signArgs[2].kycHash);
+      expect(await frbc.kyc(signers[signersIndex + 1].address)).to.equal(signArgs[2].kycHash);
       expect(await frabric.participant(signers[signersIndex + 1].address)).to.equal(pType);
       assert(await frabric.canPropose(signers[signersIndex + 1].address));
       signersIndex += 3;
@@ -163,7 +163,7 @@ describe("Frabric", accounts => {
     ).to.emit(frabric, "ParticipantChange").withArgs(signArgs[2].participant, ParticipantType.Governor);
 
     // Verify they were successfully added
-    expect(await frbc.info(governor.address)).to.equal(signArgs[2].kycHash);
+    expect(await frbc.kyc(governor.address)).to.equal(signArgs[2].kycHash);
     expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Governor);
     expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Active);
     assert(await frabric.canPropose(governor.address));

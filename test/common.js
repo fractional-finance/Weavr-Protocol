@@ -2,6 +2,13 @@ const { waffle } = require("hardhat");
 const { assert, expect } = require("chai");
 
 module.exports = {
+  WhitelistStatus: {
+    Null: 0,
+    Removed: 1,
+    Whitelisted: 2,
+    KYC: 3
+  },
+
   OrderType: {
     Null: 0,
     Buy: 1,

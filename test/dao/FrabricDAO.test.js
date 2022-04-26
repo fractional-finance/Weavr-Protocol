@@ -20,11 +20,11 @@ describe("FrabricDAO", accounts => {
 
     usd = await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD");
     ({ frbc, auction } = await FrabricERC20.deployFRBC(usd.address));
-    await frbc.setWhitelisted(auction.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
-    await frbc.setWhitelisted(participant.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frbc.whitelist(auction.address);
+    await frbc.whitelist(participant.address);
     await frbc.mint(participant.address, ethers.utils.parseUnits("5"));
     fDAO = (await (await ethers.getContractFactory("TestFrabricDAO")).deploy(frbc.address)).connect(participant);
-    await frbc.setWhitelisted(fDAO.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frbc.whitelist(fDAO.address);
     await frbc.mint(fDAO.address, ONE);
     await frbc.transferOwnership(fDAO.address);
     frbc = frbc.connect(participant);

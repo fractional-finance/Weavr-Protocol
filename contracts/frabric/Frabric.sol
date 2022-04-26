@@ -403,7 +403,8 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
 
     // Whitelist them
-    IFrabricERC20(erc20).setWhitelisted(approving, kycHash);
+    IFrabricERC20(erc20).whitelist(approving);
+    IFrabricERC20(erc20).setKYC(approving, kycHash);
 
     // We could delete _participants[id] here if we knew how many values were included in the Merkle
     // This gas refund isn't worth the extra variable and tracking

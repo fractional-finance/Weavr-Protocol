@@ -21,8 +21,16 @@ contract TestFrabric is FrabricWhitelist {
 
   mapping(address => IFrabricCore.GovernorStatus) public governor;
 
-  function whitelist(address person) external {
-    _setWhitelisted(person, bytes32("0x01"));
+  function setParent(address _parent) external override {
+    _setParent(_parent);
+  }
+
+  function whitelist(address person) external override {
+    _whitelist(person);
+  }
+
+  function setKYC(address person, bytes32 hash) external override {
+    _setKYC(person, hash);
   }
 
   function remove(address person) external {

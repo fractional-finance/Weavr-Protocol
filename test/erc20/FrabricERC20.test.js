@@ -7,7 +7,6 @@ const { snapshot, revert, impermanent, increaseTime } = require("../common.js");
 
 const ONE = ethers.utils.parseUnits("1");
 const WEEK = 7 * 24 * 60 * 60;
-const INFO = ethers.utils.id("info");
 
 let signers, deployer, other;
 let usd, auction, frbc, parent;
@@ -59,8 +58,7 @@ describe("FrabricERC20", () => {
   });
 
   it("should handle whitelisting", async () => {
-    await frbc.setWhitelisted(other.address, INFO);
-    expect(await frbc.info(other.address)).to.equal(INFO);
+    await frbc.whitelist(other.address);
   });
 
   it("should allow transferring", async () => {
@@ -183,7 +181,7 @@ describe("FrabricERC20", () => {
 
   it("should allow removing if the parent removed", impermanent(async () => {
     let other = signers[0];
-    await parent.setWhitelisted(other.address, INFO);
+    await parent.whitelist(other.address);
     await parent.mint(other.address, 1);
     await frbc.mint(other.address, ONE);
     await parent.remove(other.address, 10);

@@ -147,7 +147,7 @@ abstract contract DAO is Composable, IDAO {
 
     // Automatically vote in favor for the creator if they have votes and are actively whitelisted
     int112 votes = int112(uint112(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
-    if ((votes != 0) && IWhitelist(erc20).whitelisted(msg.sender)) {
+    if ((votes != 0) && IFrabricWhitelistCore(erc20).whitelisted(msg.sender)) {
       _voteUnsafe(msg.sender, id, proposal, votes, votes);
     }
   }
@@ -203,7 +203,7 @@ abstract contract DAO is Composable, IDAO {
   function _voteUnsafe(uint256 id, address voter) internal {
     ProposalStruct storage proposal = _proposals[id];
     int112 votes = int112(uint112(IVotes(erc20).getPastVotes(voter, proposal.voteBlock)));
-    if ((votes != 0) && IWhitelist(erc20).whitelisted(voter)) {
+    if ((votes != 0) && IFrabricWhitelistCore(erc20).whitelisted(voter)) {
       _voteUnsafe(voter, id, proposal, votes, votes);
     }
   }
@@ -217,7 +217,7 @@ abstract contract DAO is Composable, IDAO {
     // Threads keep token balances until someone calls remove on them
     // This check prevents them from voting in the meantime, even though it could
     // eventually be handled by calling remove and cancelProposal when the time comes
-    if (!IWhitelist(erc20).whitelisted(msg.sender)) {
+    if (!IFrabricWhitelistCore(erc20).whitelisted(msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
 

@@ -8,12 +8,16 @@ contract TestFrabricWhitelist is FrabricWhitelist {
     _setGlobal();
   }
 
-  function setParent(address _parent) external {
+  function setParent(address _parent) external override {
     _setParent(_parent);
   }
 
-  function setWhitelisted(address person, bytes32 dataHash) external {
-    _setWhitelisted(person, dataHash);
+  function whitelist(address person) external override {
+    _whitelist(person);
+  }
+
+  function setKYC(address person, bytes32 hash) external override {
+    _setKYC(person, hash);
   }
 
   function remove(address person) external {

@@ -22,7 +22,7 @@ describe("DAO", () => {
     ({ frbc } = await FrabricERC20.deployFRBC(usd.address));
     await frbc.mint(deployer.address, 100);
     dao = await (await ethers.getContractFactory("TestDAO")).deploy(frbc.address);
-    await frbc.setWhitelisted(dao.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frbc.whitelist(dao.address);
   });
 
   it("should have initialized correctly", async () => {
@@ -48,7 +48,7 @@ describe("DAO", () => {
 
   it("should create proposals and automatically vote", async () => {
     // Prep code for other tests
-    await frbc.setWhitelisted(other.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frbc.whitelist(other.address);
     await frbc.transfer(other.address, 8);
 
     const tx = await dao.propose(type, false, info);
