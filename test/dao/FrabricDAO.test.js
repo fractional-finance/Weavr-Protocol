@@ -72,7 +72,7 @@ describe("FrabricDAO", accounts => {
     const time = (await waffle.provider.getBlock("latest")).timestamp;
     await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, ONE);
     await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, ONE);
-    await expect(tx).to.emit(auction, "Listing").withArgs(0, fDAO.address, frbc.address, usd.address, ONE, time, WEEK);
+    await expect(tx).to.emit(auction, "Auctions").withArgs(0, fDAO.address, frbc.address, usd.address, ONE, 1, time, WEEK);
     expect(await frbc.balanceOf(fDAO.address)).to.equal(0);
     expect(await frbc.balanceOf(auction.address)).to.equal(ONE);
   });
@@ -104,7 +104,7 @@ describe("FrabricDAO", accounts => {
     await expect(tx).to.emit(frbc, "Transfer").withArgs(ethers.constants.AddressZero, fDAO.address, TWO);
     await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, TWO);
     await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, TWO);
-    await expect(tx).to.emit(auction, "Listing").withArgs(1, fDAO.address, frbc.address, usd.address, TWO, time, WEEK);
+    await expect(tx).to.emit(auction, "Auctions").withArgs(1, fDAO.address, frbc.address, usd.address, TWO, 1, time, WEEK);
     expect(await frbc.balanceOf(auction.address)).to.equal(ethers.utils.parseUnits("3"));
   });
 
@@ -164,19 +164,16 @@ describe("FrabricDAO", accounts => {
       await expect(tx).to.emit(frbc, "Approval").withArgs(other.address, auction.address, 100 - removalFee);
       await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, auction.address, 100 - removalFee);
 
-      let start = (await waffle.provider.getBlock("latest")).timestamp;
-      for (let b = 0; b < 4; b++) {
-        await expect(tx).to.emit(auction, "Listing").withArgs(
-          2 + (i * 4) + b,
-          other.address,
-          frbc.address,
-          usd.address,
-          i === 0 ? 25 : (b !== 3 ? 23 : 26),
-          start,
-          WEEK
-        );
-        start += WEEK;
-      }
+      await expect(tx).to.emit(auction, "Auctions").withArgs(
+        2 + (i * 4),
+        other.address,
+        frbc.address,
+        usd.address,
+        100 - removalFee,
+        4,
+        (await waffle.provider.getBlock("latest")).timestamp,
+        WEEK
+      );
       await expect(tx).to.emit(frbc, "Removal").withArgs(other.address, 100);
       await expect(tx).to.emit(fDAO, "RemovalHook").withArgs(other.address);
 

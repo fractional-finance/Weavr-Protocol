@@ -8,24 +8,25 @@ import "../common/IComposable.sol";
 // for auction. This is done with the following listing API which is separated out
 // for greater flexibility in the future
 interface IAuctionCore is IComposable {
-  // Indexes the ID as expected, the seller so someone can find their own auctions
+  // Indexes the ID as expected, the seller so people can find their own auctions
   // which they need to complete, and the token so people can find auctions by the token being sold
-  event Listing(
-    uint256 indexed id,
+  event Auctions(
+    uint256 indexed startID,
     address indexed seller,
     address indexed token,
     address traded,
-    uint256 amount,
+    uint256 total,
+    uint8 quantity,
     uint64 start,
     uint32 length
   );
 
   function list(
+    address seller,
     address token,
     address traded,
-    address seller,
     uint256 amount,
-    uint256 batches,
+    uint8 batches,
     uint64 start,
     uint32 length
   ) external returns (uint256 id);
@@ -42,7 +43,7 @@ interface IAuction is IAuctionCore {
   function withdraw(address token, address trader) external;
 
   function active(uint256 id) external view returns (bool);
-  // Will only work for active auctions
+  // Will only work for auctions which have yet to complete
   function token(uint256 id) external view returns (address);
   function traded(uint256 id) external view returns (address);
   function amount(uint256 id) external view returns (uint256);

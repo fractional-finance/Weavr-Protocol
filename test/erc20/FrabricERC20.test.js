@@ -147,19 +147,16 @@ describe("FrabricERC20", () => {
         // deployer is the contract owner and the owner gets the removal fee
         await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, deployer.address, removalFee);
       }
-      let start = (await waffle.provider.getBlock("latest")).timestamp;
-      for (let b = 0; b < 4; b++) {
-        await expect(tx).to.emit(auction, "Listing").withArgs(
-          b,
-          other.address,
-          frbc.address,
-          usd.address,
-          b !== 3 ? listed.div(4) : listed.sub(listed.div(4).mul(3)),
-          start,
-          WEEK
-        );
-        start += WEEK;
-      }
+      await expect(tx).to.emit(auction, "Auctions").withArgs(
+        0,
+        other.address,
+        frbc.address,
+        usd.address,
+        listed,
+        4,
+        (await waffle.provider.getBlock("latest")).timestamp,
+        WEEK
+      );
       await expect(tx).to.emit(frbc, "Removal").withArgs(other.address, balance);
       expect(await frbc.whitelisted(other.address)).to.equal(false);
       expect(await frbc.balanceOf(other.address)).to.equal(0);
@@ -198,19 +195,16 @@ describe("FrabricERC20", () => {
     const tx = await frbc.triggerRemoval(other.address);
     await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, auction.address, listed);
     await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, deployer.address, removalFee);
-    let start = (await waffle.provider.getBlock("latest")).timestamp;
-    for (let b = 0; b < 4; b++) {
-      await expect(tx).to.emit(auction, "Listing").withArgs(
-        b,
-        other.address,
-        frbc.address,
-        usd.address,
-        b !== 3 ? listed.div(4) : listed.sub(listed.div(4).mul(3)),
-        start,
-        WEEK
-      );
-      start += WEEK;
-    }
+    await expect(tx).to.emit(auction, "Auctions").withArgs(
+      0,
+      other.address,
+      frbc.address,
+      usd.address,
+      listed,
+      4,
+      (await waffle.provider.getBlock("latest")).timestamp,
+      WEEK
+    );
     await expect(tx).to.emit(frbc, "Removal").withArgs(other.address, balance);
     expect(await frbc.whitelisted(other.address)).to.equal(false);
     expect(await frbc.balanceOf(other.address)).to.equal(0);

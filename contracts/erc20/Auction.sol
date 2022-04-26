@@ -57,7 +57,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     address _token,
     address _traded,
     uint256 _amount,
-    uint256 batches,
+    uint8 batches,
     uint64 start,
     uint32 length
   ) external override nonReentrant returns (uint256 id) {
@@ -89,6 +89,9 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       start = uint64(block.timestamp);
     }
 
+    // Use a single event to save on gas
+    emit Auctions(_nextID, seller, _token, _traded, _amount, batches, start, length);
+
     for (uint256 i = 0; i < batches; i++) {
       // Could technically be further optimized by moving this outside the loop
       // with a duplicated loop body. Not worth it
@@ -105,12 +108,12 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       auction.token = _token;
       auction.traded = _traded;
       auction.amount = batchAmount;
-      auction.start = start + uint64(i * length);
+      auction.start = start;
       auction.length = length;
       auction.end = auction.start + length;
-      emit Listing(id, seller, _token, _traded, batchAmount, auction.start, length);
 
       _amount -= batchAmount;
+      start += length;
     }
   }
 
@@ -240,7 +243,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     IERC20(_token).safeTransfer(trader, _amount);
   }
 
-  // These functions will only work for active proposals
+  // These functions will only work for auctions which have yet to complete
   function active(uint256 id) external view override returns (bool) {
     return (_auctions[id].start <= block.timestamp) && (block.timestamp <= _auctions[id].end);
   }

@@ -13,13 +13,9 @@ let defaultArgs;
 const WEEK = 7 * 24 * 60 * 60;
 
 // Helper function to generate custom arguments without specifying all 7
-function override(args, includeBatches) {
+function override(args) {
   args = { ...defaultArgs, ...args };
-  let res = [args.seller, args.token, args.traded, args.amount];
-  if (includeBatches) {
-    res.push(args.batches);
-  }
-  return [...res, args.start, args.length];
+  return [args.seller, args.token, args.traded, args.amount, args.batches, args.start, args.length];
 }
 
 async function list(id, args) {
@@ -34,7 +30,7 @@ async function list(id, args) {
   const before = await frbc.balanceOf(auction.address);
 
   // Create the listing
-  const tx = await auction.list(...override(args, true));
+  const tx = await auction.list(...override(args));
 
   // verify the balance was transferred
   await expect(tx).to.emit(frbc, "Transfer").withArgs(seller.address, auction.address, args.amount);
@@ -45,6 +41,9 @@ async function list(id, args) {
   if (!args.start) {
     args.start = time;
   }
+
+  // Check the event
+  await expect(tx).to.emit(auction, "Auctions").withArgs(id, ...override(args));
 
   // Calculate the per batch amount
   let last = args.amount % args.batches;
@@ -57,7 +56,6 @@ async function list(id, args) {
       args.amount += last;
     }
 
-    await expect(tx).to.emit(auction, "Listing").withArgs(id + i, ...override(args, false));
     expect(await auction.active(id + i)).to.equal(args.start <= time);
     expect(await auction.token(id + i)).to.equal(args.token);
     expect(await auction.traded(id + i)).to.equal(args.traded);
