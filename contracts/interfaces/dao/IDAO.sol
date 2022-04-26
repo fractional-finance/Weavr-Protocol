@@ -15,7 +15,13 @@ interface IDAOCore is IComposable {
     Cancelled
   }
 
-  event Proposal(uint256 indexed id, uint256 indexed proposalType, address indexed creator, bytes32 info);
+  event Proposal(
+    uint256 indexed id,
+    uint256 indexed proposalType,
+    address indexed creator,
+    bool supermajority,
+    bytes32 info
+  );
   event ProposalStateChange(uint256 indexed id, ProposalState indexed state);
 
   function erc20() external view returns (address);
@@ -50,12 +56,13 @@ interface IDAO is IDAOCore {
   function nextProposalID() external view returns (uint256);
 
   // Will only work for proposals pre-finalization
-  function proposalVoteBlock(uint256 id) external view returns (uint32);
-  function proposalVotes(uint256 id) external view returns (int112);
-  function proposalTotalVotes(uint256 id) external view returns (uint112);
+  function supermajorityRequired(uint256 id) external view returns (bool);
+  function voteBlock(uint256 id) external view returns (uint32);
+  function netVotes(uint256 id) external view returns (int112);
+  function totalVotes(uint256 id) external view returns (uint112);
 
   // Will work even with finalized proposals (cancelled/completed)
-  function proposalVote(uint256 id, address voter) external view returns (int112);
+  function voteRecord(uint256 id, address voter) external view returns (int112);
 }
 
 error InactiveProposal(uint256 id);

@@ -52,7 +52,7 @@ describe("Frabric", accounts => {
   it("should let you add KYC agencies", async () => {
     const [ kyc ] = signers.splice(0, 1);
     await expect(
-      (await proposal(frabric, "Participants", [ParticipantType.KYC, kyc.address.toLowerCase() + "000000000000000000000000"])).tx
+      (await proposal(frabric, "Participants", false, [ParticipantType.KYC, kyc.address.toLowerCase() + "000000000000000000000000"])).tx
     ).to.emit(frabric, "ParticipantChange").withArgs(kyc.address, ParticipantType.KYC);
 
     // Verify they were successfully added
@@ -74,7 +74,7 @@ describe("Frabric", accounts => {
       );
 
       // Perform the proposal
-      const { id } = await proposal(frabric, "Participants", [pType, merkle.getHexRoot()])
+      const { id } = await proposal(frabric, "Participants", false, [pType, merkle.getHexRoot()])
 
       const signArgs = [
         {
@@ -122,7 +122,7 @@ describe("Frabric", accounts => {
   });
 
   it("should let you add a governor", async () => {
-    const { id } = await proposal(frabric, "Participants", [ParticipantType.Governor, governor.address.toLowerCase() + "000000000000000000000000"]);
+    const { id } = await proposal(frabric, "Participants", false, [ParticipantType.Governor, governor.address.toLowerCase() + "000000000000000000000000"]);
     expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Unverified);
 
     const signArgs = [
@@ -183,14 +183,14 @@ describe("Frabric", accounts => {
 
   it("should let you remove bond", async () => {
     await expect(
-      (await proposal(frabric, "BondRemoval", [governor.address, false, 3333])).tx
+      (await proposal(frabric, "BondRemoval", false, [governor.address, false, 3333])).tx
     ).to.emit(bond, "Unbond").withArgs(governor.address, 3333);
     expect(await pair.balanceOf(governor.address)).to.equal(3333);
   });
 
   it("should let you slash bond", async () => {
     await expect(
-      (await proposal(frabric, "BondRemoval", [governor.address, true, 5667])).tx
+      (await proposal(frabric, "BondRemoval", false, [governor.address, true, 5667])).tx
     ).to.emit(bond, "Slash").withArgs(governor.address, 5667);
     expect(await pair.balanceOf(frabric.address)).to.equal(5667);
   });
@@ -205,6 +205,7 @@ describe("Frabric", accounts => {
     const { tx } = await proposal(
       frabric,
       "Thread",
+      false,
       [0, "Test Thread", "TTHR", descriptor, governor.address, data],
       [0, 4, 1, 2, 3, 5]
     );
@@ -228,7 +229,7 @@ describe("Frabric", accounts => {
     // Remove the governor as they have additional code in the hook, making them
     // the singular complete case
     await expect(
-      (await proposal(frabric, "ParticipantRemoval", [governor.address, 0, []])).tx
+      (await proposal(frabric, "ParticipantRemoval", false, [governor.address, 0, []])).tx
     ).to.emit(frabric, "ParticipantChange").withArgs(governor.address, ParticipantType.Removed);
     expect(await frbc.whitelisted(governor.address)).to.equal(false);
     expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Removed);

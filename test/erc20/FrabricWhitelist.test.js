@@ -69,6 +69,7 @@ describe("FrabricWhitelist", accounts => {
     ).to.emit(whitelist, "Whitelisted").withArgs(others[0].address, false);
     expect(await whitelist.explicitlyWhitelisted(others[0].address)).to.equal(false);
     expect(await whitelist.whitelisted(others[0].address)).to.equal(false);
+    expect(await whitelist.removedAt(others[0].address)).to.equal((await waffle.provider.getBlock("latest")).number);
     assert(await whitelist.removed(others[0].address));
   });
 

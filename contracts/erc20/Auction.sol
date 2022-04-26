@@ -54,32 +54,32 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
 
   function list(
     address seller,
-    address token,
-    address traded,
-    uint256 amount,
+    address _token,
+    address _traded,
+    uint256 _amount,
     uint256 batches,
     uint64 start,
     uint32 length
   ) external override nonReentrant returns (uint256 id) {
     // Require the caller to either be the token itself, forcing a sale, or the
     // seller
-    if ((msg.sender != token) && (msg.sender != seller)) {
+    if ((msg.sender != _token) && (msg.sender != seller)) {
       revert Unauthorized(msg.sender, seller);
     }
 
     // Traditionally vulnerable pattern, hence nonReentrant
     // You can call complete/withdraw during this yet that'd solely decrease the
     // balance, which isn't advantageous
-    uint256 startBal = IERC20(token).balanceOf(address(this));
-    IERC20(token).safeTransferFrom(seller, address(this), amount);
-    amount = IERC20(token).balanceOf(address(this)) - startBal;
-    if (amount == 0) {
+    uint256 startBal = IERC20(_token).balanceOf(address(this));
+    IERC20(_token).safeTransferFrom(seller, address(this), _amount);
+    _amount = IERC20(_token).balanceOf(address(this)) - startBal;
+    if (_amount == 0) {
       revert ZeroAmount();
     }
 
     // If amount is microscopic, list it in a single batch
     // This following line also prevents batches from equaling 0
-    uint256 batchAmount = amount / batches;
+    uint256 batchAmount = _amount / batches;
     if (batchAmount == 0) {
       batches = 1;
     }
@@ -94,7 +94,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       // with a duplicated loop body. Not worth it
       if (i == (batches - 1)) {
         // Correct for any rounding errors
-        batchAmount = amount;
+        batchAmount = _amount;
       }
 
       id = _nextID;
@@ -102,15 +102,15 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
 
       AuctionStruct storage auction = _auctions[id];
       auction.seller = seller;
-      auction.token = token;
-      auction.traded = traded;
+      auction.token = _token;
+      auction.traded = _traded;
       auction.amount = batchAmount;
       auction.start = start + uint64(i * length);
       auction.length = length;
       auction.end = auction.start + length;
-      emit Listing(id, seller, token, traded, batchAmount, auction.start, length);
+      emit Listing(id, seller, _token, _traded, batchAmount, auction.start, length);
 
-      amount -= batchAmount;
+      _amount -= batchAmount;
     }
   }
 
@@ -132,15 +132,15 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   // won't pass as EIP165 compatible
 
   // This comment is a waste of space yet technically accurate and therefore remains
-  function notWhitelisted(address token, address person) private view returns (bool) {
+  function notWhitelisted(address _token, address person) private view returns (bool) {
     return (
       // If this contract doesn't support the IWhitelist interface,
       // return false, meaning they're not not whitelisted (meaning they are,
       // as contracts without whitelists behave as if everyone is whitelisted)
-      token.supportsInterface(type(IWhitelist).interfaceId) &&
+      _token.supportsInterface(type(IWhitelist).interfaceId) &&
       // If there is a whitelist and this person isn't whitelisted however,
       // return true so we can error
-      (!IWhitelist(token).whitelisted(person))
+      (!IWhitelist(_token).whitelisted(person))
     );
   }
 
@@ -234,19 +234,35 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     emit AuctionComplete(id);
   }
 
-  function withdraw(address token, address trader) external override {
-    uint256 amount = balances[token][trader];
-    balances[token][trader] = 0;
-    IERC20(token).safeTransfer(trader, amount);
+  function withdraw(address _token, address trader) external override {
+    uint256 _amount = balances[_token][trader];
+    balances[_token][trader] = 0;
+    IERC20(_token).safeTransfer(trader, _amount);
   }
 
+  // These functions will only work for active proposals
   function active(uint256 id) external view override returns (bool) {
     return (_auctions[id].start <= block.timestamp) && (block.timestamp <= _auctions[id].end);
   }
-  function highestBidder(uint256 id) external view override returns (address) {
+
+  // We could expose start/length/seller here, yet we want to encourage using
+  // the event API as that will always provide that info while this will solely
+  // provide it while the auction is active. This is the data which may have
+  // value on chain
+
+  function token(uint256 id) external view override returns (address) {
+    return _auctions[id].token;
+  }
+  function traded(uint256 id) external view override returns (address) {
+    return _auctions[id].traded;
+  }
+  function amount(uint256 id) external view override returns (uint256) {
+    return _auctions[id].amount;
+  }
+  function highBidder(uint256 id) external view override returns (address) {
     return _auctions[id].bidder;
   }
-  function highestBid(uint256 id) external view override returns (uint256) {
+  function highBid(uint256 id) external view override returns (uint256) {
     return _auctions[id].bid;
   }
   function end(uint256 id) external view override returns (uint64) {

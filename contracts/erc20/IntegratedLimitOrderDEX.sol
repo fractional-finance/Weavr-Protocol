@@ -100,11 +100,10 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     uint256 price,
     uint256 amount,
     PricePoint storage point
-  ) private returns (uint256) {
+  ) private returns (uint256 filled) {
     bool buying = point.orderType == OrderType.Sell;
 
     // Fill orders until there are either no orders or our order is filled
-    uint256 filled = 0;
     uint256 h = point.orders.length - 1;
     _inDEX = true;
     for (; amount != 0; h--) {
@@ -189,7 +188,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     address trader,
     uint256 price,
     uint256 amount
-  ) private returns (uint256 filled, uint256) {
+  ) private returns (uint256 filled) {
     // Ensure the trader is whitelisted
     // If they're buying tokens, this would be a DoS if we didn't handle removed people above
     // Since we do, it's just pointless
@@ -223,7 +222,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
       filled = _fill(trader, price, amount, point);
       // Return if fully filled
       if (filled == amount) {
-        return (filled, 0);
+        return filled;
       }
       amount -= filled;
     }
@@ -239,7 +238,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     point.orders.push(OrderStruct(trader, 0, amount));
     emit OrderIncrease(trader, price, amount);
 
-    return (filled, point.orders.length - 1);
+    return filled;
   }
 
   // Returns the same as action
@@ -250,7 +249,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     address trader,
     uint256 price,
     uint256 minimumAmount
-  ) external override nonReentrant returns (uint256, uint256) {
+  ) external override nonReentrant returns (uint256 filled) {
     // Determine the value sent
     // Not a pattern vulnerable to re-entrancy despite being a balance-based amount calculation
     uint256 balance = IERC20(tradeToken).balanceOf(address(this));
@@ -289,12 +288,12 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   function sell(
     uint256 price,
     uint256 amount
-  ) external override nonReentrant returns (uint256 filled, uint256 id) {
+  ) external override nonReentrant returns (uint256 filled) {
     locked[msg.sender] += atomic(amount);
     if (balanceOf(msg.sender) < locked[msg.sender]) {
       revert NotEnoughFunds(locked[msg.sender], balanceOf(msg.sender));
     }
-    (filled, id) = _action(OrderType.Sell, OrderType.Buy, msg.sender, price, amount);
+    filled = _action(OrderType.Sell, OrderType.Buy, msg.sender, price, amount);
     // Trigger a withdraw for any tokens from filled orders
     _withdrawTradeToken(msg.sender);
   }

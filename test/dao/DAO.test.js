@@ -52,23 +52,25 @@ describe("DAO", () => {
     await frbc.transfer(other.address, 8);
 
     const tx = await dao.propose(type, false, info);
-    await expect(tx).to.emit(dao, "Proposal").withArgs(0, type, deployer.address, info);
+    await expect(tx).to.emit(dao, "Proposal").withArgs(0, type, deployer.address, false, info);
     await expect(tx).to.emit(dao, "ProposalStateChange", 0, ProposalState.Active);
     // 10, not 92, due to the 10% vote cap
     await expect(tx).to.emit(dao, "Vote").withArgs(0, VoteDirection.Yes, deployer.address, 10);
 
     assert(await dao.proposalActive(0));
-    let block = (await waffle.provider.getBlock("latest"));
+    const block = (await waffle.provider.getBlock("latest"));
     end = (await dao.votingPeriod()).add(block.timestamp);
-    expect(await dao.proposalVoteBlock(0)).to.equal(block.number - 1);
-    expect(await dao.proposalVotes(0)).to.equal(10);
-    expect(await dao.proposalTotalVotes(0), 10);
-    expect(await dao.proposalVote(0, deployer.address)).to.equal(10);
+    expect(await dao.supermajorityRequired(0)).to.equal(false);
+    expect(await dao.voteBlock(0)).to.equal(block.number - 1);
+    expect(await dao.netVotes(0)).to.equal(10);
+    expect(await dao.totalVotes(0), 10);
+    expect(await dao.voteRecord(0, deployer.address)).to.equal(10);
   });
 
   it("should create proposals requiring a supermajority", async () => {
     const tx = await dao.propose(type, true, info);
-    await expect(tx).to.emit(dao, "Proposal").withArgs(1, type, deployer.address, info);
+    await expect(tx).to.emit(dao, "Proposal").withArgs(1, type, deployer.address, true, info);
+    assert(await dao.supermajorityRequired(1));
     await expect(tx).to.emit(dao, "ProposalStateChange", 1, ProposalState.Active);
     await expect(tx).to.emit(dao, "Vote").withArgs(1, VoteDirection.Yes, deployer.address, 10);
   });
@@ -77,9 +79,9 @@ describe("DAO", () => {
     await expect(
       await dao.connect(other).vote([0], [-5])
     ).to.emit(dao, "Vote").withArgs(0, VoteDirection.No, other.address, 5);
-    expect(await dao.proposalVotes(0)).to.equal(5);
-    expect(await dao.proposalTotalVotes(0), 15);
-    expect(await dao.proposalVote(0, other.address)).to.equal(-5);
+    expect(await dao.netVotes(0)).to.equal(5);
+    expect(await dao.totalVotes(0), 15);
+    expect(await dao.voteRecord(0, other.address)).to.equal(-5);
   });
 
   // Also tests re-voting
@@ -90,9 +92,9 @@ describe("DAO", () => {
       await dao.connect(other).vote([0], [-9])
     ).to.emit(dao, "Vote").withArgs(0, VoteDirection.No, other.address, 8);
     // As a note, 2 < (20 / 6), so this is majority yet not supermajority
-    expect(await dao.proposalVotes(0)).to.equal(2);
-    expect(await dao.proposalTotalVotes(0), 18);
-    expect(await dao.proposalVote(0, other.address)).to.equal(-8);
+    expect(await dao.netVotes(0)).to.equal(2);
+    expect(await dao.totalVotes(0), 18);
+    expect(await dao.voteRecord(0, other.address)).to.equal(-8);
   });
 
   // TODO: Batch voting
@@ -191,10 +193,12 @@ describe("DAO", () => {
   });
 
   it("should delete the proposal, which leaves behind the vote map", async () => {
-    expect(await dao.proposalVoteBlock(0)).to.equal(0);
-    expect(await dao.proposalVotes(0)).to.equal(0);
-    expect(await dao.proposalTotalVotes(0)).to.equal(0);
-    expect(await dao.proposalVote(0, deployer.address)).to.equal(10);
+    // This first check is pointless as this field is already false
+    expect(await dao.supermajorityRequired(0)).to.equal(false);
+    expect(await dao.voteBlock(0)).to.equal(0);
+    expect(await dao.netVotes(0)).to.equal(0);
+    expect(await dao.totalVotes(0)).to.equal(0);
+    expect(await dao.voteRecord(0, deployer.address)).to.equal(10);
   });
 
   it("shouldn't let you withdraw completed proposals", async () => {

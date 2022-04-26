@@ -5,7 +5,7 @@ const { expect } = require("chai");
 const deployBeacon = require("../../scripts/deployBeacon.js");
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
 
-const { ProposalState, ParticipantType } = require("../common.js");
+const { ProposalState, FrabricProposalType, ParticipantType } = require("../common.js");
 
 let addresses, root;
 let frabric, tx;
@@ -39,7 +39,13 @@ describe("InitialFrabric", accounts => {
 
   it("should have initialized correctly", async () => {
     // Fake proposal for participation addition
-    await expect(tx).to.emit(frabric, "Proposal");
+    await expect(tx).to.emit(frabric, "Proposal").withArgs(
+      0,
+      FrabricProposalType.Participants,
+      ethers.constants.AddressZero,
+      true,
+      ethers.utils.id("Genesis Participants")
+    );
     await expect(tx).to.emit(frabric, "ProposalStateChange").withArgs(0, ProposalState.Active);
     await expect(tx).to.emit(frabric, "ProposalStateChange").withArgs(0, ProposalState.Queued);
     await expect(tx).to.emit(frabric, "ProposalStateChange").withArgs(0, ProposalState.Executed);

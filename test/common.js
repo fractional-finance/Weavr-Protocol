@@ -80,7 +80,7 @@ module.exports = {
   },
   increaseTime: (time) => waffle.provider.send("evm_increaseTime", [time]),
 
-  propose: async (dao, proposal, args, order) => {
+  propose: async (dao, proposal, supermajority, args, order) => {
     let ProposalType;
     if (module.exports.CommonProposalType.hasOwnProperty(proposal)) {
       ProposalType = module.exports.CommonProposalType;
@@ -104,10 +104,13 @@ module.exports = {
       id,
       ProposalType[proposal],
       dao.signer.address,
+      supermajority,
       info
     );
     await expect(tx).to.emit(dao, "ProposalStateChange").withArgs(id, module.exports.ProposalState.Active);
     expect(await dao.nextProposalID()).to.equal(id.add(1));
+    expect(await dao.supermajorityRequired(id)).to.equal(supermajority);
+    expect(await dao.voteBlock(id)).to.equal((await waffle.provider.getBlock("latest")).number - 1);
 
     if (
       (typeof(args[args.length - 1]) === "object") &&
@@ -149,8 +152,8 @@ module.exports = {
     return tx;
   },
 
-  proposal: async (dao, proposal, args, order) => {
-    const { id } = await module.exports.propose(dao, proposal, args, order);
+  proposal: async (dao, proposal, supermajority, args, order) => {
+    const { id } = await module.exports.propose(dao, proposal, supermajority, args, order);
     return { id, tx: await module.exports.queueAndComplete(dao, id) };
   }
 }

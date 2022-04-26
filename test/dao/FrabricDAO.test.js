@@ -5,6 +5,8 @@ const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
 const { OrderType, propose, queueAndComplete, proposal } = require("../common.js");
 
 const WEEK = 7 * 24 * 60 * 60;
+const ONE = ethers.utils.parseUnits("1");
+const TWO = ethers.utils.parseUnits("2");
 
 let signers, deployer, participant;
 let usd, auction, frbc, fDAO;
@@ -23,7 +25,7 @@ describe("FrabricDAO", accounts => {
     await frbc.mint(participant.address, ethers.utils.parseUnits("5"));
     fDAO = (await (await ethers.getContractFactory("TestFrabricDAO")).deploy(frbc.address)).connect(participant);
     await frbc.setWhitelisted(fDAO.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
-    await frbc.mint(fDAO.address, ethers.utils.parseUnits("1"));
+    await frbc.mint(fDAO.address, ONE);
     await frbc.transferOwnership(fDAO.address);
     frbc = frbc.connect(participant);
   });
@@ -35,7 +37,7 @@ describe("FrabricDAO", accounts => {
 
   it("should have paper proposals", async () => {
     // Since Paper proposals are literally a NOP dependent on the info string, this is sufficient
-    await proposal(fDAO, "Paper", []);
+    await proposal(fDAO, "Paper", false, []);
   });
 
   it("should allow upgrading", async () => {
@@ -46,33 +48,33 @@ describe("FrabricDAO", accounts => {
     await usd.transfer(fDAO.address, 111);
 
     const other = signers.splice(0, 1)[0].address;
-    const tx = (await proposal(fDAO, "TokenAction", [usd.address, other, false, 0, 111])).tx;
+    const tx = (await proposal(fDAO, "TokenAction", false, [usd.address, other, false, 0, 111])).tx;
     await expect(tx).to.emit(usd, "Transfer").withArgs(fDAO.address, other, 111);
 
     expect(await usd.balanceOf(other)).to.equal(111);
   });
 
   it("should allow selling tokens on their DEX", async () => {
-    const tx = (await proposal(fDAO, "TokenAction", [frbc.address, fDAO.address, false, 2, ethers.utils.parseUnits("1")])).tx;
+    const tx = (await proposal(fDAO, "TokenAction", false, [frbc.address, fDAO.address, false, 2, ONE])).tx;
     await expect(tx).to.emit(frbc, "Order").withArgs(OrderType.Sell, 2);
     await expect(tx).to.emit(frbc, "OrderIncrease").withArgs(fDAO.address, 2, 1);
-    expect(await frbc.locked(fDAO.address)).to.equal(ethers.utils.parseUnits("1"));
+    expect(await frbc.locked(fDAO.address)).to.equal(ONE);
   });
 
   it("should allow cancelling orders on a DEX", async () => {
-    const tx = (await proposal(fDAO, "TokenAction", [frbc.address, fDAO.address, false, 2, 0])).tx;
+    const tx = (await proposal(fDAO, "TokenAction", false, [frbc.address, fDAO.address, false, 2, 0])).tx;
     await expect(tx).to.emit(frbc, "OrderCancellation").withArgs(fDAO.address, 2, 1);
     expect(await frbc.locked(fDAO.address)).to.equal(ethers.utils.parseUnits("0"));
   });
 
   it("should allow selling tokens at auction", async () => {
-    const tx = (await proposal(fDAO, "TokenAction", [frbc.address, auction.address, false, 0, ethers.utils.parseUnits("1")])).tx;
+    const tx = (await proposal(fDAO, "TokenAction", false, [frbc.address, auction.address, false, 0, ONE])).tx;
     const time = (await waffle.provider.getBlock("latest")).timestamp;
-    await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("1"));
-    await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("1"));
-    await expect(tx).to.emit(auction, "Listing").withArgs(0, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("1"), time, WEEK);
+    await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, ONE);
+    await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, ONE);
+    await expect(tx).to.emit(auction, "Listing").withArgs(0, fDAO.address, frbc.address, usd.address, ONE, time, WEEK);
     expect(await frbc.balanceOf(fDAO.address)).to.equal(0);
-    expect(await frbc.balanceOf(auction.address)).to.equal(ethers.utils.parseUnits("1"));
+    expect(await frbc.balanceOf(auction.address)).to.equal(ONE);
   });
 
   // The following tests pass if the NotMintable line of FrabricDAO which forces
@@ -82,27 +84,27 @@ describe("FrabricDAO", accounts => {
     await fDAO.whitelist(other);
 
     const supply = await frbc.totalSupply();
-    const tx = (await proposal(fDAO, "TokenAction", [frbc.address, other, true, 0, 222])).tx;
+    const tx = (await proposal(fDAO, "TokenAction", true, [frbc.address, other, true, 0, 222])).tx;
     await expect(tx).to.emit(frbc, "Transfer").withArgs(ethers.constants.AddressZero, other, 222);
     expect(await frbc.totalSupply()).to.equal(supply.add(222));
     expect(await frbc.balanceOf(other)).to.equal(222);
   });
 
   it("should allow minting and selling on the DEX", async () => {
-    const tx = (await proposal(fDAO, "TokenAction", [frbc.address, fDAO.address, true, 2, ethers.utils.parseUnits("2")])).tx;
-    await expect(tx).to.emit(frbc, "Transfer").withArgs(ethers.constants.AddressZero, fDAO.address, ethers.utils.parseUnits("2"));
+    const tx = (await proposal(fDAO, "TokenAction", true, [frbc.address, fDAO.address, true, 2, TWO])).tx;
+    await expect(tx).to.emit(frbc, "Transfer").withArgs(ethers.constants.AddressZero, fDAO.address, TWO);
     await expect(tx).to.emit(frbc, "Order").withArgs(OrderType.Sell, 2);
     await expect(tx).to.emit(frbc, "OrderIncrease").withArgs(fDAO.address, 2, 2);
-    expect(await frbc.locked(fDAO.address)).to.equal(ethers.utils.parseUnits("2"));
+    expect(await frbc.locked(fDAO.address)).to.equal(TWO);
   });
 
   it("should allow minting and selling at Auction", async () => {
-    const tx = (await proposal(fDAO, "TokenAction", [frbc.address, auction.address, true, 0, ethers.utils.parseUnits("2")])).tx;
+    const tx = (await proposal(fDAO, "TokenAction", true, [frbc.address, auction.address, true, 0, TWO])).tx;
     const time = (await waffle.provider.getBlock("latest")).timestamp;
-    await expect(tx).to.emit(frbc, "Transfer").withArgs(ethers.constants.AddressZero, fDAO.address, ethers.utils.parseUnits("2"));
-    await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("2"));
-    await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, ethers.utils.parseUnits("2"));
-    await expect(tx).to.emit(auction, "Listing").withArgs(1, fDAO.address, frbc.address, usd.address, ethers.utils.parseUnits("2"), time, WEEK);
+    await expect(tx).to.emit(frbc, "Transfer").withArgs(ethers.constants.AddressZero, fDAO.address, TWO);
+    await expect(tx).to.emit(frbc, "Approval").withArgs(fDAO.address, auction.address, TWO);
+    await expect(tx).to.emit(frbc, "Transfer").withArgs(fDAO.address, auction.address, TWO);
+    await expect(tx).to.emit(auction, "Listing").withArgs(1, fDAO.address, frbc.address, usd.address, TWO, time, WEEK);
     expect(await frbc.balanceOf(auction.address)).to.equal(ethers.utils.parseUnits("3"));
   });
 
@@ -144,7 +146,7 @@ describe("FrabricDAO", accounts => {
         }
       }
 
-      const { id, tx: freeze } = await propose(fDAO, "ParticipantRemoval", [other.address, removalFee, signatures]);
+      const { id, tx: freeze } = await propose(fDAO, "ParticipantRemoval", false, [other.address, removalFee, signatures]);
       if (i === 2) {
         let frozenUntil = (await waffle.provider.getBlock("latest")).timestamp + WEEK + (3 * 24 * 60 * 60);
         await expect(freeze).to.emit(frbc, "Freeze").withArgs(other.address, frozenUntil);

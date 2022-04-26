@@ -67,23 +67,24 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   }
 
   // Distribution implementation
-  function _distribute(address token, uint112 amount) internal {
+  function _distribute(address token, uint112 amount) internal returns (uint256 id) {
     if (amount == 0) {
       revert ZeroAmount();
     }
 
-    _distributions[_nextID] = DistributionStruct(
+    id = _nextID;
+    _nextID++;
+    _distributions[id] = DistributionStruct(
       token,
       uint32(block.number - 1),
       amount,
       // Cache the supply so each claim doesn't have to repeat this binary search
       uint112(getPastTotalSupply(block.number - 1))
     );
-    emit Distribution(_nextID, token, amount);
-    _nextID++;
+    emit Distribution(id, token, amount);
   }
 
-  function distribute(address token, uint112 amount) public override nonReentrant {
+  function distribute(address token, uint112 amount) public override nonReentrant returns (uint256) {
     uint256 balance = IERC20(token).balanceOf(address(this));
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     // This does mean USDT distributions could theoretically break at some point
@@ -93,11 +94,11 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     // this contract is used as a parent of Crowdfund, if you could re-enter on
     // this transferFrom call, you could buy Crowdfund tokens with funds then attributed
     // to this distribution. This either means placing nonReentrant everywhere or just
-    // banning an idiotic token design in places like this
+    // banning idiotic token designs in places like this
     if (IERC20(token).balanceOf(address(this)) != (balance + amount)) {
       revert FeeOnTransfer(token);
     }
-    _distribute(token, amount);
+    return _distribute(token, amount);
   }
 
   function claim(uint256 id, address person) external override {

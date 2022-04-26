@@ -115,7 +115,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     transferAllowed = false;
   }
 
-  function deposit(uint112 amount) external override {
+  function deposit(uint112 amount) external override returns (uint112) {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
     }
@@ -155,6 +155,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
       revert FeeOnTransfer(token);
     }
     emit Deposit(msg.sender, amount);
+
+    return amount;
   }
 
   // Enable withdrawing funds before the target is reached

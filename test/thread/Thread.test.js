@@ -15,7 +15,7 @@ let erc20, thread;
 // Test only the governor can complete this proposal
 async function onlyGovernor(thread, proposal, args, governor) {
   // Propose it
-  const { id } = await common.propose(thread, proposal, args);
+  const { id } = await common.propose(thread, proposal, true, args);
   // Queue it, and attempt completion with the default signer
   await expect(
     common.queueAndComplete(thread, id)
@@ -85,6 +85,7 @@ describe("Thread", async () => {
       await common.proposal(
         thread,
         "Upgrade",
+        true,
         [beacon.address, thread.address, 1, code, "0x"]
       )
     );
@@ -105,7 +106,7 @@ describe("Thread", async () => {
     const oldDescriptor = await thread.descriptor();
     const newDescriptor = "0x" + (new Buffer.from("new IPFS").toString("hex")).repeat(4);
     await expect(
-      (await common.proposal(thread, "DescriptorChange", [newDescriptor])).tx
+      (await common.proposal(thread, "DescriptorChange", false, [newDescriptor])).tx
     ).to.emit(thread, "DescriptorChange").withArgs(oldDescriptor, newDescriptor);
     expect(await thread.descriptor()).to.equal(newDescriptor);
   });

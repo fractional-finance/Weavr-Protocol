@@ -65,7 +65,11 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   constructor() Composable("FrabricERC20") initializer {}
 
   // Redefine ERC20 functions so the DEX can pick them up as overrides and call them
-  function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {
+  function _transfer(
+    address from,
+    address to,
+    uint256 amount
+  ) internal override(ERC20Upgradeable, IntegratedLimitOrderDEX) {
     super._transfer(from, to, amount);
   }
   function balanceOf(

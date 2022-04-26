@@ -42,8 +42,12 @@ interface IAuction is IAuctionCore {
   function withdraw(address token, address trader) external;
 
   function active(uint256 id) external view returns (bool);
-  function highestBidder(uint256 id) external view returns (address);
-  function highestBid(uint256 id) external view returns (uint256);
+  // Will only work for active auctions
+  function token(uint256 id) external view returns (address);
+  function traded(uint256 id) external view returns (address);
+  function amount(uint256 id) external view returns (uint256);
+  function highBidder(uint256 id) external view returns (address);
+  function highBid(uint256 id) external view returns (uint256);
   function end(uint256 id) external view returns (uint64);
 }
 

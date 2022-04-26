@@ -13,7 +13,7 @@ interface IDistributionERC20 is IVotesUpgradeable, IERC20, IComposable {
 
   function claimed(uint256 id, address person) external view returns (bool);
 
-  function distribute(address token, uint112 amount) external;
+  function distribute(address token, uint112 amount) external returns (uint256 id);
   function claim(uint256 id, address person) external;
 }
 

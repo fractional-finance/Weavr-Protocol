@@ -20,7 +20,7 @@ interface IIntegratedLimitOrderDEXCore {
   // sell is here as the FrabricDAO has the ability to sell tokens on their integrated DEX
   // That means this function API can't change, nor can cancelOrder (also used by FrabricDAO)
   // buy is meant to be used by users, offering greater flexibility, especially as it has a router for a frontend
-  function sell(uint256 price, uint256 amount) external returns (uint256, uint256);
+  function sell(uint256 price, uint256 amount) external returns (uint256);
   function cancelOrder(uint256 price) external;
 }
 
@@ -35,7 +35,7 @@ interface IIntegratedLimitOrderDEX is IComposable, IIntegratedLimitOrderDEXCore 
     address trader,
     uint256 price,
     uint256 minimumAmount
-  ) external returns (uint256, uint256);
+  ) external returns (uint256);
 
   function pointType(uint256 price) external view returns (IIntegratedLimitOrderDEXCore.OrderType);
   function orderQuantity(uint256 price) external view returns (uint256);

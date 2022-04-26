@@ -27,9 +27,9 @@ async function list(id, args) {
   if (!args) {
     args = {};
   }
+  args = { ...defaultArgs, ...args };
 
   // Approve the Auction contract to spend these tokens
-  args.amount = args.amount ? args.amount : defaultArgs.amount;
   await frbc.approve(auction.address, args.amount);
   const before = await frbc.balanceOf(auction.address);
 
@@ -45,10 +45,8 @@ async function list(id, args) {
   if (!args.start) {
     args.start = time;
   }
-  args.length = args.length ? args.length : defaultArgs.length;
 
   // Calculate the per batch amount
-  args.batches = args.batches ? args.batches : defaultArgs.batches;
   let last = args.amount % args.batches;
   args.amount = Math.floor(args.amount / args.batches);
 
@@ -61,8 +59,11 @@ async function list(id, args) {
 
     await expect(tx).to.emit(auction, "Listing").withArgs(id + i, ...override(args, false));
     expect(await auction.active(id + i)).to.equal(args.start <= time);
-    expect(await auction.highestBidder(id + i)).to.equal(ethers.constants.AddressZero);
-    expect(await auction.highestBid(id + i)).to.equal(0);
+    expect(await auction.token(id + i)).to.equal(args.token);
+    expect(await auction.traded(id + i)).to.equal(args.traded);
+    expect(await auction.amount(id + i)).to.equal(args.amount);
+    expect(await auction.highBidder(id + i)).to.equal(ethers.constants.AddressZero);
+    expect(await auction.highBid(id + i)).to.equal(0);
     expect(await auction.end(id + i)).to.equal(args.start + args.length);
 
     // Increment the start time for the next auction
@@ -74,11 +75,11 @@ async function list(id, args) {
 
 async function bid(signer, id, amount) {
   // Track the current bidder if one exists
-  const oldBidder = await auction.highestBidder(id);
+  const oldBidder = await auction.highBidder(id);
   let oldBalance, oldBid;
   if (oldBidder !== ethers.constants.AddressZero) {
     oldBalance = await auction.balances(usd.address, oldBidder);
-    oldBid = await auction.highestBid(id);
+    oldBid = await auction.highBid(id);
   }
 
   // Place the bid
@@ -91,8 +92,8 @@ async function bid(signer, id, amount) {
   await expect(tx).to.emit(usd, "Transfer").withArgs(signer.address, auction.address, amount);
   await expect(tx).to.emit(auction, "Bid").withArgs(id, signer.address, amount);
   expect(await usd.balanceOf(auction.address)).to.equal(before.add(amount));
-  expect(await auction.highestBidder(id)).to.be.equal(signer.address);
-  expect(await auction.highestBid(id)).to.be.equal(amount);
+  expect(await auction.highBidder(id)).to.be.equal(signer.address);
+  expect(await auction.highBid(id)).to.be.equal(amount);
 
   // Make sure the old bidder had their funds returned
   if (oldBidder !== ethers.constants.AddressZero) {

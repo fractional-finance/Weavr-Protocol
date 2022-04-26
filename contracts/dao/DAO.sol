@@ -73,7 +73,7 @@ abstract contract DAO is Composable, IDAO {
     id = _nextProposalID;
     _nextProposalID++;
 
-    emit Proposal(id, proposalType, address(0), info);
+    emit Proposal(id, proposalType, address(0), true, info);
     emit ProposalStateChange(id, ProposalState.Active);
     emit ProposalStateChange(id, ProposalState.Queued);
     emit ProposalStateChange(id, ProposalState.Executed);
@@ -142,7 +142,7 @@ abstract contract DAO is Composable, IDAO {
 
     // Separate event to allow indexing by type/creator while maintaining state machine consistency
     // Also exposes info
-    emit Proposal(id, proposalType, proposal.creator, info);
+    emit Proposal(id, proposalType, proposal.creator, supermajority, info);
     emit ProposalStateChange(id, proposal.state);
 
     // Automatically vote in favor for the creator if they have votes and are actively whitelisted
@@ -154,7 +154,13 @@ abstract contract DAO is Composable, IDAO {
 
   // Labelled unsafe due to its split checks with the various callers and lack of guarantees
   // on what checks it'll perform. This can only be used in a carefully designed, cohesive ecosystemm
-  function _voteUnsafe(address voter, uint256 id, ProposalStruct storage proposal, int112 votes, int112 absVotes) private {
+  function _voteUnsafe(
+    address voter,
+    uint256 id,
+    ProposalStruct storage proposal,
+    int112 votes,
+    int112 absVotes
+  ) private {
     // Cap voting power per user at 10% of the current total supply
     // This will hopefully not be executed 99% of the time and then only for select Threads
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
@@ -399,17 +405,20 @@ abstract contract DAO is Composable, IDAO {
   // Will only work with proposals which have yet to complete in some form
   // After that, the sole information available onchain is passed and proposalVote
   // as mappings aren't deleted
-  function proposalVoteBlock(uint256 id) external view override returns (uint32) {
+  function supermajorityRequired(uint256 id) external view override returns (bool) {
+    return _proposals[id].supermajority;
+  }
+  function voteBlock(uint256 id) external view override returns (uint32) {
     return _proposals[id].voteBlock;
   }
-  function proposalVotes(uint256 id) public view override returns (int112) {
+  function netVotes(uint256 id) public view override returns (int112) {
     return _proposals[id].votes;
   }
-  function proposalTotalVotes(uint256 id) external view override returns (uint112) {
+  function totalVotes(uint256 id) external view override returns (uint112) {
     return _proposals[id].totalVotes;
   }
 
-  function proposalVote(uint256 id, address voter) external view override returns (int112) {
+  function voteRecord(uint256 id, address voter) external view override returns (int112) {
     return _proposals[id].voters[voter];
   }
 }

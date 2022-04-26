@@ -32,7 +32,7 @@ interface ICrowdfund is IDistributionERC20 {
 
   function normalizeRaiseToThread(uint256 amount) external returns (uint256);
 
-  function deposit(uint112 amount) external;
+  function deposit(uint112 amount) external returns (uint112);
   function withdraw(uint112 amount) external;
   function cancel() external;
   function execute() external;

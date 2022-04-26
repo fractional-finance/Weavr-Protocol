@@ -20,7 +20,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   // This will NOT resolve to its parent's info if no info is set here
   mapping(address => bytes32) public override info;
   // List of people removed from the whitelist
-  mapping(address => bool) private _removed;
+  mapping(address => uint256) private _removed;
 
   uint256[100] private __gap;
 
@@ -62,7 +62,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
     // They will not be 0 if _setRemoved was called while they are whitelisted locally
     // _setRemoved is only called if they're not whitelisted and a local whitelist
     // will always work to count as whitelisted
-    if (_removed[person]) {
+    if (removed(person)) {
       revert Removed(person);
     }
 
@@ -75,22 +75,22 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   }
 
   function _setRemoved(address person) internal {
-    if (_removed[person]) {
+    if (removed(person)) {
       revert Removed(person);
     }
-    _removed[person] = true;
+    _removed[person] = block.number;
 
     emit Whitelisted(person, false);
   }
 
   function explicitlyWhitelisted(address person) public view override returns (bool) {
-    return (info[person] != bytes32(0)) && (!_removed[person]);
+    return (info[person] != bytes32(0)) && (!removed(person));
   }
 
   function whitelisted(address person) public view virtual override returns (bool) {
     return (
       // Was never removed
-      (!_removed[person]) &&
+      (!removed(person)) &&
       // Check the parent whitelist (actually relevant check most of the time)
       ((parent != address(0)) && IWhitelist(parent).whitelisted(person)) ||
       // Global or explicitly whitelisted
@@ -98,7 +98,11 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
     );
   }
 
-  function removed(address person) public view virtual override returns (bool) {
+  function removedAt(address person) external view override returns (uint256) {
     return _removed[person];
+  }
+
+  function removed(address person) public view virtual override returns (bool) {
+    return _removed[person] != 0;
   }
 }
