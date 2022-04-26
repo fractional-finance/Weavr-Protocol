@@ -1,7 +1,7 @@
 const { ethers, waffle } = require("hardhat");
 const { assert, expect } = require("chai");
 
-const { snapshot, revert, mine } = require("../common.js");
+const { impermanent, mine } = require("../common.js");
 
 let signers, deployer, other, token;
 
@@ -102,9 +102,7 @@ describe("DistributionERC20", accounts => {
   })
 
   // 3 recipients
-  it("should handle distributions to multiple parties", async () => {
-    const id = await snapshot();
-
+  it("should handle distributions to multiple parties", impermanent(async () => {
     let amounts = [
       "333333333333333333333333",
       "333333333333333333333333",
@@ -132,10 +130,7 @@ describe("DistributionERC20", accounts => {
       expect(await other.balanceOf(address)).to.equal(amount);
     }
     expect(await other.balanceOf(token.address)).to.equal(1);
-
-    // Perfect state
-    await revert(id);
-  });
+  }));
 
   // Fuzz
   it("should handle distributions to variable parties", async () => {

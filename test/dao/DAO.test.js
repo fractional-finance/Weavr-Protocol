@@ -3,7 +3,7 @@ const { assert, expect } = require("chai");
 
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
 
-const { ProposalState, VoteDirection, snapshot, revert, increaseTime } = require("../common.js");
+const { ProposalState, VoteDirection, impermanent, increaseTime } = require("../common.js");
 
 const type = 255;
 const info = ethers.utils.id("info");
@@ -35,12 +35,10 @@ describe("DAO", () => {
     expect(await dao.requiredParticipation()).to.equal(10);
   });
 
-  it("shouldn't expect participation from tokens it holds", async () => {
-    const id = await snapshot();
+  it("shouldn't expect participation from tokens it holds", impermanent(async () => {
     await frbc.transfer(dao.address, 10);
     expect(await dao.requiredParticipation()).to.equal(9);
-    await revert(id);
-  });
+  }));
 
   it("should check canPropose", async () => {
     await expect(
@@ -105,22 +103,19 @@ describe("DAO", () => {
     ).to.be.revertedWith(`Unauthorized("${other.address}", "${deployer.address}")`);
   });
 
-  it("should let the proposal creator withdraw an active proposal ", async () => {
-    const id = await snapshot();
+  it("should let the proposal creator withdraw an active proposal ", impermanent(async () => {
     await expect(
       await dao.withdrawProposal(0)
     ).to.emit(dao, "ProposalStateChange").withArgs(0, ProposalState.Cancelled);
     expect(await dao.proposalActive(0)).to.equal(false);
-    await revert(id);
-  });
+  }));
 
   it("shouldn't let you queue proposals still being voted on", async () => {
     let time = (await waffle.provider.getBlock("latest")).timestamp + 1;
     await expect(dao.queueProposal(0)).to.be.revertedWith(`ActiveProposal(0, ${time}, ${end})`);
   });
 
-  it("shouldn't let you queue net positive proposals which require a supermajority", async () => {
-    const id = await snapshot();
+  it("shouldn't let you queue net positive proposals which require a supermajority", impermanent(async () => {
     await expect(
       await dao.connect(other).vote([1], [-8])
     ).to.emit(dao, "Vote").withArgs(1, VoteDirection.No, other.address, 8);
@@ -128,8 +123,7 @@ describe("DAO", () => {
     await expect(
       dao.queueProposal(1)
     ).to.be.revertedWith(`ProposalFailed(1, 2)`);
-    await revert(id);
-  });
+  }));
 
   it("should let you queue passing proposals", async () => {
     await increaseTime(parseInt(await dao.votingPeriod()));
@@ -148,14 +142,12 @@ describe("DAO", () => {
   // TODO: Negative net (somewhat tested already by the negative supermajority test)
   // TODO: Insufficient participation
 
-  it("should let you withdraw queued proposals", async () => {
-    const id = await snapshot();
+  it("should let you withdraw queued proposals", impermanent(async () => {
     await expect(
       await dao.withdrawProposal(0)
     ).to.emit(dao, "ProposalStateChange").withArgs(0, ProposalState.Cancelled);
     expect(await dao.proposalActive(0)).to.equal(false);
-    await revert(id);
-  });
+  }));
 
   it("shouldn't let you cancel proposals which have enough votes", async () => {
     await expect(
@@ -163,31 +155,25 @@ describe("DAO", () => {
     ).to.be.revertedWith(`ProposalPassed(0, 2)`);
   });
 
-  it("shouldn't let you cancel proposals with voters who voted no", async () => {
-    const id = await snapshot();
+  it("shouldn't let you cancel proposals with voters who voted no", impermanent(async () => {
     await expect(
       dao.cancelProposal(0, [other.address])
     ).to.be.revertedWith(`NotYesVote(0, "${other.address}")`);
-    await revert(id);
-  });
+  }));
 
-  it("shouldn't let you cancel proposals with repeated voters", async () => {
-    const id = await snapshot();
+  it("shouldn't let you cancel proposals with repeated voters", impermanent(async () => {
     await expect(
       dao.cancelProposal(0, [deployer.address, deployer.address])
     ).to.be.revertedWith(`UnsortedVoter("${deployer.address}")`);
-    await revert(id);
-  });
+  }));
 
-  it("should let you cancel proposals which no longer have enough votes", async () => {
-    const id = await snapshot();
+  it("should let you cancel proposals which no longer have enough votes", impermanent(async () => {
     await frbc.transfer(dao.address, await frbc.balanceOf(deployer.address));
     await expect(
       await dao.cancelProposal(0, [deployer.address])
     ).to.emit(dao, "ProposalStateChange").withArgs(0, ProposalState.Cancelled);
     expect(await dao.proposalActive(0)).to.equal(false);
-    await revert(id);
-  });
+  }));
 
   it("shouldn't let you complete proposals which are still queued", async () => {
     let time = (await waffle.provider.getBlock("latest")).timestamp + 1;

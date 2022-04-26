@@ -3,7 +3,7 @@ const { assert, expect } = require("chai");
 
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
 
-const { snapshot, revert, increaseTime } = require("../common.js");
+const { snapshot, revert, impermanent, increaseTime } = require("../common.js");
 
 const ONE = ethers.utils.parseUnits("1");
 const WEEK = 7 * 24 * 60 * 60;
@@ -184,9 +184,7 @@ describe("FrabricERC20", () => {
     expect(await frbc.frozenUntil(other.address)).to.equal(time + 120);
   });
 
-  it("should allow removing if the parent removed", async () => {
-    const id = await snapshot();
-
+  it("should allow removing if the parent removed", impermanent(async () => {
     let other = signers[0];
     await parent.setWhitelisted(other.address, INFO);
     await parent.mint(other.address, 1);
@@ -217,9 +215,7 @@ describe("FrabricERC20", () => {
     expect(await frbc.whitelisted(other.address)).to.equal(false);
     expect(await frbc.balanceOf(other.address)).to.equal(0);
     expect(await frbc.locked(other.address)).to.equal(0);
-
-    await revert(id);
-  });
+  }));
 
   it("should allow pausing and then shouldn't allow transfers", async () => {
     await frbc.pause();

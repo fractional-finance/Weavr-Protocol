@@ -63,6 +63,12 @@ module.exports = {
 
   snapshot: () => waffle.provider.send("evm_snapshot", []),
   revert: (id) => waffle.provider.send("evm_revert", [id]),
+  impermanent: test => async () => {
+    const id = await module.exports.snapshot();
+    await test();
+    await module.exports.revert(id);
+  },
+
   mine: async (blocks) => {
     for (let i = 0; i < blocks; i++) {
       await waffle.provider.send(
