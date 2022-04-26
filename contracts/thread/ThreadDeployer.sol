@@ -127,7 +127,6 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
       name,
       symbol,
       threadTokenSupply,
-      true,
       parent,
       tradeToken,
       auction

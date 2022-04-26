@@ -30,7 +30,6 @@ module.exports = {
         "FRBC",
         // Supply is 0 as all distribution is via mint
         0,
-        true,
         // Parent whitelist doesn't exist
         ethers.constants.AddressZero,
         usd

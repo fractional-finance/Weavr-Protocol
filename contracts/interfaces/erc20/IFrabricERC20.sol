@@ -21,7 +21,6 @@ interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IRemovalFee, I
   event Freeze(address indexed person, uint64 until);
   event Removal(address indexed person, uint256 balance);
 
-  function mintable() external view returns (bool);
   function auction() external view returns (address);
 
   function mint(address to, uint256 amount) external;
@@ -41,7 +40,6 @@ interface IFrabricERC20Initializable is IFrabricERC20 {
     string memory name,
     string memory symbol,
     uint256 supply,
-    bool mintable,
     address parent,
     address tradeToken,
     address auction
@@ -49,7 +47,6 @@ interface IFrabricERC20Initializable is IFrabricERC20 {
 }
 
 error SupplyExceedsUInt112(uint256 supply);
-error NotMintable();
 error Frozen(address person);
 error NothingToRemove(address person);
 // Not Paused due to an overlap with the event

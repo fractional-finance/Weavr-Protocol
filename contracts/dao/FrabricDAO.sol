@@ -165,14 +165,11 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       // All of this mint code should work and will be reviewed by auditors to confirm that
       // That said, at this time, we are not launching with any form of minting enabled
       // Solely commented during development to enable running tests on this code
-      // revert NotMintable();
+      // revert Minting();
 
       supermajority = true;
       if (token != erc20) {
         revert MintingDifferentToken(token, erc20);
-      }
-      if (!IFrabricERC20(erc20).mintable()) {
-        revert NotMintable();
       }
     }
 

@@ -18,7 +18,6 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Initializable {
   using ERC165Checker for address;
 
-  bool public override mintable;
   address public override auction;
 
   bool private _burning;
@@ -31,7 +30,6 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     string memory name,
     string memory symbol,
     uint256 supply,
-    bool _mintable,
     address parent,
     address tradeToken,
     address _auction
@@ -66,7 +64,6 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
     // Mint the supply
     _mint(msg.sender, supply);
-    mintable = _mintable;
 
     auction = _auction;
 
@@ -95,9 +92,6 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   }
 
   function mint(address to, uint256 amount) external override onlyOwner {
-    if (!mintable) {
-      revert NotMintable();
-    }
     _mint(to, amount);
     if (totalSupply() > uint256(type(uint112).max)) {
       revert SupplyExceedsUInt112(totalSupply());
