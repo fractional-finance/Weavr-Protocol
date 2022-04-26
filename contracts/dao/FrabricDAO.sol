@@ -238,6 +238,8 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
         // they believe they should be removed. They can change their mind later
 
         // Safe usage as this proposal is guaranteed to be active
+        // If this account had already voted, _voteUnsafe will remove their votes
+        // before voting again, making this safe against repeat signers
         _voteUnsafe(
           id,
           ECDSA.recover(

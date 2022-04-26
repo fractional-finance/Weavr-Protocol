@@ -1,5 +1,5 @@
 const { waffle } = require("hardhat");
-const { expect } = require("chai");
+const { assert, expect } = require("chai");
 
 module.exports = {
   OrderType: {
@@ -14,6 +14,12 @@ module.exports = {
     Queued: 2,
     Executed: 3,
     Cancelled: 4
+  },
+
+  VoteDirection: {
+    Abstain: 0,
+    Yes: 1,
+    No: 2
   },
 
   CommonProposalType: {
@@ -94,8 +100,12 @@ module.exports = {
       info
     );
     await expect(tx).to.emit(dao, "ProposalStateChanged").withArgs(id, module.exports.ProposalState.Active);
+    expect(await dao.nextProposalID()).to.equal(id.add(1));
 
-    if ((typeof(args[args.length - 1]) === "object") && (!args[args.length - 1].hasOwnProperty("_isBigNumber"))) {
+    if (
+      (typeof(args[args.length - 1]) === "object") &&
+      (!args[args.length - 1].hasOwnProperty("_isBigNumber"))
+    ) {
       args.pop();
     }
 
@@ -126,6 +136,7 @@ module.exports = {
     // Complete it
     const tx = await dao.completeProposal(id);
     await expect(tx).to.emit(dao, "ProposalStateChanged").withArgs(id, module.exports.ProposalState.Executed);
+    assert(await dao.passed(id));
     return tx;
   },
 

@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.9;
 
+import "../common/Errors.sol";
 import "../common/IComposable.sol";
 
 // Only commit to a fraction of the DAO API at this time
 // Voting/cancellation/queueing may undergo significant changes in the future
 interface IDAOCore is IComposable {
   enum ProposalState {
-    Null, // Not needed given current usage yet sane to have
+    Null,
     Active,
     Queued,
     Executed,
@@ -33,8 +34,8 @@ interface IDAO is IDAOCore {
   // Actual voting uses a signed integer at this time
   enum VoteDirection {
     Abstain,
-    No,
-    Yes
+    Yes,
+    No
   }
 
   event Vote(uint256 indexed id, VoteDirection indexed direction, address indexed voter, uint128 votes);
@@ -57,7 +58,6 @@ interface IDAO is IDAOCore {
   function proposalVote(uint256 id, address voter) external view returns (int128);
 }
 
-error NotAuthorizedToPropose(address caller);
 error InactiveProposal(uint256 id);
 error ActiveProposal(uint256 id, uint256 time, uint256 endTime);
 error ProposalFailed(uint256 id, int256 votes);
@@ -68,5 +68,3 @@ error NotYesVote(uint256 id, address voter);
 error UnsortedVoter(address voter);
 error ProposalPassed(uint256 id, int256 votes);
 error StillQueued(uint256 id, uint256 time, uint256 queuedUntil);
-error AlreadyFinished(uint256 id, IDAO.ProposalState state);
-error NotProposalCreator(uint256 id, address creator, address caller);

@@ -51,7 +51,6 @@ interface IAuctionInitializable is IAuction {
   function initialize() external;
 }
 
-error Unauthorized(address caller, address user);
 error AuctionPending(uint256 time, uint256 start);
 error AuctionOver(uint256 time, uint256 end);
 error BidTooLow(uint256 bid, uint256 currentBid);

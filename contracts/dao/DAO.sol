@@ -85,7 +85,8 @@ abstract contract DAO is Composable, IDAO {
   function canPropose(address proposer) public virtual view returns (bool);
   modifier beforeProposal() {
     if (!canPropose(msg.sender)) {
-      revert NotAuthorizedToPropose(msg.sender);
+      // Presumably a lack of whitelisting
+      revert NotWhitelisted(msg.sender);
     }
     _;
   }
@@ -223,7 +224,7 @@ abstract contract DAO is Composable, IDAO {
       int128 votesI = votes[i];
 
       // If they're abstaining, don't check if they have enough votes
-      // 0 will be less than whatever amount they do have
+      // 0 will be less than (or equal to) whatever amount they do have
       int128 absVotes;
       if (votesI == 0) {
         absVotes = 0;
@@ -234,6 +235,7 @@ abstract contract DAO is Composable, IDAO {
         if (absVotes > actualVotes) {
           // votesI / absVotes will return 1 or -1, representing the vote direction
           votesI = actualVotes * (votesI / absVotes);
+          absVotes = actualVotes;
         }
       }
 
@@ -303,6 +305,9 @@ abstract contract DAO is Composable, IDAO {
       }
 
       int128 votes = int128(uint128(IERC20(erc20).balanceOf(voter)));
+      // If the supply has shrunk, this will potentially apply a value greater than the modern 10%
+      // If the supply has expanded, this will use the historic vote cap which is smaller than the modern 10%
+      // The latter is more accurate and more likely
       int128 tenPercent = int128(uint128(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
       if (votes > tenPercent) {
         votes = tenPercent;
@@ -320,9 +325,14 @@ abstract contract DAO is Composable, IDAO {
       newVotes -= voted - votes;
     }
 
-    // If votes is 0, it would've failed queueProposal
-    // Fail it here as well
-    if (newVotes > 0) {
+    int128 passingVotes = 0;
+    if (proposal.supermajority) {
+      passingVotes = int128(proposal.totalVotes / 6);
+    }
+
+    // If votes are tied, it would've failed queueProposal
+    // Fail it here as well (by not using >=)
+    if (newVotes > passingVotes) {
       revert ProposalPassed(id, newVotes);
     }
 
@@ -366,11 +376,11 @@ abstract contract DAO is Composable, IDAO {
     // A proposal which didn't pass will pass this check
     // It's not worth checking the timestamp when marking the proposal as Cancelled is more accurate than Active anyways
     if ((proposal.state != ProposalState.Active) && (proposal.state != ProposalState.Queued)) {
-      revert AlreadyFinished(id, proposal.state);
+      revert InactiveProposal(id);
     }
     // Only allow the proposer to withdraw a proposal.
     if (proposal.creator != msg.sender) {
-      revert NotProposalCreator(id, proposal.creator, msg.sender);
+      revert Unauthorized(msg.sender, proposal.creator);
     }
     delete _proposals[id];
     emit ProposalStateChanged(id, ProposalState.Cancelled);
