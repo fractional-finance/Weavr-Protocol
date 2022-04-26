@@ -38,7 +38,7 @@ module.exports = {
   },
 
   FrabricProposalType: {
-    Participants: 0,
+    Participant: 0,
     BondRemoval: 1,
     Thread: 2,
     ThreadProposal: 3
@@ -50,15 +50,15 @@ module.exports = {
     Genesis: 2,
     KYC: 3,
     Governor: 4,
-    Individual: 5,
-    Corporation: 6
+    Voucher: 5,
+    Individual: 6,
+    Corporation: 7
   },
 
   GovernorStatus: {
     Null: 0,
-    Unverified: 1,
-    Active: 2,
-    Removed: 3
+    Active: 1,
+    Removed: 2
   },
 
   ThreadProposalType: {
@@ -126,6 +126,10 @@ module.exports = {
       args.pop();
     }
 
+    if (proposal === "ParticipantRemoval") {
+      args.pop();
+    }
+
     let ordered = args;
     if (order) {
       ordered = [];
@@ -133,6 +137,7 @@ module.exports = {
         ordered.push(args[i]);
       }
     }
+
     if (proposal !== "Paper") {
       await expect(tx).to.emit(dao, proposal + "Proposal").withArgs(id, ...ordered);
     }

@@ -217,8 +217,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     _whitelist(person);
   }
 
-  function setKYC(address person, bytes32 hash) external override onlyOwner {
-    _setKYC(person, hash);
+  function setKYC(address person, bytes32 hash, uint256 nonce) external override onlyOwner {
+    _setKYC(person, hash, nonce);
   }
 
   // nonReentrant would be overkill given onlyOwner except this needs to not be the initial vector

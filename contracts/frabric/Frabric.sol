@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import { StorageSlotUpgradeable as StorageSlot } from "@openzeppelin/contracts-upgradeable/utils/StorageSlotUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 
 import "../interfaces/frabric/IBond.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
@@ -22,13 +21,12 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   address public override bond;
   address public override threadDeployer;
 
-  struct Participants {
+  struct Participant {
     ParticipantType pType;
-    bool passed;
-    bytes32 participants;
+    address addr;
   }
   // The proposal structs are private as their events are easily grabbed and contain the needed information
-  mapping(uint256 => Participants) private _participants;
+  mapping(uint256 => Participant) private _participants;
 
   struct BondRemoval {
     address governor;
@@ -55,6 +53,10 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   }
   mapping(uint256 => ThreadProposalStruct) private _threadProposals;
 
+  mapping(address => uint256) public override vouchers;
+
+  mapping(uint16 => bytes4) private _proposalSelectors;
+
   function validateUpgrade(uint256 _version, bytes calldata data) external view override {
     if (_version != 2) {
       revert InvalidVersion(_version, 2);
@@ -67,6 +69,16 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     if (!_threadDeployer.supportsInterface(type(IThreadDeployer).interfaceId)) {
       revert UnsupportedInterface(_threadDeployer, type(IThreadDeployer).interfaceId);
     }
+  }
+
+  function _addParticipant(address _participant, ParticipantType pType) private {
+    IFrabricWhitelistCore(erc20).whitelist(_participant);
+    participant[_participant] = pType;
+    emit ParticipantChange(pType, _participant);
+  }
+
+  function _addKYC(address kyc) private {
+    IFrabricWhitelistCore(erc20).setKYC(kyc, keccak256(abi.encodePacked("KYC ", kyc)), 0);
   }
 
   function upgrade(uint256 _version, bytes calldata data) external override {
@@ -101,8 +113,15 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     address kyc;
     (bond, threadDeployer, kyc) = abi.decode(data, (address, address, address));
 
-    participant[kyc] = ParticipantType.KYC;
-    emit ParticipantChange(kyc, ParticipantType.KYC);
+    _addParticipant(kyc, ParticipantType.KYC);
+    _addKYC(kyc);
+
+    _proposalSelectors[uint16(CommonProposalType.Paper)       ^ commonProposalBit] = IFrabricDAO.proposePaper.selector;
+    _proposalSelectors[uint16(CommonProposalType.Upgrade)     ^ commonProposalBit] = IFrabricDAO.proposeUpgrade.selector;
+    _proposalSelectors[uint16(CommonProposalType.TokenAction) ^ commonProposalBit] = IFrabricDAO.proposeTokenAction.selector;
+
+    _proposalSelectors[uint16(IThread.ThreadProposalType.GovernorChange)] = IThread.proposeGovernorChange.selector;
+    _proposalSelectors[uint16(IThread.ThreadProposalType.Dissolution)]    = IThread.proposeDissolution.selector;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -112,37 +131,31 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   }
 
   function canPropose(address proposer) public view override(DAO, IDAOCore) returns (bool) {
-    return uint256(participant[proposer]) > uint256(ParticipantType.Removed);
+    return uint8(participant[proposer]) >= uint8(ParticipantType.Genesis);
   }
 
-  function proposeParticipants(
+  function proposeParticipant(
     ParticipantType participantType,
-    bytes32 participants,
+    address _participant,
     bytes32 info
   ) external override returns (uint256 id) {
-    if (participantType == ParticipantType.Null) {
-      // CommonProposalType.ParticipantRemoval should be used
-      revert ProposingNullParticipants();
-    } else if (participantType == ParticipantType.Genesis) {
-      revert ProposingGenesisParticipants();
+    if (
+      (participantType < ParticipantType.KYC) ||
+      (ParticipantType.Voucher < participantType)
+    ) {
+      revert InvalidParticipantType(participantType);
     }
 
-    if ((participantType == ParticipantType.KYC) || (participantType == ParticipantType.Governor)) {
-      // Validate this to be an address if this ParticipantType should only be a single address
-      if (bytes32(bytes20(participants)) != participants) {
-        revert InvalidAddress(participants);
-      }
-
-      if (participant[address(bytes20(participants))] != ParticipantType.Null) {
-        revert ParticipantAlreadyApproved(address(bytes20(participants)));
-      }
+    if (
+      (participant[_participant] != ParticipantType.Null) ||
+      IFrabricWhitelistCore(erc20).whitelisted(_participant)
+    ) {
+      revert ParticipantAlreadyApproved(_participant);
     }
 
-    id = _createProposal(uint16(FrabricProposalType.Participants), false, info);
-    Participants storage pStruct = _participants[id];
-    pStruct.pType = participantType;
-    pStruct.participants = participants;
-    emit ParticipantsProposal(id, participantType, participants);
+    id = _createProposal(uint16(FrabricProposalType.Participant), false, info);
+    _participants[id] = Participant(participantType, _participant);
+    emit ParticipantProposal(id, participantType, _participant);
   }
 
   function proposeBondRemoval(
@@ -225,39 +238,14 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       if (!thread.supportsInterface(type(IFrabricDAO).interfaceId)) {
         revert UnsupportedInterface(thread, type(IFrabricDAO).interfaceId);
       }
-
-      CommonProposalType pType = CommonProposalType(_proposalType ^ commonProposalBit);
-      // This should be cheaper than a mapping at this size
-      if (pType == CommonProposalType.Paper) {
-        selector = IFrabricDAO.proposePaper.selector;
-      } else if (pType == CommonProposalType.Upgrade) {
-        selector = IFrabricDAO.proposeUpgrade.selector;
-      } else if (pType == CommonProposalType.TokenAction) {
-        selector = IFrabricDAO.proposeTokenAction.selector;
-      } else if (pType == CommonProposalType.ParticipantRemoval) {
-        // If a participant should be removed, remove them from the Frabric, not the Thread
-        revert ProposingParticipantRemovalOnThread();
-      } else {
-        revert UnhandledEnumCase("Frabric proposeThreadProposal CommonProposal", _proposalType);
-      }
     } else {
       if (!thread.supportsInterface(type(IThread).interfaceId)) {
         revert UnsupportedInterface(thread, type(IThread).interfaceId);
       }
-
-      IThread.ThreadProposalType pType = IThread.ThreadProposalType(_proposalType);
-      if (pType == IThread.ThreadProposalType.GovernorChange) {
-        selector = IThread.proposeGovernorChange.selector;
-      } else if (pType == IThread.ThreadProposalType.FrabricChange) {
-        // Doesn't use UnhandledEnumCase as that suggests a development-level failure to handle cases
-        // While that already isn't guaranteed in this function, as _proposalType is user input,
-        // it requires invalid input. Technically, FrabricChange is a legitimate enum value
-        revert ProposingFrabricChange();
-      } else if (pType == IThread.ThreadProposalType.Dissolution) {
-        selector = IThread.proposeDissolution.selector;
-      } else {
-        revert UnhandledEnumCase("Frabric proposeThreadProposal ThreadProposal", _proposalType);
-      }
+    }
+    selector = _proposalSelectors[_proposalType];
+    if (selector == bytes4(0)) {
+      revert UnhandledEnumCase("Frabric proposeThreadProposal", _proposalType);
     }
 
     id = _createProposal(uint16(FrabricProposalType.ThreadProposal), false, info);
@@ -270,46 +258,30 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       governor[_participant] = GovernorStatus.Removed;
     }
     participant[_participant] = ParticipantType.Removed;
-    emit ParticipantChange(_participant, ParticipantType.Removed);
+    emit ParticipantChange(ParticipantType.Removed, _participant);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
     FrabricProposalType pType = FrabricProposalType(_pType);
-    if (pType == FrabricProposalType.Participants) {
-      Participants storage participants = _participants[id];
-
-      if (participants.pType == ParticipantType.KYC) {
-        address kyc = address(bytes20(participants.participants));
-        // This check also exists in proposeParticipants, yet that doesn't
-        // prevent the same participant from being proposed multiple times simultaneously
-        // This is an edge case which should never happen, yet handling it means
-        // checking here to ensure if they already exist, they're not overwritten
-        // While we could error here, we may as well delete the invalid proposal and move on with life
-        if (participant[kyc] != ParticipantType.Null) {
-          delete _participants[id];
-          return;
-        }
-
-        participant[kyc] = ParticipantType.KYC;
-        emit ParticipantChange(kyc, ParticipantType.KYC);
-        // Delete for the gas savings
+    if (pType == FrabricProposalType.Participant) {
+      Participant storage _participant = _participants[id];
+      // This check also exists in proposeParticipant, yet that doesn't prevent
+      // the same participant from being proposed multiple times simultaneously
+      // This is an edge case which should never happen, yet handling it means
+      // checking here to ensure if they already exist, they're not overwritten
+      // While we could error here, we may as well delete the invalid proposal and move on with life
+      if (participant[_participant.addr] != ParticipantType.Null) {
         delete _participants[id];
+        return;
+      }
 
+      if (_participant.pType == ParticipantType.KYC) {
+        _addParticipant(_participant.addr, _participant.pType);
+        _addKYC(_participant.addr);
+        delete _participants[id];
       } else {
-        if (participants.pType == ParticipantType.Governor) {
-          if (
-            // Simultaneously proposed and became a different participant or approved governor
-            (participant[address(bytes20(participants.participants))] != ParticipantType.Null) ||
-            // Simultaneously proposed as a governor multiple times BUT solely Unverified
-            (governor[address(bytes20(participants.participants))] != GovernorStatus.Null)
-          ) {
-            revert ParticipantAlreadyApproved(address(bytes20(participants.participants)));
-          }
-          governor[address(bytes20(participants.participants))] = GovernorStatus.Unverified;
-        }
-
-        // Set this proposal as having passed so the KYC company can whitelist
-        participants.passed = true;
+        // Whitelist them until they're KYCd
+        IFrabricWhitelistCore(erc20).whitelist(_participant.addr);
       }
 
     } else if (pType == FrabricProposalType.RemoveBond) {
@@ -348,25 +320,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
   }
 
-  function approve(
-    uint256 id,
-    address approving,
-    bytes32 kycHash,
-    bytes32[] memory proof,
-    bytes calldata signature
-  ) external override {
-    if (approving == address(0)) {
-      // Technically, it's an invalid participant, not an invalid address
-      revert InvalidAddress(bytes32(bytes20(address(0))));
-    } else if (participant[approving] != ParticipantType.Null) {
-      revert ParticipantAlreadyApproved(approving);
-    }
-
-    Participants storage participants = _participants[id];
-    if (!participants.passed) {
-      revert ParticipantsProposalNotPassed(id);
-    }
-
+  function vouch(address _participant, bytes calldata signature) external override {
     // Places signer in a variable to make the information available for the error
     // While generally, the errors include an abundance of information with the expectation they'll be caught in a call,
     // and even if they are executed on chain, we don't care about the increased gas costs for the extreme minority,
@@ -374,39 +328,71 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     address signer = ECDSA.recover(
       _hashTypedDataV4(
         keccak256(
+          abi.encode(keccak256("Vouch(address participant)"), _participant)
+        )
+      ),
+      signature
+    );
+
+    if (!IFrabricWhitelistCore(erc20).hasKYC(signer)) {
+      revert NotKYC(signer);
+    }
+
+    if (participant[signer] != ParticipantType.Voucher) {
+      if (vouchers[signer] == 6) {
+        revert OutOfVouchers(signer);
+      }
+      vouchers[signer] += 1;
+    }
+
+    // The fact whitelist can only be called once for a given participant makes this secure against replay attacks
+    IFrabricWhitelistCore(erc20).whitelist(_participant);
+    emit Vouched(signer, _participant);
+  }
+
+  function approve(
+    ParticipantType pType,
+    address approving,
+    bytes32 kycHash,
+    bytes calldata signature
+  ) external override {
+    if ((pType == ParticipantType.Null) && passed[uint160(approving)]) {
+      address temp = _participants[uint160(approving)].addr;
+      pType = _participants[uint160(approving)].pType;
+      delete _participants[uint160(approving)];
+      approving = temp;
+    } else if ((pType != ParticipantType.Individual) && (pType != ParticipantType.Corporation)) {
+      revert InvalidParticipantType(pType);
+    } else {
+      pType = pType;
+    }
+
+    address signer = ECDSA.recover(
+      _hashTypedDataV4(
+        keccak256(
           abi.encode(
-            keccak256("KYCVerification(address participant,bytes32 kycHash)"),
+            keccak256("KYCVerification(uint8 participantType,address participant,bytes32 kyc,uint256 nonce)"),
+            pType,
             approving,
-            kycHash
+            kycHash,
+            0 // For now, don't allow updating KYC hashes
           )
         )
       ),
       signature
     );
     if (participant[signer] != ParticipantType.KYC) {
-      revert InvalidKYCSignature(signer, participant[signer]);
+      revert InvalidKYCSignature(approving, pType);
     }
 
-    // Verify the address was actually part of this proposal
-    // Directly use the address as a leaf. Since it's a RipeMD-160 hash of a 32-byte value, this shouldn't be an issue
-    if (!MerkleProofUpgradeable.verify(proof, participants.participants, bytes32(bytes20(approving)))) {
-      revert IncorrectParticipant(approving, participants.participants, proof);
-    }
+    participant[approving] = pType;
+    emit ParticipantChange(pType, approving);
 
     // Set their status
-    participant[approving] = participants.pType;
-    emit ParticipantChange(approving, participants.pType);
-    if (participants.pType == ParticipantType.Governor) {
+    IFrabricWhitelistCore(erc20).setKYC(approving, kycHash, 0);
+
+    if (pType == ParticipantType.Governor) {
       governor[approving] = GovernorStatus.Active;
-      // Delete the proposal since it was just them
-      delete _participants[id];
     }
-
-    // Whitelist them
-    IFrabricERC20(erc20).whitelist(approving);
-    IFrabricERC20(erc20).setKYC(approving, kycHash);
-
-    // We could delete _participants[id] here if we knew how many values were included in the Merkle
-    // This gas refund isn't worth the extra variable and tracking
   }
 }

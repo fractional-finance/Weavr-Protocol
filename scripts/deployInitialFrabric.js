@@ -1,8 +1,6 @@
 const hre = require("hardhat");
 const { ethers, upgrades, waffle } = hre;
 
-const { MerkleTree } = require("merkletreejs");
-
 const u2SDK = require("@uniswap/v2-sdk");
 const uSDK = require("@uniswap/sdk-core");
 
@@ -43,6 +41,8 @@ module.exports = async (usd, uniswap, genesis) => {
   let genesisList = [];
   for (const person in genesis) {
     await frbc.whitelist(person);
+    await frbc.setKYC(person, ethers.utils.id(genesis[person].info), 0);
+
     // Delay code from Beacon used to resolve consistent timing issues that make little sense
     if ((await waffle.provider.getNetwork()).chainId != 31337) {
       let block = await waffle.provider.getBlockNumber();
@@ -98,23 +98,7 @@ module.exports = async (usd, uniswap, genesis) => {
   const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
   const proxy = await deployBeacon("single", InitialFrabric);
 
-  const root = (
-    new MerkleTree(
-      genesisList.map(address => address + "000000000000000000000000"),
-      ethers.utils.keccak256,
-      { sortPairs: true }
-    )
-  ).getHexRoot();
-
-  const frabric = await upgrades.deployBeaconProxy(
-    proxy.address,
-    InitialFrabric,
-    [
-      frbc.address,
-      genesisList,
-      root.substr(2) ? root : ethers.constants.HashZero
-    ]
-  );
+  const frabric = await upgrades.deployBeaconProxy(proxy.address, InitialFrabric, [frbc.address, genesisList]);
   await frbc.whitelist(frabric.address);
 
   // Transfer ownership of everything to the Frabric

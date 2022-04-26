@@ -67,7 +67,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     // If we are, the this erc20 hasn't had init called yet, and the ThreadDeployer
     // will set the parent when it calls init
     if (IFrabricWhitelistCore(erc20).parent() != address(0)) {
-      IFrabricERC20(erc20).setParent(IDAO(frabric).erc20());
+      IFrabricWhitelistCore(erc20).setParent(IDAO(frabric).erc20());
     }
   }
 
@@ -123,9 +123,9 @@ contract Thread is FrabricDAO, IThreadInitializable {
   // if that's desired for whatever reason
   function canPropose(address proposer) public view override(DAO, IDAOCore) returns (bool) {
     return (
-      // Whitelisted token holder
+      // KYCd token holder
       (
-        IFrabricWhitelistCore(erc20).whitelisted(proposer) &&
+        IFrabricWhitelistCore(erc20).hasKYC(proposer) &&
         (IERC20(erc20).balanceOf(proposer) != 0)
       ) ||
       // Governor
@@ -161,13 +161,14 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function proposeParticipantRemoval(
     address participant,
     uint8 removalFee,
+    uint64 freezeUntilNonce,
     bytes[] calldata signatures,
     bytes32 info
   ) public override(FrabricDAO, IFrabricDAO) returns (uint256) {
     if (irremovable[participant]) {
       revert Irremovable(participant);
     }
-    return super.proposeParticipantRemoval(participant, removalFee, signatures, info);
+    return super.proposeParticipantRemoval(participant, removalFee, freezeUntilNonce, signatures, info);
   }
 
   function proposeDescriptorChange(

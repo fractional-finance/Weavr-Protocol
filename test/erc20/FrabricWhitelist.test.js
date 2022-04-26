@@ -37,7 +37,7 @@ describe("FrabricWhitelist", accounts => {
     const random = await (await ethers.getContractFactory("TestERC20")).deploy("Name", "SYM");
     await expect(
       whitelist.setParent(random.address)
-    ).to.be.revertedWith(`UnsupportedInterface("${random.address}", "0x9f62c115")`);
+    ).to.be.revertedWith(`UnsupportedInterface("${random.address}", "0x07bf0425")`);
   });
 
   it("should let you set a parent", async () => {
@@ -60,8 +60,8 @@ describe("FrabricWhitelist", accounts => {
 
   it("should track KYC", async () => {
     await expect(
-      await whitelist.setKYC(person.address, oldInfo)
-    ).to.emit(whitelist, "KYCUpdate").withArgs(person.address, ethers.constants.HashZero, oldInfo);
+      await whitelist.setKYC(person.address, oldInfo, 0)
+    ).to.emit(whitelist, "KYCUpdate").withArgs(person.address, ethers.constants.HashZero, oldInfo, 0);
     assert(await whitelist.explicitlyWhitelisted(person.address));
     assert(await whitelist.whitelisted(person.address));
     expect(await whitelist.kyc(person.address)).to.equal(oldInfo);
@@ -71,13 +71,23 @@ describe("FrabricWhitelist", accounts => {
 
   it("should support updating KYC hashes", async () => {
     await expect(
-      await whitelist.setKYC(person.address, newInfo)
-    ).to.emit(whitelist, "KYCUpdate").withArgs(person.address, oldInfo, newInfo);
+      await whitelist.setKYC(person.address, newInfo, 1)
+    ).to.emit(whitelist, "KYCUpdate").withArgs(person.address, oldInfo, newInfo, 1);
     assert(await whitelist.explicitlyWhitelisted(person.address));
     assert(await whitelist.whitelisted(person.address));
     expect(await whitelist.kyc(person.address)).to.equal(newInfo);
     expect(await whitelist.removedAt(person.address)).to.equal(0);
     expect(await whitelist.removed(person.address)).to.equal(false);
+  });
+
+  it("should nonce KYC hashes", async () => {
+    await expect(
+      whitelist.setKYC(person.address, newInfo, 1)
+    ).to.be.revertedWith(`Replay(1, 2)`);
+
+    await expect(
+      await whitelist.setKYC(person.address, newInfo, 2)
+    ).to.emit(whitelist, "KYCUpdate").withArgs(person.address, newInfo, newInfo, 2);
   });
 
   it("should handle removals", async () => {
@@ -98,7 +108,7 @@ describe("FrabricWhitelist", accounts => {
   });
 
   it("should carry parent status", async () => {
-    await parent.setKYC(parentPerson.address, newInfo);
+    await parent.setKYC(parentPerson.address, newInfo, 0);
     expect(await whitelist.status(parentPerson.address)).to.equal(WhitelistStatus.KYC);
   });
 

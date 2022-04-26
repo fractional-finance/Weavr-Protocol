@@ -11,3 +11,4 @@ error UnsupportedInterface(address contractAddress, bytes4 interfaceID);
 error ExternalCallFailed(address called, bytes4 selector, bytes error);
 
 error Unauthorized(address caller, address user);
+error Replay(uint256 nonce, uint256 expected);

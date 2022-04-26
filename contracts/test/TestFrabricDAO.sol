@@ -12,15 +12,15 @@ contract TestFrabricDAO is FrabricDAO {
   }
 
   function setParent(address _parent) external {
-    IFrabricWhitelist(erc20).setParent(_parent);
+    IFrabricWhitelistCore(erc20).setParent(_parent);
   }
 
   function whitelist(address person) external {
-    IFrabricWhitelist(erc20).whitelist(person);
+    IFrabricWhitelistCore(erc20).whitelist(person);
   }
 
-  function setKYC(address person, bytes32 hash) external {
-    IFrabricWhitelist(erc20).setKYC(person, hash);
+  function setKYC(address person, bytes32 hash, uint256 nonce) external {
+    IFrabricWhitelistCore(erc20).setKYC(person, hash, nonce);
   }
 
   function canPropose(address) public pure override returns (bool) {

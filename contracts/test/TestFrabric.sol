@@ -29,8 +29,8 @@ contract TestFrabric is FrabricWhitelist {
     _whitelist(person);
   }
 
-  function setKYC(address person, bytes32 hash) external override {
-    _setKYC(person, hash);
+  function setKYC(address person, bytes32 hash, uint256 nonce) external override {
+    _setKYC(person, hash, nonce);
   }
 
   function remove(address person) external {
@@ -45,7 +45,7 @@ contract TestFrabric is FrabricWhitelist {
     bytes32 descriptor,
     address _governor,
     address tradeToken,
-    uint256 target
+    uint112 target
   ) external {
     IThreadDeployer(threadDeployer).deploy(
       variant,

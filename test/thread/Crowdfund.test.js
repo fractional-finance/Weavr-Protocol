@@ -28,7 +28,7 @@ describe("Crowdfund", async () => {
     signers = await ethers.getSigners();
     [ deployer, governor ] = signers.splice(0, 2);
     await frabric.whitelist(governor.address);
-    await frabric.setGovernor(governor.address, 2);
+    await frabric.setGovernor(governor.address, common.GovernorStatus.Active);
     for (let i = 0; i < 3; i++) {
       await frabric.whitelist(signers[i].address);
     }

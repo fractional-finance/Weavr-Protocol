@@ -23,6 +23,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   // Intended to point to a hash of the whitelisted party's KYC info
   // This will NOT resolve to its parent's info if no info is set here
   mapping(address => bytes32) public override kyc;
+  mapping(address => uint256) public override kycNonces;
 
   uint256[100] private __gap;
 
@@ -60,23 +61,25 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
     emit Whitelisted(person, true);
   }
 
-  function _setKYC(address person, bytes32 hash) internal {
-    if (uint8(_status[person]) < uint8(Status.Whitelisted)) {
-      if (_status[person] == Status.Null) {
-        revert NotWhitelisted(person);
-      } else if (_status[person] == Status.Removed) {
-        revert Removed(person);
-      } else {
-        revert UnhandledEnumCase("FrabricWhitelist _setKYC", uint8(_status[person]));
-      }
+  function _setKYC(address person, bytes32 hash, uint256 nonce) internal {
+    // Make sure this is an actual user
+    if (_status[person] == Status.Null) {
+      revert NotWhitelisted(person);
     }
 
-    if (kyc[person] == hash) {
-      return;
+    // Make sure this isn't replayed
+    if (nonce != kycNonces[person]) {
+      revert Replay(nonce, kycNonces[person]);
+    }
+    kycNonces[person]++;
+
+    // If they were previously solely whitelisted, mark them as KYCd
+    if (_status[person] == Status.Whitelisted) {
+      _status[person] = Status.KYC;
     }
 
-    _status[person] = Status.KYC;
-    emit KYCUpdate(person, kyc[person], hash);
+    // Update the KYC hash
+    emit KYCUpdate(person, kyc[person], hash, nonce);
     kyc[person] = hash;
   }
 
@@ -92,6 +95,9 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
 
   function status(address person) public view override returns (Status) {
     Status res = _status[person];
+    if (res == Status.Removed) {
+      return res;
+    }
 
     // If we have a parent, get their status
     if (parent != address(0)) {
@@ -121,13 +127,8 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   }
 
   function whitelisted(address person) public view virtual override returns (bool) {
-    // Was never removed
-    if (removed(person)) {
-      return false;
-    }
-
-    // Was never removed
     return (
+      // Was never removed
       (!removed(person)) && (
         // Whitelisted by the parent (actually relevant check most of the time)
         ((parent != address(0)) && IFrabricWhitelistCore(parent).whitelisted(person)) ||
@@ -135,6 +136,10 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
         explicitlyWhitelisted(person) || global
       )
     );
+  }
+
+  function hasKYC(address person) external view override returns (bool) {
+    return uint8(status(person)) >= uint8(Status.KYC);
   }
 
   function removed(address person) public view virtual override returns (bool) {

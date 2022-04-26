@@ -5,7 +5,7 @@ const deployInitialFrabric = require("../../scripts/deployInitialFrabric.js");
 const deployFrabric = require("../../scripts/deployFrabric.js");
 
 const deployUniswap = require("../scripts/deployUniswap.js");
-const { queueAndComplete } = require("../common.js");
+const { proposal } = require("../common.js");
 
 module.exports = async () => {
   // Redundant with `npx hardhat test`, yet supports running as
@@ -41,18 +41,21 @@ module.exports = async () => {
   contracts.bond = upgrade.bond;
   contracts.threadDeployer = upgrade.threadDeployer;
 
-  await frabric.connect(signers[2]).proposeUpgrade(
-    proxy.address,
-    ethers.constants.AddressZero,
-    2,
-    upgrade.frabricCode,
-    (new ethers.utils.AbiCoder()).encode(
-      ["address", "address", "address"],
-      [upgrade.bond.address, upgrade.threadDeployer.address, signers[1].address]
-    ),
-    ethers.utils.id("Upgrade to the Frabric")
+  await proposal(
+    frabric.connect(signers[2]),
+    "Upgrade",
+    true,
+    [
+      proxy.address,
+      ethers.constants.AddressZero,
+      2,
+      upgrade.frabricCode,
+      (new ethers.utils.AbiCoder()).encode(
+        ["address", "address", "address"],
+        [upgrade.bond.address, upgrade.threadDeployer.address, signers[1].address]
+      )
+    ]
   );
-  await queueAndComplete(frabric, 1);
 
   await proxy.triggerUpgrade(frabric.address, 2);
   contracts.frabric = (await ethers.getContractFactory("Frabric")).attach(contracts.frabric.address);
