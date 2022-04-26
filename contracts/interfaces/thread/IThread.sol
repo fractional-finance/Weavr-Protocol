@@ -10,12 +10,9 @@ interface IThread is IFrabricDAO {
   event EcosystemLeaveWithUpgradesProposed(uint256 indexed id, address indexed frabric, address indexed governor);
   event DissolutionProposed(uint256 indexed id, address indexed token, uint256 amount);
 
-  event DescriptorChanged(bytes32 indexed oldDescriptor, bytes32 indexed newDescriptor);
-  event FrabricChanged(address indexed oldGovernor, address indexed newGovernor);
-  event GovernorChanged(address indexed oldGovernor, address indexed newGovernor);
-  // Includes IDs to point to the original proposals since these have nothing worth putting in them
-  // They emit other events as relevant
-  event LeftEcosystemWithUpgrades(uint256 indexed id);
+  event DescriptorChange(bytes32 indexed oldDescriptor, bytes32 indexed newDescriptor);
+  event FrabricChange(address indexed oldGovernor, address indexed newGovernor);
+  event GovernorChange(address indexed oldGovernor, address indexed newGovernor);
 
   enum ThreadProposalType {
     DescriptorChange,
@@ -68,4 +65,6 @@ interface IThreadInitializable is IThread {
 }
 
 error NotGovernor(address caller, address governor);
+error ProposingUpgrade(address beacon, address instance, address code);
+error Irremovable(address participant);
 error NotLeaving(address frabric, address newFrabric);

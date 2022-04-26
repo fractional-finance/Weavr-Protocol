@@ -132,7 +132,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   // won't pass as EIP165 compatible
 
   // This comment is a waste of space yet technically accurate and therefore remains
-  function notWhitelisted(address token, address person) internal view returns (bool) {
+  function notWhitelisted(address token, address person) private view returns (bool) {
     return (
       // If this contract doesn't support the IWhitelist interface,
       // return false, meaning they're not not whitelisted (meaning they are,
@@ -231,7 +231,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       balances[auction.traded][auction.seller] += auction.bid;
     }
 
-    emit AuctionCompleted(id);
+    emit AuctionComplete(id);
   }
 
   function withdraw(address token, address trader) external override {

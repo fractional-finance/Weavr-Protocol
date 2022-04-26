@@ -19,7 +19,7 @@ describe("SingleBeacon", () => {
 
   it("should allow upgrading release channel 0", async () => {
     await expect(
-      beacon.upgrade(ethers.constants.AddressZero, 2, auction, "0x")
+      await beacon.upgrade(ethers.constants.AddressZero, 2, auction, "0x")
     ).to.emit(beacon, "Upgrade").withArgs(ethers.constants.AddressZero, 2, auction, "0x");
   });
 

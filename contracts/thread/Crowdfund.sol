@@ -63,7 +63,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     target = _target;
     state = State.Active;
     // This could be packed into the following, yet we'd lose indexing
-    emit CrowdfundStarted(governor, thread, token, target);
+    emit NewCrowdfund(governor, thread, token, target);
     emit StateChange(state);
 
     // Normalize 1 of the raise token to the thread token to ensure normalization won't fail

@@ -40,10 +40,10 @@ describe("InitialFrabric", accounts => {
   it("should have initialized correctly", async () => {
     // Fake proposal for participation addition
     await expect(tx).to.emit(frabric, "NewProposal");
-    await expect(tx).to.emit(frabric, "ProposalStateChanged").withArgs(0, ProposalState.Active);
-    await expect(tx).to.emit(frabric, "ProposalStateChanged").withArgs(0, ProposalState.Queued);
-    await expect(tx).to.emit(frabric, "ProposalStateChanged").withArgs(0, ProposalState.Executed);
-    await expect(tx).to.emit(frabric, "ProposalStateChanged").withArgs(0, ProposalState.Executed);
+    await expect(tx).to.emit(frabric, "ProposalStateChange").withArgs(0, ProposalState.Active);
+    await expect(tx).to.emit(frabric, "ProposalStateChange").withArgs(0, ProposalState.Queued);
+    await expect(tx).to.emit(frabric, "ProposalStateChange").withArgs(0, ProposalState.Executed);
+    await expect(tx).to.emit(frabric, "ProposalStateChange").withArgs(0, ProposalState.Executed);
     await expect(tx).to.emit(frabric, "ParticipantsProposed").withArgs(0, ParticipantType.Genesis, root);
     for (const address of addresses) {
       // Per-participant variables

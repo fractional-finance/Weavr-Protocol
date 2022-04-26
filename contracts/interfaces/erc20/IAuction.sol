@@ -33,7 +33,7 @@ interface IAuctionCore is IComposable {
 
 interface IAuction is IAuctionCore {
   event Bid(uint256 indexed id, address bidder, uint256 amount);
-  event AuctionCompleted(uint256 indexed id);
+  event AuctionComplete(uint256 indexed id);
 
   function balances(address token, address amount) external returns (uint256);
 

@@ -124,8 +124,8 @@ describe("Beacon", () => {
   // Does verify the upgrade data is properly verified by TestUpgradeable as expected
   it("should hit full code coverage on TestUpgradeable", async () => {
     const u = await upgradeable(3, true);
-    expect(u.validateUpgrade(2, data)).to.be.revertedWith("1");
-    expect(
+    await expect(u.validateUpgrade(2, data)).to.be.revertedWith("1");
+    await expect(
       u.validateUpgrade(3, (new ethers.utils.AbiCoder()).encode(
         ["address", "bytes"],
         [
@@ -134,7 +134,7 @@ describe("Beacon", () => {
         ]
       ))
     ).to.be.revertedWith("2");
-    expect(
+    await expect(
       u.validateUpgrade(3, (new ethers.utils.AbiCoder()).encode(
         ["address", "bytes"],
         [

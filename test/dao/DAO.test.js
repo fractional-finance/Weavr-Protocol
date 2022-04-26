@@ -55,7 +55,7 @@ describe("DAO", () => {
 
     const tx = await dao.propose(type, false, info);
     await expect(tx).to.emit(dao, "NewProposal").withArgs(0, type, deployer.address, info);
-    await expect(tx).to.emit(dao, "ProposalStateChanged", 0, ProposalState.Active);
+    await expect(tx).to.emit(dao, "ProposalStateChange", 0, ProposalState.Active);
     // 10, not 92, due to the 10% vote cap
     await expect(tx).to.emit(dao, "Vote").withArgs(0, VoteDirection.Yes, deployer.address, 10);
 
@@ -71,7 +71,7 @@ describe("DAO", () => {
   it("should create proposals requiring a supermajority", async () => {
     const tx = await dao.propose(type, true, info);
     await expect(tx).to.emit(dao, "NewProposal").withArgs(1, type, deployer.address, info);
-    await expect(tx).to.emit(dao, "ProposalStateChanged", 1, ProposalState.Active);
+    await expect(tx).to.emit(dao, "ProposalStateChange", 1, ProposalState.Active);
     await expect(tx).to.emit(dao, "Vote").withArgs(1, VoteDirection.Yes, deployer.address, 10);
   });
 
@@ -109,7 +109,7 @@ describe("DAO", () => {
     const id = await snapshot();
     await expect(
       await dao.withdrawProposal(0)
-    ).to.emit(dao, "ProposalStateChanged").withArgs(0, ProposalState.Cancelled);
+    ).to.emit(dao, "ProposalStateChange").withArgs(0, ProposalState.Cancelled);
     expect(await dao.proposalActive(0)).to.equal(false);
     await revert(id);
   });
@@ -135,14 +135,14 @@ describe("DAO", () => {
     await increaseTime(parseInt(await dao.votingPeriod()));
     await expect(
       await dao.queueProposal(0)
-    ).to.emit(dao, "ProposalStateChanged").withArgs(0, ProposalState.Queued);
+    ).to.emit(dao, "ProposalStateChange").withArgs(0, ProposalState.Queued);
     end = (await dao.queuePeriod()).add((await waffle.provider.getBlock("latest")).timestamp);
   });
 
   it("should let you queue passing supermajority proposals", async () => {
     await expect(
       await dao.queueProposal(1)
-    ).to.emit(dao, "ProposalStateChanged").withArgs(1, ProposalState.Queued);
+    ).to.emit(dao, "ProposalStateChange").withArgs(1, ProposalState.Queued);
   });
 
   // TODO: Negative net (somewhat tested already by the negative supermajority test)
@@ -152,7 +152,7 @@ describe("DAO", () => {
     const id = await snapshot();
     await expect(
       await dao.withdrawProposal(0)
-    ).to.emit(dao, "ProposalStateChanged").withArgs(0, ProposalState.Cancelled);
+    ).to.emit(dao, "ProposalStateChange").withArgs(0, ProposalState.Cancelled);
     expect(await dao.proposalActive(0)).to.equal(false);
     await revert(id);
   });
@@ -184,7 +184,7 @@ describe("DAO", () => {
     await frbc.transfer(dao.address, await frbc.balanceOf(deployer.address));
     await expect(
       await dao.cancelProposal(0, [deployer.address])
-    ).to.emit(dao, "ProposalStateChanged").withArgs(0, ProposalState.Cancelled);
+    ).to.emit(dao, "ProposalStateChange").withArgs(0, ProposalState.Cancelled);
     expect(await dao.proposalActive(0)).to.equal(false);
     await revert(id);
   });

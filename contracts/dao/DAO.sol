@@ -75,9 +75,9 @@ abstract contract DAO is Composable, IDAO {
     _nextProposalID++;
 
     emit NewProposal(id, proposalType, address(0), info);
-    emit ProposalStateChanged(id, ProposalState.Active);
-    emit ProposalStateChanged(id, ProposalState.Queued);
-    emit ProposalStateChanged(id, ProposalState.Executed);
+    emit ProposalStateChange(id, ProposalState.Active);
+    emit ProposalStateChange(id, ProposalState.Queued);
+    emit ProposalStateChange(id, ProposalState.Executed);
   }
 
   function requiredParticipation() public view returns (uint128) {
@@ -144,7 +144,7 @@ abstract contract DAO is Composable, IDAO {
     // Separate event to allow indexing by type/creator while maintaining state machine consistency
     // Also exposes info
     emit NewProposal(id, proposalType, proposal.creator, info);
-    emit ProposalStateChanged(id, proposal.state);
+    emit ProposalStateChange(id, proposal.state);
 
     // Automatically vote in favor for the creator if they have votes and are actively whitelisted
     int128 votes = int128(uint128(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
@@ -283,7 +283,7 @@ abstract contract DAO is Composable, IDAO {
 
     proposal.state = ProposalState.Queued;
     proposal.stateStartTime = uint64(block.timestamp);
-    emit ProposalStateChanged(id, proposal.state);
+    emit ProposalStateChange(id, proposal.state);
   }
 
   function cancelProposal(uint256 id, address[] calldata voters) external override {
@@ -342,7 +342,7 @@ abstract contract DAO is Composable, IDAO {
     }
 
     delete _proposals[id];
-    emit ProposalStateChanged(id, ProposalState.Cancelled);
+    emit ProposalStateChange(id, ProposalState.Cancelled);
   }
 
   function _completeProposal(uint256 id, uint16 proposalType) internal virtual;
@@ -369,7 +369,7 @@ abstract contract DAO is Composable, IDAO {
     // Solely used for getter functionality
     // While we could use it for state checks, we already need to check it's specifically Queued
     passed[id] = true;
-    emit ProposalStateChanged(id, ProposalState.Executed);
+    emit ProposalStateChange(id, ProposalState.Executed);
 
     // Re-entrancy here would do nothing as the proposal has had its state updated
     _completeProposal(id, pType);
@@ -388,7 +388,7 @@ abstract contract DAO is Composable, IDAO {
       revert Unauthorized(msg.sender, proposal.creator);
     }
     delete _proposals[id];
-    emit ProposalStateChanged(id, ProposalState.Cancelled);
+    emit ProposalStateChange(id, ProposalState.Cancelled);
   }
 
   // Next proposal ID. Mainly useful for tests, yet also a quick way to get the

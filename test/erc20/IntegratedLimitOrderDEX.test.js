@@ -38,7 +38,7 @@ async function action(type, trader, price, amount) {
     counter = OrderType.Buy;
   }
 
-  if (type == OrderType.Sell) {
+  if (type === OrderType.Sell) {
     locked[trader] = locked[trader] ? locked[trader].add(amount) : amount;
   }
 
@@ -47,7 +47,7 @@ async function action(type, trader, price, amount) {
   let mutated = [trader];
   if (book.hasOwnProperty(price)) {
     if (book[price].type === counter) {
-      for (let i = (book[price].orders.length - 1); i != -1; i--) {
+      for (let i = (book[price].orders.length - 1); i !== -1; i--) {
         let order = book[price].orders[i];
         mutated.push(order.trader);
 
@@ -286,11 +286,11 @@ describe("IntegratedLimitOrderDEX", accounts => {
         action = action % 2;
       }
 
-      if (action == 0) {
+      if (action === 0) {
         await buy([deployer, other][addr], price, Math.floor(Math.random() * 100) + 1);
-      } else if (action == 1) {
+      } else if (action === 1) {
         await sell([deployer, other][addr], price, Math.floor(Math.random() * 100) + 1);
-      } else if (action == 2) {
+      } else if (action === 2) {
         await cancel([deployer, other][addr], price);
       }
     }

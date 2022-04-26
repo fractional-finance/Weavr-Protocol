@@ -42,7 +42,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     uint256 version;
     bytes data;
   }
-  mapping(uint256 => Upgrade) internal _upgrades;
+  mapping(uint256 => Upgrade) private _upgrades;
 
   struct TokenAction {
     address token;
@@ -51,13 +51,13 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     uint256 price;
     uint256 amount;
   }
-  mapping(uint256 => TokenAction) internal _tokenActions;
+  mapping(uint256 => TokenAction) private _tokenActions;
 
   struct Removal {
     address participant;
     uint8 fee;
   }
-  mapping(uint256 => Removal) internal _removals;
+  mapping(uint256 => Removal) private _removals;
 
   uint256[100] private __gap;
 
@@ -89,21 +89,6 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, false, info);
   }
 
-  // These are allowed to be overriden (see Thread for why)
-  // They aren't required to be overriden and proposals are assumed to be valid
-  // like any other proposal if they aren't
-  function _canProposeUpgrade(
-    address /*beacon*/,
-    address /*instance*/,
-    address /*code*/
-  ) internal view virtual returns (bool) {
-    return true;
-  }
-
-  function _canProposeRemoval(address /*participant*/) internal view virtual returns (bool) {
-    return true;
-  }
-
   // Allows upgrading itself or any contract owned by itself
   // Specifying any irrelevant beacon will work yet won't have any impact
   // Specifying an arbitrary contract would also work if it has functions/
@@ -117,7 +102,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     address code,
     bytes calldata data,
     bytes32 info
-  ) external override returns (uint256 id) {
+  ) public virtual override returns (uint256 id) {
     if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
       revert UnsupportedInterface(beacon, type(IFrabricBeacon).interfaceId);
     }
@@ -135,10 +120,6 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     // and it will never accept this implementation (which isn't even being passed to it)
     if (beaconName != codeName) {
       revert DifferentContract(beaconName, codeName);
-    }
-
-    if (!_canProposeUpgrade(beacon, instance, code)) {
-      revert ProposingUpgrade(beacon, instance, code);
     }
 
     id = _createProposal(uint16(CommonProposalType.Upgrade) | commonProposalBit, true, info);
@@ -205,11 +186,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     uint8 removalFee,
     bytes[] calldata signatures,
     bytes32 info
-  ) external override returns (uint256 id) {
-    if (!_canProposeRemoval(participant)) {
-      revert Irremovable(participant);
-    }
-
+  ) public virtual override returns (uint256 id) {
     if (removalFee > maxRemovalFee) {
       revert InvalidRemovalFee(removalFee, maxRemovalFee);
     }
@@ -276,7 +253,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     if (_isCommonProposal(_pType)) {
       CommonProposalType pType = CommonProposalType(_pType ^ commonProposalBit);
       if (pType == CommonProposalType.Paper) {
-        // NOP as the DAO emits ProposalStateChanged which is all that's needed for this
+        // NOP as the DAO emits ProposalStateChange which is all that's needed for this
 
       } else if (pType == CommonProposalType.Upgrade) {
         Upgrade storage upgrade = _upgrades[id];

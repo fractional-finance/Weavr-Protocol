@@ -14,7 +14,7 @@ interface ICrowdfund is IDistributionERC20 {
     Finished
   }
 
-  event CrowdfundStarted(address indexed governor, address indexed thread, address indexed token, uint256 target);
+  event NewCrowdfund(address indexed governor, address indexed thread, address indexed token, uint256 target);
   event StateChange(State indexed state);
   event Deposit(address indexed depositor, uint256 amount);
   event Withdraw(address indexed depositor, uint256 amount);

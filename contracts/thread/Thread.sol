@@ -61,7 +61,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   }
 
   function _setFrabric(address _frabric) private viableFrabric(_frabric) {
-    emit FrabricChanged(frabric, _frabric);
+    emit FrabricChange(frabric, _frabric);
     frabric = _frabric;
     // Update the parent whitelist as well, if we're not still initializing
     // If we are, the this erc20 hasn't had init called yet, and the ThreadDeployer
@@ -85,7 +85,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
       revert NotGovernor(msg.sender, _governor);
     }
 
-    emit GovernorChanged(governor, _governor);
+    emit GovernorChange(governor, _governor);
     governor = _governor;
   }
 
@@ -106,7 +106,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     supportsInterface[type(IThread).interfaceId] = true;
 
     descriptor = _descriptor;
-    // Doesn't bother faking a proposal, yet this will still emit XChanged
+    // Doesn't bother faking a proposal, yet this will still emit XChange
     _setFrabric(_frabric);
     _setGovernor(_governor);
 
@@ -135,24 +135,39 @@ contract Thread is FrabricDAO, IThreadInitializable {
     );
   }
 
-  function _canProposeUpgrade(
+  function proposeUpgrade(
     address beacon,
     address instance,
-    address code
-  ) internal view override returns (bool) {
-    return (
+    uint256 version,
+    address code,
+    bytes calldata data,
+    bytes32 info
+  ) public override(FrabricDAO, IFrabricDAO) returns (uint256) {
+    if (!(
       // If upgrades are enabled, all good
-      (block.timestamp <= upgradesEnabled) ||
+      ((upgradesEnabled != 0) && (block.timestamp >= upgradesEnabled)) ||
       // Upgrades to the current code/release channels are always allowed
       // This prevents the Frabric from forcing an update onto Threads and allows
       // switching between versions presumably published by the Frabric
+      // Doesn't bother checking supportsInterface as FrabricDAO will
       (code == IFrabricBeacon(beacon).implementation(instance)) ||
       (uint160(code) <= IFrabricBeacon(beacon).releaseChannels())
-    );
+    )) {
+      revert ProposingUpgrade(beacon, instance, code);
+    }
+    return super.proposeUpgrade(beacon, instance, version, code, data, info);
   }
 
-  function _canProposeRemoval(address participant) internal view override returns (bool) {
-    return !irremovable[participant];
+  function proposeParticipantRemoval(
+    address participant,
+    uint8 removalFee,
+    bytes[] calldata signatures,
+    bytes32 info
+  ) public override(FrabricDAO, IFrabricDAO) returns (uint256) {
+    if (irremovable[participant]) {
+      revert Irremovable(participant);
+    }
+    return super.proposeParticipantRemoval(participant, removalFee, signatures, info);
   }
 
   function proposeDescriptorChange(
@@ -232,7 +247,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
     ThreadProposalType pType = ThreadProposalType(_pType);
     if (pType == ThreadProposalType.DescriptorChange) {
-      emit DescriptorChanged(descriptor, _descriptors[id]);
+      emit DescriptorChange(descriptor, _descriptors[id]);
       descriptor = _descriptors[id];
       delete _descriptors[id];
 
@@ -247,8 +262,6 @@ contract Thread is FrabricDAO, IThreadInitializable {
       delete _governors[id];
 
     } else if (pType == ThreadProposalType.EcosystemLeaveWithUpgrades) {
-      // Ecosystem leave
-      emit LeftEcosystemWithUpgrades(id);
       _setFrabric(_frabrics[id]);
       delete _frabrics[id];
       _setGovernor(_governors[id]);

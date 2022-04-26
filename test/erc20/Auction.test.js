@@ -103,7 +103,7 @@ async function bid(signer, id, amount) {
 async function complete(id) {
   const tx = await auction.complete(id);
   expect(await auction.active(id)).to.equal(false);
-  await expect(tx).to.emit(auction, "AuctionCompleted").withArgs(id);
+  await expect(tx).to.emit(auction, "AuctionComplete").withArgs(id);
   return tx;
 }
 
@@ -189,7 +189,7 @@ describe("Auction", accounts => {
   });
 
   it("should let you complete auctions", async () => {
-    await expect(await complete(0)).to.emit(auction, "AuctionCompleted").withArgs(0);
+    await expect(await complete(0)).to.emit(auction, "AuctionComplete").withArgs(0);
     expect(await auction.balances(frbc.address, winner.address)).to.equal(100);
     expect(await auction.balances(usd.address, seller.address)).to.equal(2);
   });

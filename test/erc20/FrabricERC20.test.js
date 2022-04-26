@@ -135,7 +135,7 @@ describe("FrabricERC20", () => {
 
     for (let i = 0; i < 2; i++) {
       let removalFee = ethers.BigNumber.from(0);
-      if (i == 1) {
+      if (i === 1) {
         removalFee = balance.mul(5).div(100);
       }
       const listed = balance.sub(removalFee);
@@ -143,7 +143,7 @@ describe("FrabricERC20", () => {
       const id = await snapshot();
       const tx = await frbc.remove(other.address, i * 5);
       await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, auction.address, listed);
-      if (i == 1) {
+      if (i === 1) {
         // deployer is the contract owner and the owner gets the removal fee
         await expect(tx).to.emit(frbc, "Transfer").withArgs(other.address, deployer.address, removalFee);
       }
@@ -154,7 +154,7 @@ describe("FrabricERC20", () => {
           other.address,
           frbc.address,
           usd.address,
-          b != 3 ? listed.div(4) : listed.sub(listed.div(4).mul(3)),
+          b !== 3 ? listed.div(4) : listed.sub(listed.div(4).mul(3)),
           start,
           WEEK
         );
@@ -207,7 +207,7 @@ describe("FrabricERC20", () => {
         other.address,
         frbc.address,
         usd.address,
-        b != 3 ? listed.div(4) : listed.sub(listed.div(4).mul(3)),
+        b !== 3 ? listed.div(4) : listed.sub(listed.div(4).mul(3)),
         start,
         WEEK
       );

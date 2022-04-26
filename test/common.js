@@ -99,7 +99,7 @@ module.exports = {
       dao.signer.address,
       info
     );
-    await expect(tx).to.emit(dao, "ProposalStateChanged").withArgs(id, module.exports.ProposalState.Active);
+    await expect(tx).to.emit(dao, "ProposalStateChange").withArgs(id, module.exports.ProposalState.Active);
     expect(await dao.nextProposalID()).to.equal(id.add(1));
 
     if (
@@ -117,7 +117,7 @@ module.exports = {
       }
     }
     if (proposal !== "Paper") {
-      await expect(await tx).to.emit(dao, proposal + "Proposed").withArgs(id, ...ordered);
+      await expect(tx).to.emit(dao, proposal + "Proposed").withArgs(id, ...ordered);
     }
 
     return { id, tx };
@@ -128,14 +128,16 @@ module.exports = {
     module.exports.increaseTime(parseInt(await dao.votingPeriod()) + 1);
 
     // Queue the proposal
-    await expect(await dao.queueProposal(id)).to.emit(dao, "ProposalStateChanged").withArgs(id, module.exports.ProposalState.Queued);
+    await expect(
+      await dao.queueProposal(id)
+    ).to.emit(dao, "ProposalStateChange").withArgs(id, module.exports.ProposalState.Queued);
 
     // Advance the clock 48 hours
     module.exports.increaseTime(2 * 24 * 60 * 60 + 1);
 
     // Complete it
     const tx = await dao.completeProposal(id);
-    await expect(tx).to.emit(dao, "ProposalStateChanged").withArgs(id, module.exports.ProposalState.Executed);
+    await expect(tx).to.emit(dao, "ProposalStateChange").withArgs(id, module.exports.ProposalState.Executed);
     assert(await dao.passed(id));
     return tx;
   },

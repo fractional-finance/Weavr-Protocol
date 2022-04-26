@@ -64,7 +64,7 @@ describe("Crowdfund", async () => {
 
     // Do basic tests it emits the expected events at setup
     // TODO: Make this complete
-    await expect(tx).to.emit(crowdfund, "CrowdfundStarted")
+    await expect(tx).to.emit(crowdfund, "NewCrowdfund")
     await expect(tx).to.emit(crowdfund, "StateChange");
   });
 

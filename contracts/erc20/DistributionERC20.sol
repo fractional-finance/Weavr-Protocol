@@ -69,7 +69,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     }
 
     _distributions[_nextID] = Distribution(token, uint64(block.number), amount);
-    emit Distributed(_nextID, token, amount);
+    emit NewDistribution(_nextID, token, amount);
     _nextID++;
   }
 

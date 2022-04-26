@@ -58,8 +58,6 @@ interface IFrabricDAO is IDAO {
 }
 
 error InvalidRemovalFee(uint8 fee, uint8 max);
-error ProposingUpgrade(address beacon, address instance, address code);
-error Irremovable(address participant);
 error Minting();
 error MintingDifferentToken(address specified, address token);
 error TargetMalleability(address target, address expected);

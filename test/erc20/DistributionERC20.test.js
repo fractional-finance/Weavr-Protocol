@@ -85,7 +85,7 @@ describe("DistributionERC20", accounts => {
 
     await expect(
       await token.distribute(other.address, ethers.utils.parseUnits("100"))
-    ).to.emit(token, "Distributed").withArgs(0, other.address, ethers.utils.parseUnits("100"));
+    ).to.emit(token, "NewDistribution").withArgs(0, other.address, ethers.utils.parseUnits("100"));
 
     expect(await token.claimed(0, deployer.address)).to.equal(false);
 
@@ -119,7 +119,7 @@ describe("DistributionERC20", accounts => {
     await other.approve(token.address, ethers.utils.parseUnits("1000"));
     await expect(
       await token.distribute(other.address, ethers.utils.parseUnits("1000"))
-    ).to.emit(token, "Distributed").withArgs(1, other.address, ethers.utils.parseUnits("1000"));
+    ).to.emit(token, "NewDistribution").withArgs(1, other.address, ethers.utils.parseUnits("1000"));
 
     for (let i = 0; i < 3; i++) {
       let address = sub[i].address;

@@ -106,7 +106,7 @@ describe("Thread", async () => {
     const newDescriptor = "0x" + (new Buffer.from("new IPFS").toString("hex")).repeat(4);
     await expect(
       (await common.proposal(thread, "DescriptorChange", [newDescriptor])).tx
-    ).to.emit(thread, "DescriptorChanged").withArgs(oldDescriptor, newDescriptor);
+    ).to.emit(thread, "DescriptorChange").withArgs(oldDescriptor, newDescriptor);
     expect(await thread.descriptor()).to.equal(newDescriptor);
   });
 
@@ -121,8 +121,8 @@ describe("Thread", async () => {
       // Make sure the new governor is the only party which can execute this
       // This signals their consent
       const tx = await onlyGovernor(thread, "FrabricChange", [otherFrabric.address, signers[0].address], signers[0]);
-      await expect(tx).to.emit(thread, "FrabricChanged").withArgs(frabric.address, otherFrabric.address)
-      await expect(tx).to.emit(thread, "GovernorChanged").withArgs(governor.address, signers[0].address);
+      await expect(tx).to.emit(thread, "FrabricChange").withArgs(frabric.address, otherFrabric.address)
+      await expect(tx).to.emit(thread, "GovernorChange").withArgs(governor.address, signers[0].address);
       await expect(await thread.frabric()).to.equal(otherFrabric.address);
       await expect(await thread.governor()).to.equal(signers[0].address);
       await expect(await erc20.parent()).to.equal(otherFrabric.address);
@@ -138,7 +138,7 @@ describe("Thread", async () => {
 
     await expect(
       onlyGovernor(thread, "GovernorChange", [signers[0].address], signers[0])
-    ).to.emit(thread, "GovernorChanged").withArgs(governor.address, signers[0].address);
+    ).to.emit(thread, "GovernorChange").withArgs(governor.address, signers[0].address);
     expect(await thread.governor()).to.equal(signers[0].address);
 
     governor = signers.splice(0, 1)[0];
