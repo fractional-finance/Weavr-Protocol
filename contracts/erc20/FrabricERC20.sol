@@ -161,34 +161,35 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     locked[person] = 0;
 
     uint256 balance = balanceOf(person);
+    emit Removal(person, balance);
     if (balance != 0) {
-      // Send the removal fee to the owner (the DAO)
-      uint256 actualFee = balance * fee / 100;
-      // Even if the fee is 0, this will always be non-zero
-      uint256 feed = balance - actualFee;
-
-      // Put the rest up for auction
-      _approve(person, auction, feed);
-
       // _removal is dangerous and this would be incredibly risky if re-entrancy
       // was possible, or if it was left set, yet every function which calls this
-      // is nonReentrant and it is set to false immediately after this call to
+      // is nonReentrant and it is set to false immediately after these calls to
       // trusted code
       _removal = true;
-      _transfer(person, owner(), actualFee);
+
+      if (fee != 0) {
+        // Send the removal fee to the owner (the DAO)
+        uint256 actualFee = balance * fee / 100;
+        _transfer(person, owner(), actualFee);
+        balance -= actualFee;
+      }
+
+      // Put the rest up for auction
+      _approve(person, auction, balance);
+
       IAuctionCore(auction).list(
         person,
         address(this),
         tradeToken,
-        feed,
+        balance,
         4,
         uint64(block.timestamp),
         1 weeks
       );
       _removal = false;
     }
-
-    emit Removal(person, balance);
   }
 
   // Whitelist functions
