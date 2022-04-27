@@ -112,7 +112,7 @@ describe("Frabric", accounts => {
         )
       );
       await expect(tx).to.emit(frbc, "Whitelisted").withArgs(participant.address, true);
-      await expect(tx).to.emit(frabric, "Vouched").withArgs(genesis.address, participant.address);
+      await expect(tx).to.emit(frabric, "Vouch").withArgs(genesis.address, participant.address);
 
       // Approve the participant
       const kycHash = ethers.utils.id(participant.address);

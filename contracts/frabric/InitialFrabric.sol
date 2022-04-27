@@ -21,11 +21,6 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
     // Actually add the genesis participants
     for (uint256 i = 0; i < genesis.length; i++) {
       participant[genesis[i]] = ParticipantType.Genesis;
-      // Now that this event is here, which it wasn't when the full DAO proposal
-      // simulation code was added, said code is decently pointless. That said,
-      // it does make ParticipantProposal complete which may be considered beneficial
-      // At the very least, there's something romantic about a DAO's first proposal
-      // being the people who are there for its start
       emit ParticipantChange(ParticipantType.Genesis, genesis[i]);
     }
   }
@@ -34,7 +29,7 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
   constructor() Composable("Frabric") initializer {}
 
   function canPropose(address proposer) public view override(DAO, IDAOCore) returns (bool) {
-    return IFrabricWhitelistCore(erc20).hasKYC(proposer);
+    return uint8(participant[proposer]) >= uint8(ParticipantType.Genesis);
   }
 
   function _completeSpecificProposal(uint256, uint256 _pType) internal pure override {

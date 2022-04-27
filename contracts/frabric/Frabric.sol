@@ -71,13 +71,10 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
   }
 
-  function _addParticipant(address _participant, ParticipantType pType) private {
-    IFrabricWhitelistCore(erc20).whitelist(_participant);
-    participant[_participant] = pType;
-    emit ParticipantChange(pType, _participant);
-  }
-
   function _addKYC(address kyc) private {
+    IFrabricWhitelistCore(erc20).whitelist(kyc);
+    participant[kyc] = ParticipantType.KYC;
+    emit ParticipantChange(ParticipantType.KYC, kyc);
     IFrabricWhitelistCore(erc20).setKYC(kyc, keccak256(abi.encodePacked("KYC ", kyc)), 0);
   }
 
@@ -113,15 +110,15 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     address kyc;
     (bond, threadDeployer, kyc) = abi.decode(data, (address, address, address));
 
-    _addParticipant(kyc, ParticipantType.KYC);
     _addKYC(kyc);
 
     _proposalSelectors[uint16(CommonProposalType.Paper)       ^ commonProposalBit] = IFrabricDAO.proposePaper.selector;
     _proposalSelectors[uint16(CommonProposalType.Upgrade)     ^ commonProposalBit] = IFrabricDAO.proposeUpgrade.selector;
     _proposalSelectors[uint16(CommonProposalType.TokenAction) ^ commonProposalBit] = IFrabricDAO.proposeTokenAction.selector;
 
-    _proposalSelectors[uint16(IThread.ThreadProposalType.GovernorChange)] = IThread.proposeGovernorChange.selector;
-    _proposalSelectors[uint16(IThread.ThreadProposalType.Dissolution)]    = IThread.proposeDissolution.selector;
+    _proposalSelectors[uint16(IThread.ThreadProposalType.DescriptorChange)] = IThread.proposeDescriptorChange.selector;
+    _proposalSelectors[uint16(IThread.ThreadProposalType.GovernorChange)]   = IThread.proposeGovernorChange.selector;
+    _proposalSelectors[uint16(IThread.ThreadProposalType.Dissolution)]      = IThread.proposeDissolution.selector;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -276,7 +273,6 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       }
 
       if (_participant.pType == ParticipantType.KYC) {
-        _addParticipant(_participant.addr, _participant.pType);
         _addKYC(_participant.addr);
         delete _participants[id];
       } else {
@@ -347,7 +343,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
     // The fact whitelist can only be called once for a given participant makes this secure against replay attacks
     IFrabricWhitelistCore(erc20).whitelist(_participant);
-    emit Vouched(signer, _participant);
+    emit Vouch(signer, _participant);
   }
 
   function approve(
@@ -382,17 +378,16 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       signature
     );
     if (participant[signer] != ParticipantType.KYC) {
-      revert InvalidKYCSignature(approving, pType);
+      revert InvalidKYCSignature(signer, participant[signer]);
     }
 
     participant[approving] = pType;
-    emit ParticipantChange(pType, approving);
-
-    // Set their status
-    IFrabricWhitelistCore(erc20).setKYC(approving, kycHash, 0);
-
     if (pType == ParticipantType.Governor) {
       governor[approving] = GovernorStatus.Active;
     }
+    emit ParticipantChange(pType, approving);
+
+    IFrabricWhitelistCore(erc20).setKYC(approving, kycHash, 0);
+    emit KYC(signer, approving);
   }
 }
