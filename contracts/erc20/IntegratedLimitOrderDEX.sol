@@ -45,7 +45,9 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   }
 
   // Indexed by price
-  mapping (uint256 => PricePoint) private _points;
+  mapping(uint256 => PricePoint) private _points;
+
+  mapping(address => mapping(uint256 => bool)) public canceling;
 
   // Used to flag when a transfer is triggered by the DEX, bypassing frozen
   bool internal _inDEX;
@@ -143,7 +145,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
       order.amount -= thisAmount;
       filled += thisAmount;
       amount -= thisAmount;
-      emit OrderFill(trader, order.trader, price, thisAmount);
+      emit OrderFill(order.trader, price, trader, thisAmount);
 
       uint256 atomicAmount = atomic(thisAmount);
       if (buying) {
@@ -298,52 +300,44 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     _withdrawTradeToken(msg.sender);
   }
 
-  function cancelOrder(uint256 price) external override nonReentrant {
+  function cancelOrder(uint256 price, uint256 i) external override nonReentrant returns (bool) {
     PricePoint storage point = _points[price];
+    OrderStruct storage order = point.orders[i];
 
-    // Will error if there are no errors at this price point
-    for (uint256 i = point.orders.length - 1;; i--) {
-      OrderStruct storage order = point.orders[i];
-
-      // If they are no longer whitelisted, remove them
-      if (!whitelisted(order.trader)) {
-        // Uses a 0 fee as this didn't have remove called, its parent did
-        // This will cause the parent fee to carry
-        _removeUnsafe(order.trader, 0);
-      }
-
-      if (
-        // Cancelling our own order
-        (order.trader == msg.sender) ||
-        // Cancelling the order of someone removed
-        // This is a cheaper check than calling whitelisted again
-        removed(order.trader)
-      ) {
-        if (point.orderType == OrderType.Buy) {
-          tradeTokenBalances[order.trader] += price * order.amount;
-        } else if (
-          (point.orderType == OrderType.Sell) &&
-          // If they were removed, they've already had their balance seized and put up for auction
-          // They should only get their traded token left floating on the DEX back (previous case)
-          (!removed(order.trader))
-        ) {
-          locked[order.trader] -= atomic(order.amount);
-        }
-
-        // Emitted even if the trader was removed
-        emit OrderCancellation(order.trader, price, order.amount);
-
-        // Delete the order
-        if (i != point.orders.length - 1) {
-          point.orders[i] = point.orders[point.orders.length - 1];
-        }
-        point.orders.pop();
-      }
-
-      if (i == 0) {
-        break;
-      }
+    // If they are no longer whitelisted, remove them
+    if (!whitelisted(order.trader)) {
+      // Uses a 0 fee as this didn't have remove called, its parent did
+      // This will cause the parent fee to carry
+      _removeUnsafe(order.trader, 0);
     }
+
+    // Canceling our own order
+    bool ours = order.trader == msg.sender;
+    // Or either canceling an order for someone or of someone removed
+    if (!(ours || canceling[order.trader][price] || removed(order.trader))) {
+      revert Unauthorized(msg.sender, order.trader);
+    }
+    canceling[order.trader][price] = false;
+
+    if (point.orderType == OrderType.Buy) {
+      tradeTokenBalances[order.trader] += price * order.amount;
+    } else if (
+      (point.orderType == OrderType.Sell) &&
+      // If they were removed, they've already had their balance seized and put up for auction
+      // They should only get their traded token left floating on the DEX back (previous case)
+      (!removed(order.trader))
+    ) {
+      locked[order.trader] -= atomic(order.amount);
+    }
+
+    // Emitted even if the trader was removed
+    emit OrderCancellation(order.trader, price, order.amount);
+
+    // Delete the order
+    if (i != point.orders.length - 1) {
+      point.orders[i] = point.orders[point.orders.length - 1];
+    }
+    point.orders.pop();
 
     // Tidy up the order type
     if (point.orders.length == 0) {
@@ -352,6 +346,14 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
     // Withdraw our own funds to prevent the need for another transaction
     _withdrawTradeToken(msg.sender);
+
+    // Return if our own order was cancelled
+    return ours;
+  }
+
+  function allowCanceling(uint256 price) external override {
+    canceling[msg.sender][price] = true;
+    emit OrderCanceling(msg.sender, price);
   }
 
   function pointType(uint256 price) external view override returns (OrderType) {

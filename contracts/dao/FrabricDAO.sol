@@ -280,7 +280,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       } else if (pType == CommonProposalType.TokenAction) {
         TokenAction storage action = _tokenActions[id];
         if (action.amount == 0) {
-          IIntegratedLimitOrderDEXCore(action.token).cancelOrder(action.price);
+          IIntegratedLimitOrderDEXCore(action.token).allowCanceling(action.price);
         } else {
           bool auction = action.target == IFrabricERC20(erc20).auction();
           if (!auction) {

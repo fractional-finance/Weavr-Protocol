@@ -93,7 +93,7 @@ async function action(type, trader, price, amount) {
           filled = amount;
           book[price].orders[i].amount = order.amount.sub(filled);
         }
-        events.push([[frbc, "OrderFill"], [trader, order.trader, price, filled]]);
+        events.push([[frbc, "OrderFill"], [order.trader, price, trader, filled]]);
         events.push(
           await bought(
             (type === OrderType.Buy) ? trader : order.trader,
@@ -194,7 +194,8 @@ async function sell(trader, price, amount) {
 
 async function cancel(trader, price) {
   let events = [];
-  for (let i = (book[price].orders.length - 1); i !== -1; i--) {
+  let i;
+  for (i = (book[price].orders.length - 1); i !== -1; i--) {
     if (book[price].orders[i].trader === trader.address) {
       let { trader: address, amount } = book[price].orders[i];
       book[price].orders[i] = book[price].orders[book[price].orders.length - 1];
@@ -208,7 +209,12 @@ async function cancel(trader, price) {
         locked[address] = locked[address].sub(amount);
       }
       events.push([[frbc, "OrderCancellation"], [address, price, amount]]);
+      break;
     }
+  }
+
+  if (i === -1) {
+    return;
   }
 
   if (book[price].orders.length === 0) {
@@ -217,7 +223,7 @@ async function cancel(trader, price) {
 
   events = autoWithdraw(trader.address, events);
 
-  const tx = await frbc.connect(trader).cancelOrder(price);
+  const tx = await frbc.connect(trader).cancelOrder(price, i);
   await verify(price, tx, events, [trader.address]);
 }
 
@@ -358,8 +364,8 @@ describe("IntegratedLimitOrderDEX", accounts => {
   function cancelRemoval(swap) {
     return async (type) => {
       // While fill can solely pop, as it only ever works on the tail orders,
-      // dropping any it fills, cancel does a full iteration and may cancel a middle
-      // item
+      // dropping any it fills, cancel works for an arbitrary index and may
+      // cancel a middle item
       if (swap) {
         // Add an additional order
         if (type === OrderType.Sell) {
@@ -369,7 +375,7 @@ describe("IntegratedLimitOrderDEX", accounts => {
         }
       }
 
-      const tx = await frbc.cancelOrder(5);
+      const tx = await frbc.cancelOrder(5, 0);
       if (!swap) {
         // It should clear the price point
         await pointCheck(5, null);
