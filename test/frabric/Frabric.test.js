@@ -1,21 +1,53 @@
 const { ethers, waffle, network } = require("hardhat");
-const { MerkleTree } = require("merkletreejs");
 const { assert, expect } = require("chai");
 
 const deployTestFrabric = require("../scripts/deployTestFrabric.js");
 const { FrabricProposalType, ParticipantType, GovernorStatus, proposal, queueAndComplete } = require("../common.js");
 
-let signers, deployer, kyc, genesis, governor;
+let signGlobal = [
+  {
+    name: "Frabric Protocol",
+    version: "1",
+    chainId: 31337
+  },
+  {
+    Vouch: [
+      { type: "address", name: "participant" }
+    ],
+    KYCVerification: [
+      { type: "uint8",   name: "participantType" },
+      { type: "address", name: "participant" },
+      { type: "bytes32", name: "kyc" },
+      { type: "uint256", name: "nonce" }
+    ]
+  }
+];
+
+function sign(signer, data) {
+  let signArgs = JSON.parse(JSON.stringify(signGlobal));
+  if (Object.keys(data).length === 1) {
+    signArgs[1] = { Vouch: signArgs[1].Vouch };
+  } else {
+    signArgs[1] = { KYCVerification: signArgs[1].KYCVerification };
+  }
+
+  // Shim for the fact ethers.js will change this functions names in the future
+  if (signer.signTypedData) {
+    return signer.signTypedData(...signArgs, data);
+  } else {
+    return signer._signTypedData(...signArgs, data);
+  }
+}
+
+let signers, deployer, kyc, genesis, governor, voucher;
 let usd, pair;
 let bond, threadDeployer;
 let frbc, frabric;
 
-// TODO: Test supermajority is used where it should be
-
 describe("Frabric", accounts => {
   before(async () => {
     signers = await ethers.getSigners();
-    [deployer, kyc, genesis, governor] = signers.splice(0, 4);
+    [deployer, kyc, genesis, governor, voucher] = signers.splice(0, 5);
 
     ({
       usd, pair,
@@ -28,6 +60,8 @@ describe("Frabric", accounts => {
     bond = bond.connect(governor);
     frbc = frbc.connect(genesis);
     frabric = frabric.connect(genesis);
+
+    signGlobal[0].verifyingContract = frabric.address;
   });
 
   it("should have the expected bond/threadDeployer", async () => {
@@ -39,21 +73,23 @@ describe("Frabric", accounts => {
     assert(!(await frabric.canPropose(signers[1].address)));
   });
 
-  it("shouldn't let you propose genesis participants", async () => {
-    await expect(
-      frabric.proposeParticipants(
-        ParticipantType.Genesis,
-        ethers.constants.HashZero,
-        ethers.utils.id("Proposing genesis participants")
-      )
-    ).to.be.revertedWith("ProposingGenesisParticipants()");
+  it("shouldn't let you propose Null/Removed/Genesis participants", async () => {
+    for (let pType of [ParticipantType.Null, ParticipantType.Removed, ParticipantType.Genesis]) {
+      await expect(
+        frabric.proposeParticipant(
+          pType,
+          ethers.constants.AddressZero,
+          ethers.utils.id("Proposing an invalid participant")
+        )
+      ).to.be.revertedWith(`InvalidParticipantType(${pType})`);
+    }
   });
 
   it("should let you add KYC agencies", async () => {
     const [ kyc ] = signers.splice(0, 1);
     await expect(
-      (await proposal(frabric, "Participants", false, [ParticipantType.KYC, kyc.address.toLowerCase() + "000000000000000000000000"])).tx
-    ).to.emit(frabric, "ParticipantChange").withArgs(kyc.address, ParticipantType.KYC);
+      (await proposal(frabric, "Participant", false, [ParticipantType.KYC, kyc.address])).tx
+    ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.KYC, kyc.address);
 
     // Verify they were successfully added
     // They will not be present on the token's whitelist
@@ -62,111 +98,104 @@ describe("Frabric", accounts => {
   });
 
   it("should let you add participants", async () => {
-    let signersIndex = 0;
     for (let pType of [ParticipantType.Individual, ParticipantType.Corporation]) {
-      // Create the merkle tree of participants
-      const merkle = new MerkleTree(
-        [signers[signersIndex].address, signers[signersIndex + 1].address, signers[signersIndex + 2].address].map(
-          (address) => address + "000000000000000000000000"
-        ),
-        ethers.utils.keccak256,
-        { sortPairs: true }
+      let participant = signers.splice(0, 1)[0];
+
+      // Vouch for the participant
+      const tx = await frabric.vouch(
+        participant.address,
+        await sign(
+          genesis,
+          {
+            participant: participant.address
+          }
+        )
       );
-
-      // Perform the proposal
-      const { id } = await proposal(frabric, "Participants", false, [pType, merkle.getHexRoot()])
-
-      const signArgs = [
-        {
-          name: "Frabric Protocol",
-          version: "1",
-          chainId: 31337,
-          verifyingContract: frabric.address
-        },
-        {
-          KYCVerification: [
-            { name: "participant", type: "address" },
-            { name: "kycHash", type: "bytes32" }
-          ]
-        },
-        {
-          participant: signers[signersIndex + 1].address,
-          kycHash: ethers.utils.id("Signer " + (signersIndex + 1))
-        }
-      ];
-      // Shim for the fact ethers.js will change this functions names in the future
-      let signature;
-      if (kyc.signTypedData) {
-        signature = await kyc.signTypedData(...signArgs);
-      } else {
-        signature = await kyc._signTypedData(...signArgs);
-      }
+      await expect(tx).to.emit(frbc, "Whitelisted").withArgs(participant.address, true);
+      await expect(tx).to.emit(frabric, "Vouched").withArgs(genesis.address, participant.address);
 
       // Approve the participant
+      const kycHash = ethers.utils.id(participant.address);
       await expect(
         await frabric.approve(
-          id,
-          signArgs[2].participant,
-          signArgs[2].kycHash,
-          merkle.getHexProof(signArgs[2].participant + "000000000000000000000000"),
-          signature
+          pType,
+          participant.address,
+          kycHash,
+          await sign(
+            kyc,
+            {
+              participantType: pType,
+              participant: participant.address,
+              kyc: kycHash,
+              nonce: 0
+            }
+          )
         )
-      ).to.emit(frabric, "ParticipantChange").withArgs(signArgs[2].participant, pType);
+      ).to.emit(frabric, "ParticipantChange").withArgs(pType, participant.address);
 
       // Verify they were successfully added
-      expect(await frbc.info(signers[signersIndex + 1].address)).to.equal(signArgs[2].kycHash);
-      expect(await frabric.participant(signers[signersIndex + 1].address)).to.equal(pType);
-      assert(await frabric.canPropose(signers[signersIndex + 1].address));
-      signersIndex += 3;
+      expect(await frbc.kyc(participant.address)).to.equal(kycHash);
+      expect(await frabric.participant(participant.address)).to.equal(pType);
+      assert(await frabric.canPropose(participant.address));
     }
   });
 
-  it("should let you add a governor", async () => {
-    const { id } = await proposal(frabric, "Participants", false, [ParticipantType.Governor, governor.address.toLowerCase() + "000000000000000000000000"]);
-    expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Unverified);
-
-    const signArgs = [
-      {
-        name: "Frabric Protocol",
-        version: "1",
-        chainId: 31337,
-        verifyingContract: frabric.address
-      },
-      {
-        KYCVerification: [
-          { name: "participant", type: "address" },
-          { name: "kycHash", type: "bytes32" }
-        ]
-      },
-      {
-        participant: governor.address,
-        kycHash: ethers.utils.id("Governor")
-      }
-    ];
-    // Shim for the fact ethers.js will change this functions names in the future
-    let signature;
-    if (kyc.signTypedData) {
-      signature = await kyc.signTypedData(...signArgs);
-    } else {
-      signature = await kyc._signTypedData(...signArgs);
-    }
+  it("should let you add a Governor", async () => {
+    const { id, tx } = await proposal(frabric, "Participant", false, [ParticipantType.Governor, governor.address]);
+    await expect(tx).to.emit(frbc, "Whitelisted").withArgs(governor.address, true);
 
     // Approve the participant
+    const kycHash = ethers.utils.id("Governor");
     await expect(
       await frabric.approve(
-        id,
-        signArgs[2].participant,
-        signArgs[2].kycHash,
-        [],
-        signature
+        ParticipantType.Null,
+        "0x" + "0".repeat(38) + id.toHexString().substr(2),
+        kycHash,
+        await sign(
+          kyc,
+          {
+            participantType: ParticipantType.Governor,
+            participant: governor.address,
+            kyc: kycHash,
+            nonce: 0
+          }
+        )
       )
-    ).to.emit(frabric, "ParticipantChange").withArgs(signArgs[2].participant, ParticipantType.Governor);
+    ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.Governor, governor.address);
 
     // Verify they were successfully added
-    expect(await frbc.info(governor.address)).to.equal(signArgs[2].kycHash);
+    expect(await frbc.kyc(governor.address)).to.equal(kycHash);
     expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Governor);
     expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Active);
     assert(await frabric.canPropose(governor.address));
+  });
+
+  it("should let you add a Voucher", async () => {
+    const { id } = await proposal(frabric, "Participant", false, [ParticipantType.Voucher, voucher.address]);
+
+    // Approve the participant
+    const kycHash = ethers.utils.id("Voucher");
+    await expect(
+      await frabric.approve(
+        ParticipantType.Null,
+        "0x" + "0".repeat(38) + id.toHexString().substr(2),
+        kycHash,
+        await sign(
+          kyc,
+          {
+            participantType: ParticipantType.Voucher,
+            participant: voucher.address,
+            kyc: kycHash,
+            nonce: 0
+          }
+        )
+      )
+    ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.Voucher, voucher.address);
+
+    // Verify they were successfully added
+    expect(await frbc.kyc(voucher.address)).to.equal(kycHash);
+    expect(await frabric.participant(voucher.address)).to.equal(ParticipantType.Voucher);
+    assert(await frabric.canPropose(voucher.address));
   });
 
   // Not routed through the Frabric at all other than the GovernorStatus, which
@@ -196,7 +225,7 @@ describe("Frabric", accounts => {
   });
 
   it("should let you create a Thread", async () => {
-    const descriptor = "0x" + (new Buffer.from("ipfs").toString("hex")).repeat(8);
+    const descriptor = ethers.utils.id("ipfs");
     const data = (new ethers.utils.AbiCoder()).encode(
       ["address", "uint112"],
       [usd.address, 1000]
@@ -229,8 +258,8 @@ describe("Frabric", accounts => {
     // Remove the governor as they have additional code in the hook, making them
     // the singular complete case
     await expect(
-      (await proposal(frabric, "ParticipantRemoval", false, [governor.address, 0, []])).tx
-    ).to.emit(frabric, "ParticipantChange").withArgs(governor.address, ParticipantType.Removed);
+      (await proposal(frabric, "ParticipantRemoval", false, [governor.address, 0, 0, []])).tx
+    ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.Removed, governor.address);
     expect(await frbc.whitelisted(governor.address)).to.equal(false);
     expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Removed);
     expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Removed);

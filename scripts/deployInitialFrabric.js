@@ -1,8 +1,6 @@
 const hre = require("hardhat");
 const { ethers, upgrades, waffle } = hre;
 
-const { MerkleTree } = require("merkletreejs");
-
 const u2SDK = require("@uniswap/v2-sdk");
 const uSDK = require("@uniswap/sdk-core");
 
@@ -19,7 +17,7 @@ module.exports = async (usd, uniswap, genesis) => {
   const signer = (await ethers.getSigners())[0];
 
   const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
-  await frbc.setWhitelisted(auction.address, ethers.utils.id("Auction"));
+  await frbc.whitelist(auction.address);
 
   // Deploy the Uniswap pair to get the bond token
   uniswap = new ethers.Contract(
@@ -37,12 +35,14 @@ module.exports = async (usd, uniswap, genesis) => {
   // We're immediately creating a wrapped derivative token with no transfer limitations
   // That said, it's a derivative subject to reduced profit potential and unusable as FRBC
   // Considering the critical role Uniswap plays in the Ethereum ecosystem, we accordingly accept this effect
-  await frbc.setWhitelisted(pair, ethers.utils.id("Uniswap v2 FRBC-USD Pair"));
+  await frbc.whitelist(pair);
 
   // Process the genesis
   let genesisList = [];
   for (const person in genesis) {
-    await frbc.setWhitelisted(person, ethers.utils.id(genesis[person].info));
+    await frbc.whitelist(person);
+    await frbc.setKYC(person, ethers.utils.id(genesis[person].info), 0);
+
     // Delay code from Beacon used to resolve consistent timing issues that make little sense
     if ((await waffle.provider.getNetwork()).chainId != 31337) {
       let block = await waffle.provider.getBlockNumber();
@@ -98,24 +98,8 @@ module.exports = async (usd, uniswap, genesis) => {
   const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
   const proxy = await deployBeacon("single", InitialFrabric);
 
-  const root = (
-    new MerkleTree(
-      genesisList.map(address => address + "000000000000000000000000"),
-      ethers.utils.keccak256,
-      { sortPairs: true }
-    )
-  ).getHexRoot();
-
-  const frabric = await upgrades.deployBeaconProxy(
-    proxy.address,
-    InitialFrabric,
-    [
-      frbc.address,
-      genesisList,
-      root.substr(2) ? root : ethers.constants.HashZero
-    ]
-  );
-  await frbc.setWhitelisted(frabric.address, ethers.utils.id("Frabric"));
+  const frabric = await upgrades.deployBeaconProxy(proxy.address, InitialFrabric, [frbc.address, genesisList]);
+  await frbc.whitelist(frabric.address);
 
   // Transfer ownership of everything to the Frabric
   // The Auction isn't owned as it doesn't need to be

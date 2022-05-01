@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import { IFrabricERC20, IFrabricERC20Initializable } from "../interfaces/erc20/IFrabricERC20.sol";
+import { IFrabricWhitelistCore, IFrabricERC20, IFrabricERC20Initializable } from "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/thread/IThread.sol";
 import "../interfaces/thread/ICrowdfund.sol";
 import { ITimelock } from "../interfaces/erc20/ITimelock.sol";
@@ -200,13 +200,13 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     );
 
     // Whitelist the Crowdfund and transfer the Thread tokens to it
-    IFrabricERC20(erc20).setWhitelisted(crowdfund, keccak256("Crowdfund"));
+    IFrabricWhitelistCore(erc20).whitelist(crowdfund);
     IERC20(erc20).safeTransfer(crowdfund, threadBaseTokenSupply);
 
     // Whitelist Timelock to hold the additional tokens
     // This could be done at a global level given how all Thread tokens sync with this contract
     // That said, not whitelisting it globally avoids FRBC from being sent here accidentally
-    IFrabricERC20(erc20).setWhitelisted(timelock, keccak256("Timelock"));
+    IFrabricWhitelistCore(erc20).whitelist(timelock);
 
     // Create the lock and transfer the additional tokens to it
     // Schedule it to release at 1% per month

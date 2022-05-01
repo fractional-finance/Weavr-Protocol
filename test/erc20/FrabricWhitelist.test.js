@@ -3,9 +3,9 @@ const { assert, expect } = require("chai");
 
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
 
-const { increaseTime } = require("../common.js");
+const { WhitelistStatus } = require("../common.js");
 
-let signers, deployer, others;
+let signers, deployer, person, parentPerson;
 let parent, whitelist;
 
 const oldInfo = "0x1111111111111111111111111111111111111111111111111111111111111111";
@@ -15,7 +15,7 @@ describe("FrabricWhitelist", accounts => {
   before(async () => {
     signers = await ethers.getSigners();
     deployer = signers.splice(0, 1);
-    others = signers.splice(0, 3);
+    [ person, parentPerson ] = signers.splice(0, 2);
 
     FrabricWhitelist = await ethers.getContractFactory("TestFrabricWhitelist");
     parent = await FrabricWhitelist.deploy(ethers.constants.AddressZero);
@@ -25,68 +25,101 @@ describe("FrabricWhitelist", accounts => {
     let change = (await parent.queryFilter(parent.filters.ParentChange()))[0].args;
     expect(change.oldParent).to.equal(ethers.constants.AddressZero);
     expect(change.newParent).to.equal(ethers.constants.AddressZero);
+    expect(await parent.parent()).to.equal(ethers.constants.AddressZero);
+
     change = (await whitelist.queryFilter(whitelist.filters.ParentChange()))[0].args;
     expect(change.oldParent).to.equal(ethers.constants.AddressZero);
     expect(change.newParent).to.equal(parent.address);
     expect(await whitelist.parent()).to.equal(parent.address);
   });
 
-  it("should require any parent implements IWhitelist", async () => {
-    let random = await (await ethers.getContractFactory("TestERC20")).deploy("Name", "SYM");
+  it("should require any parent implements IFrabricWhitelistCore", async () => {
+    const random = await (await ethers.getContractFactory("TestERC20")).deploy("Name", "SYM");
     await expect(
       whitelist.setParent(random.address)
-    ).to.be.revertedWith(`UnsupportedInterface("${random.address}", "0xd936547e")`);
+    ).to.be.revertedWith(`UnsupportedInterface("${random.address}", "0x07bf0425")`);
   });
 
   it("should let you set a parent", async () => {
-    // This is already tested thanks to the before function
+    // This is already tested thanks to before
     await expect(
       await whitelist.setParent(parent.address)
     ).to.emit(whitelist, "ParentChange").withArgs(parent.address, parent.address);
     expect(await whitelist.parent()).to.equal(parent.address);
   });
 
-  it("should track whitelisted and info hashes", async () => {
-    const tx = await whitelist.setWhitelisted(others[0].address, oldInfo);
-    await expect(tx).to.emit(whitelist, "Whitelisted").withArgs(others[0].address, true);
-    await expect(tx).to.emit(whitelist, "InfoChange").withArgs(others[0].address, ethers.constants.HashZero, oldInfo);
-    expect(await whitelist.info(others[0].address)).to.equal(oldInfo);
-    assert(await whitelist.explicitlyWhitelisted(others[0].address));
-    assert(await whitelist.whitelisted(others[0].address));
-    expect(await whitelist.removed(others[0].address)).to.equal(false);
+  it("should track whitelisted", async () => {
+    await expect(
+      await whitelist.whitelist(person.address)
+    ).to.emit(whitelist, "Whitelisted").withArgs(person.address, true);
+    assert(await whitelist.explicitlyWhitelisted(person.address));
+    assert(await whitelist.whitelisted(person.address));
+    expect(await whitelist.kyc(person.address)).to.equal(ethers.constants.HashZero);
+    expect(await whitelist.removed(person.address)).to.equal(false);
   });
 
-  it("should support updating info hashes", async () => {
-    const tx = await whitelist.setWhitelisted(others[0].address, newInfo);
-    await expect(tx).to.not.emit(whitelist, "Whitelisted");
-    await expect(tx).to.emit(whitelist, "InfoChange").withArgs(others[0].address, oldInfo, newInfo);
-    expect(await whitelist.info(others[0].address)).to.equal(newInfo);
+  it("should track KYC", async () => {
+    await expect(
+      await whitelist.setKYC(person.address, oldInfo, 0)
+    ).to.emit(whitelist, "KYCUpdate").withArgs(person.address, ethers.constants.HashZero, oldInfo, 0);
+    assert(await whitelist.explicitlyWhitelisted(person.address));
+    assert(await whitelist.whitelisted(person.address));
+    expect(await whitelist.kyc(person.address)).to.equal(oldInfo);
+    expect(await whitelist.removedAt(person.address)).to.equal(0);
+    expect(await whitelist.removed(person.address)).to.equal(false);
+  });
+
+  it("should support updating KYC hashes", async () => {
+    await expect(
+      await whitelist.setKYC(person.address, newInfo, 1)
+    ).to.emit(whitelist, "KYCUpdate").withArgs(person.address, oldInfo, newInfo, 1);
+    assert(await whitelist.explicitlyWhitelisted(person.address));
+    assert(await whitelist.whitelisted(person.address));
+    expect(await whitelist.kyc(person.address)).to.equal(newInfo);
+    expect(await whitelist.removedAt(person.address)).to.equal(0);
+    expect(await whitelist.removed(person.address)).to.equal(false);
+  });
+
+  it("should nonce KYC hashes", async () => {
+    await expect(
+      whitelist.setKYC(person.address, newInfo, 1)
+    ).to.be.revertedWith(`Replay(1, 2)`);
+
+    await expect(
+      await whitelist.setKYC(person.address, newInfo, 2)
+    ).to.emit(whitelist, "KYCUpdate").withArgs(person.address, newInfo, newInfo, 2);
   });
 
   it("should handle removals", async () => {
     await expect(
-      await whitelist.remove(others[0].address)
-    ).to.emit(whitelist, "Whitelisted").withArgs(others[0].address, false);
-    expect(await whitelist.explicitlyWhitelisted(others[0].address)).to.equal(false);
-    expect(await whitelist.whitelisted(others[0].address)).to.equal(false);
-    expect(await whitelist.removedAt(others[0].address)).to.equal((await waffle.provider.getBlock("latest")).number);
-    assert(await whitelist.removed(others[0].address));
+      await whitelist.remove(person.address)
+    ).to.emit(whitelist, "Whitelisted").withArgs(person.address, false);
+    expect(await whitelist.explicitlyWhitelisted(person.address)).to.equal(false);
+    expect(await whitelist.whitelisted(person.address)).to.equal(false);
+    expect(await whitelist.kyc(person.address)).to.equal(newInfo);
+    expect(await whitelist.removedAt(person.address)).to.equal((await waffle.provider.getBlock("latest")).number);
+    assert(await whitelist.removed(person.address));
   });
 
-  it("should support parent whitelisting", async () => {
-    await parent.setWhitelisted(others[1].address, newInfo);
-    assert(await whitelist.whitelisted(others[1].address));
-    expect(await whitelist.explicitlyWhitelisted(others[1].address)).to.equal(false);
+  it("should carry parent whitelisting", async () => {
+    await parent.whitelist(parentPerson.address);
+    assert(await whitelist.whitelisted(parentPerson.address));
+    expect(await whitelist.explicitlyWhitelisted(parentPerson.address)).to.equal(false);
+  });
+
+  it("should carry parent status", async () => {
+    await parent.setKYC(parentPerson.address, newInfo, 0);
+    expect(await whitelist.status(parentPerson.address)).to.equal(WhitelistStatus.KYC);
   });
 
   it("should considered removed even if parent whitelisted", async () => {
-    await parent.setWhitelisted(others[0].address, newInfo);
-    expect(await whitelist.whitelisted(others[0].address)).to.equal(false);
+    await parent.whitelist(person.address);
+    expect(await whitelist.whitelisted(person.address)).to.equal(false);
   })
 
   it("should support going global", async () => {
     expect(await whitelist.setGlobal()).to.emit(whitelist, "GlobalAcceptance");
     assert(await whitelist.global());
-    assert(await whitelist.whitelisted(others[2].address));
+    assert(await whitelist.whitelisted(signers[0].address));
   });
 });

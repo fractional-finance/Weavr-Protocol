@@ -66,19 +66,6 @@ abstract contract DAO is Composable, IDAO {
     queuePeriod = 48 hours;
   }
 
-  // Create a fake proposal
-  // Used by the Frabric to add its initial participants in a manner consistent
-  // with actual usage
-  function _fakeProposal(uint16 proposalType, bytes32 info) internal returns (uint256 id) {
-    id = _nextProposalID;
-    _nextProposalID++;
-
-    emit Proposal(id, proposalType, address(0), true, info);
-    emit ProposalStateChange(id, ProposalState.Active);
-    emit ProposalStateChange(id, ProposalState.Queued);
-    emit ProposalStateChange(id, ProposalState.Executed);
-  }
-
   function requiredParticipation() public view returns (uint112) {
     // Uses the current total supply instead of the historical total supply in
     // order to represent the current community
@@ -145,9 +132,9 @@ abstract contract DAO is Composable, IDAO {
     emit Proposal(id, proposalType, proposal.creator, supermajority, info);
     emit ProposalStateChange(id, proposal.state);
 
-    // Automatically vote in favor for the creator if they have votes and are actively whitelisted
+    // Automatically vote in favor for the creator if they have votes and are actively KYCd
     int112 votes = int112(uint112(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
-    if ((votes != 0) && IWhitelist(erc20).whitelisted(msg.sender)) {
+    if ((votes != 0) && IFrabricWhitelistCore(erc20).hasKYC(msg.sender)) {
       _voteUnsafe(msg.sender, id, proposal, votes, votes);
     }
   }
@@ -203,7 +190,7 @@ abstract contract DAO is Composable, IDAO {
   function _voteUnsafe(uint256 id, address voter) internal {
     ProposalStruct storage proposal = _proposals[id];
     int112 votes = int112(uint112(IVotes(erc20).getPastVotes(voter, proposal.voteBlock)));
-    if ((votes != 0) && IWhitelist(erc20).whitelisted(voter)) {
+    if ((votes != 0) && IFrabricWhitelistCore(erc20).hasKYC(voter)) {
       _voteUnsafe(voter, id, proposal, votes, votes);
     }
   }
@@ -212,13 +199,9 @@ abstract contract DAO is Composable, IDAO {
   // it's a very minor gas cost which does offer savings when multiple proposals
   // are voted on at the same time
   function vote(uint256[] memory ids, int112[] memory votes) external override {
-    // Requires the caller to also be whitelisted. While the below NoVotes error
-    // should prevent this from happening, when the Frabric removes someone,
-    // Threads keep token balances until someone calls remove on them
-    // This check prevents them from voting in the meantime, even though it could
-    // eventually be handled by calling remove and cancelProposal when the time comes
-    if (!IWhitelist(erc20).whitelisted(msg.sender)) {
-      revert NotWhitelisted(msg.sender);
+    // Require the caller to be KYCd
+    if (!IFrabricWhitelistCore(erc20).hasKYC(msg.sender)) {
+      revert NotKYC(msg.sender);
     }
 
     for (uint256 i = 0; i < ids.length; i++) {

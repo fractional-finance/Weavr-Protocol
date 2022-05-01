@@ -241,14 +241,14 @@ describe("IntegratedLimitOrderDEX", accounts => {
     await frbc.mint(deployer.address, ethers.utils.parseUnits("777777"));
     frbcBalances[deployer.address] = ethers.BigNumber.from("777777");
 
-    await frbc.setWhitelisted(other.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frbc.whitelist(other.address);
     await frbc.mint(other.address, ethers.utils.parseUnits("333333"));
     frbcBalances[other.address] = ethers.BigNumber.from("333333");
 
     ({ frbc: parent } = await FrabricERC20.deployFRBC(usd.address));
     await frbc.setParent(parent.address);
 
-    await parent.setWhitelisted(removed.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await parent.whitelist(removed.address);
     await frbc.mint(removed.address, ethers.utils.parseUnits("1"));
     frbcBalances[removed.address] = ethers.BigNumber.from("1");
   });

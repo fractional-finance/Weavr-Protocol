@@ -5,7 +5,7 @@ import "../dao/IFrabricDAO.sol";
 
 interface IInitialFrabric is IFrabricDAO {
   enum FrabricProposalType {
-    Participants
+    Participant
   }
 
   enum ParticipantType {
@@ -15,12 +15,12 @@ interface IInitialFrabric is IFrabricDAO {
     Genesis
   }
 
-  event ParticipantsProposal(
+  event ParticipantProposal(
     uint256 indexed id,
     ParticipantType indexed participantType,
-    bytes32 participants
+    address participant
   );
-  event ParticipantChange(address indexed participant, ParticipantType indexed participantType);
+  event ParticipantChange(ParticipantType indexed participantType, address indexed participant);
 
   function participant(address participant) external view returns (ParticipantType);
 }
@@ -28,7 +28,6 @@ interface IInitialFrabric is IFrabricDAO {
 interface IInitialFrabricInitializable is IInitialFrabric {
   function initialize(
     address erc20,
-    address[] calldata genesis,
-    bytes32 genesisMerkle
+    address[] calldata genesis
   ) external;
 }

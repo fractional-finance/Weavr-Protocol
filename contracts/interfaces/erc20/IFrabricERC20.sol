@@ -10,6 +10,8 @@ interface IRemovalFee {
 }
 
 interface IFreeze {
+  event Freeze(address indexed person, uint64 until);
+
   function frozenUntil(address person) external view returns (uint64);
   function frozen(address person) external returns (bool);
 
@@ -18,7 +20,6 @@ interface IFreeze {
 }
 
 interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IRemovalFee, IFreeze, IIntegratedLimitOrderDEX {
-  event Freeze(address indexed person, uint64 until);
   event Removal(address indexed person, uint256 balance);
 
   function auction() external view returns (address);
@@ -26,8 +27,6 @@ interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IRemovalFee, I
   function mint(address to, uint256 amount) external;
   function burn(uint256 amount) external;
 
-  function setParent(address parent) external;
-  function setWhitelisted(address person, bytes32 dataHash) external;
   function remove(address participant, uint8 fee) external;
   function triggerRemoval(address person) external;
 

@@ -126,7 +126,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
       revert ZeroAmount();
     }
 
-    if (!IWhitelist(whitelist).whitelisted(msg.sender)) {
+    if (!IFrabricWhitelistCore(whitelist).whitelisted(msg.sender)) {
       revert NotWhitelisted(msg.sender);
     }
 

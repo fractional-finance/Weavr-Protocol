@@ -52,6 +52,7 @@ interface IFrabricDAO is IDAO {
   function proposeParticipantRemoval(
     address participant,
     uint8 removalFee,
+    uint64 freezeUntilNonce,
     bytes[] calldata signatures,
     bytes32 info
   ) external returns (uint256);

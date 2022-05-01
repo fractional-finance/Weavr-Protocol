@@ -6,7 +6,7 @@ const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
 const { ProposalState, VoteDirection, impermanent, increaseTime } = require("../common.js");
 
 const type = 255;
-const info = ethers.utils.id("info");
+const INFO = ethers.utils.id("info");
 
 let signers, deployer, other;
 let frbc, dao;
@@ -21,8 +21,9 @@ describe("DAO", () => {
     const usd = await (await ethers.getContractFactory("TestERC20")).deploy("Test USD", "TUSD");
     ({ frbc } = await FrabricERC20.deployFRBC(usd.address));
     await frbc.mint(deployer.address, 100);
+    await frbc.setKYC(deployer.address, ethers.utils.id("deployer"), 0);
     dao = await (await ethers.getContractFactory("TestDAO")).deploy(frbc.address);
-    await frbc.setWhitelisted(dao.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frbc.whitelist(dao.address);
   });
 
   it("should have initialized correctly", async () => {
@@ -42,17 +43,18 @@ describe("DAO", () => {
 
   it("should check canPropose", async () => {
     await expect(
-      dao.connect(other).propose(type, false, info)
+      dao.connect(other).propose(type, false, INFO)
     ).to.be.revertedWith(`NotWhitelisted("${other.address}")`);
   });
 
   it("should create proposals and automatically vote", async () => {
     // Prep code for other tests
-    await frbc.setWhitelisted(other.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frbc.whitelist(other.address);
+    await frbc.setKYC(other.address, ethers.utils.id("kyc"), 0);
     await frbc.transfer(other.address, 8);
 
-    const tx = await dao.propose(type, false, info);
-    await expect(tx).to.emit(dao, "Proposal").withArgs(0, type, deployer.address, false, info);
+    const tx = await dao.propose(type, false, INFO);
+    await expect(tx).to.emit(dao, "Proposal").withArgs(0, type, deployer.address, false, INFO);
     await expect(tx).to.emit(dao, "ProposalStateChange", 0, ProposalState.Active);
     // 10, not 92, due to the 10% vote cap
     await expect(tx).to.emit(dao, "Vote").withArgs(0, VoteDirection.Yes, deployer.address, 10);
@@ -68,8 +70,8 @@ describe("DAO", () => {
   });
 
   it("should create proposals requiring a supermajority", async () => {
-    const tx = await dao.propose(type, true, info);
-    await expect(tx).to.emit(dao, "Proposal").withArgs(1, type, deployer.address, true, info);
+    const tx = await dao.propose(type, true, INFO);
+    await expect(tx).to.emit(dao, "Proposal").withArgs(1, type, deployer.address, true, INFO);
     assert(await dao.supermajorityRequired(1));
     await expect(tx).to.emit(dao, "ProposalStateChange", 1, ProposalState.Active);
     await expect(tx).to.emit(dao, "Vote").withArgs(1, VoteDirection.Yes, deployer.address, 10);

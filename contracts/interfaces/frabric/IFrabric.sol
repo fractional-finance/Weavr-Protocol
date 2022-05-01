@@ -7,7 +7,6 @@ import "../dao/IFrabricDAO.sol";
 interface IFrabricCore is IFrabricDAO {
   enum GovernorStatus {
     Null,
-    Unverified, // Proposed and elected, yet hasn't gone through KYC
     Active,
     // Removed is last as GovernorStatus is written as a linear series of transitions
     // > Unverified will work to find any Governor which was ever active
@@ -19,7 +18,7 @@ interface IFrabricCore is IFrabricDAO {
 
 interface IFrabric is IFrabricCore {
   enum FrabricProposalType {
-    Participants,
+    Participant,
     RemoveBond,
     Thread,
     ThreadProposal
@@ -32,14 +31,15 @@ interface IFrabric is IFrabricCore {
     Genesis,
     KYC,
     Governor,
+    Voucher,
     Individual,
     Corporation
   }
 
-  event ParticipantsProposal(
+  event ParticipantProposal(
     uint256 indexed id,
     ParticipantType indexed participantType,
-    bytes32 participants
+    address participant
   );
   event BondRemovalProposal(
     uint256 indexed id,
@@ -62,16 +62,19 @@ interface IFrabric is IFrabricCore {
     uint256 indexed proposalType,
     bytes32 info
   );
-  event ParticipantChange(address indexed participant, ParticipantType indexed participantType);
+  event ParticipantChange(ParticipantType indexed participantType, address indexed participant);
+  event Vouched(address indexed voucher, address indexed vouchee);
 
   function participant(address participant) external view returns (ParticipantType);
 
   function bond() external view returns (address);
   function threadDeployer() external view returns (address);
 
-  function proposeParticipants(
+  function vouchers(address) external view returns (uint256);
+
+  function proposeParticipant(
     ParticipantType participantType,
-    bytes32 participants,
+    address participant,
     bytes32 info
   ) external returns (uint256);
   function proposeBondRemoval(
@@ -96,27 +99,20 @@ interface IFrabric is IFrabricCore {
     bytes32 info
   ) external returns (uint256);
 
+  function vouch(address participant, bytes calldata signature) external;
   function approve(
-    uint256 id,
+    ParticipantType pType,
     address approving,
     bytes32 kycHash,
-    bytes32[] memory proof,
     bytes calldata signature
   ) external;
 }
 
 interface IFrabricUpgradeable is IFrabric, IUpgradeable {}
 
-error InsecureUpgradeFunction();
-
-error ProposingNullParticipants();
-error ProposingGenesisParticipants();
-error InvalidAddress(bytes32 invalid);
+error InvalidParticipantType(IFrabric.ParticipantType pType);
 error ParticipantAlreadyApproved(address participant);
 error InvalidName(string name, string symbol);
-error ProposingParticipantRemovalOnThread();
-error ProposingFrabricChange();
-error ExternalCallFailed(address called, bytes4 selector, bytes error);
-error ParticipantsProposalNotPassed(uint256 id);
+error OutOfVouchers(address voucher);
+error DifferentParticipantType(address participant, IFrabric.ParticipantType current, IFrabric.ParticipantType expected);
 error InvalidKYCSignature(address signer, IFrabric.ParticipantType status);
-error IncorrectParticipant(address participant, bytes32 participants, bytes32[] proof);

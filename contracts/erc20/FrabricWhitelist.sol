@@ -16,11 +16,14 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   bool public override global;
   // Whitelist used for the entire Frabric platform
   address public override parent;
-  // Intended to point to a hash of the whitelisted party's personal info
-  // This will NOT resolve to its parent's info if no info is set here
-  mapping(address => bytes32) public override info;
-  // List of people removed from the whitelist
+  // Current status on the whitelist
+  mapping(address => Status) private _status;
+  // Height at which people were removed from the whitelist
   mapping(address => uint256) private _removed;
+  // Intended to point to a hash of the whitelisted party's KYC info
+  // This will NOT resolve to its parent's info if no info is set here
+  mapping(address => bytes32) public override kyc;
+  mapping(address => uint256) public override kycNonces;
 
   uint256[100] private __gap;
 
@@ -30,8 +33,8 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   }
 
   function _setParent(address _parent) internal {
-    if ((_parent != address(0)) && (!_parent.supportsInterface(type(IWhitelist).interfaceId))) {
-      revert UnsupportedInterface(_parent, type(IWhitelist).interfaceId);
+    if ((_parent != address(0)) && (!_parent.supportsInterface(type(IFrabricWhitelistCore).interfaceId))) {
+      revert UnsupportedInterface(_parent, type(IFrabricWhitelistCore).interfaceId);
     }
 
     // Does still emit even if address 0 was changed to address 0
@@ -41,68 +44,113 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
   }
 
   function __FrabricWhitelist_init(address _parent) internal onlyInitializing {
-    supportsInterface[type(IWhitelist).interfaceId] = true;
+    supportsInterface[type(IFrabricWhitelistCore).interfaceId] = true;
     supportsInterface[type(IFrabricWhitelist).interfaceId] = true;
-    global = false;
     _setParent(_parent);
   }
 
-  function _setWhitelisted(address person, bytes32 dataHash) internal {
-    if (dataHash == bytes32(0)) {
-      revert WhitelistingWithZero(person);
+  function _whitelist(address person) internal {
+    if (_status[person] != Status.Null) {
+      if (_status[person] == Status.Removed) {
+        revert Removed(person);
+      }
+      revert AlreadyWhitelisted(person);
     }
 
-    // If they've already been set with this data hash, return
-    if (info[person] == dataHash) {
-      return;
+    _status[person] = Status.Whitelisted;
+    emit Whitelisted(person, true);
+  }
+
+  function _setKYC(address person, bytes32 hash, uint256 nonce) internal {
+    // Make sure this is an actual user
+    if (_status[person] == Status.Null) {
+      revert NotWhitelisted(person);
     }
 
-    // If they were removed, they're being added back. Error on this case
-    // The above if statement allows them to be set to 0 multiple times however
-    // They will not be 0 if _setRemoved was called while they are whitelisted locally
-    // _setRemoved is only called if they're not whitelisted and a local whitelist
-    // will always work to count as whitelisted
-    if (removed(person)) {
-      revert Removed(person);
+    // Make sure this isn't replayed
+    if (nonce != kycNonces[person]) {
+      revert Replay(nonce, kycNonces[person]);
+    }
+    kycNonces[person]++;
+
+    // If they were previously solely whitelisted, mark them as KYCd
+    if (_status[person] == Status.Whitelisted) {
+      _status[person] = Status.KYC;
     }
 
-    if (info[person] == bytes32(0)) {
-      emit Whitelisted(person, true);
-    }
-
-    emit InfoChange(person, info[person], dataHash);
-    info[person] = dataHash;
+    // Update the KYC hash
+    emit KYCUpdate(person, kyc[person], hash, nonce);
+    kyc[person] = hash;
   }
 
   function _setRemoved(address person) internal {
     if (removed(person)) {
       revert Removed(person);
     }
-    _removed[person] = block.number;
 
+    _status[person] = Status.Removed;
+    _removed[person] = block.number;
     emit Whitelisted(person, false);
   }
 
-  function explicitlyWhitelisted(address person) public view override returns (bool) {
-    return (info[person] != bytes32(0)) && (!removed(person));
+  function status(address person) public view override returns (Status) {
+    Status res = _status[person];
+    if (res == Status.Removed) {
+      return res;
+    }
+
+    // If we have a parent, get their status
+    if (parent != address(0)) {
+      // Use a raw call so we get access to the uint8 format instead of the Status format
+      (bool success, bytes memory data) = parent.staticcall(
+        abi.encodeWithSelector(IFrabricWhitelistCore.status.selector, person)
+      );
+      if (!success) {
+        revert ExternalCallFailed(parent, IFrabricWhitelistCore.status.selector, data);
+      }
+
+      // Decode it
+      (uint8 parentStatus) = abi.decode(data, (uint8));
+      // If the parent expanded their Status enum, convert it into our range to prevent bricking
+      // This does still have rules on how the parent can expand yet is better than a complete failure
+      if (parentStatus > uint8(type(Status).max)) {
+        parentStatus = uint8(type(Status).max);
+      }
+
+      // Use whichever status is higher
+      if (parentStatus > uint8(res)) {
+        return Status(parentStatus);
+      }
+    }
+
+    return res;
   }
 
   function whitelisted(address person) public view virtual override returns (bool) {
     return (
       // Was never removed
-      (!removed(person)) &&
-      // Check the parent whitelist (actually relevant check most of the time)
-      ((parent != address(0)) && IWhitelist(parent).whitelisted(person)) ||
-      // Global or explicitly whitelisted
-      global || explicitlyWhitelisted(person)
+      (!removed(person)) && (
+        // Whitelisted by the parent (actually relevant check most of the time)
+        ((parent != address(0)) && IFrabricWhitelistCore(parent).whitelisted(person)) ||
+        // Explicitly whitelisted or global
+        explicitlyWhitelisted(person) || global
+      )
     );
+  }
+
+  function hasKYC(address person) external view override returns (bool) {
+    return uint8(status(person)) >= uint8(Status.KYC);
+  }
+
+  function removed(address person) public view virtual override returns (bool) {
+    return _status[person] == Status.Removed;
+  }
+
+  function explicitlyWhitelisted(address person) public view override returns (bool) {
+    return uint8(_status[person]) >= uint8(Status.Whitelisted);
   }
 
   function removedAt(address person) external view override returns (uint256) {
     return _removed[person];
-  }
-
-  function removed(address person) public view virtual override returns (bool) {
-    return _removed[person] != 0;
   }
 }

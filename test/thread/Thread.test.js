@@ -10,8 +10,6 @@ let signers, governor, participant;
 let frabric, token;
 let erc20, thread;
 
-// TODO: Test supermajority is used where it should be
-
 // Test only the governor can complete this proposal
 async function onlyGovernor(thread, proposal, args, governor) {
   // Propose it
@@ -36,6 +34,7 @@ describe("Thread", async () => {
     // Move the balance from the owner (deployer)
     participant = signers.splice(1, 1)[0];
     await frabric.whitelist(participant.address);
+    await frabric.setKYC(participant.address, ethers.utils.id("kyc"), 0);
     await token.transfer(participant.address, await token.balanceOf(owner.address));
     await erc20.transfer(participant.address, (await erc20.balanceOf(owner.address)).sub(1));
     thread = thread.connect(participant);
@@ -53,11 +52,16 @@ describe("Thread", async () => {
   it("should let whitelisted token holders propose", async () => {
     // signers[0] will be burnt so remove them from signers
     const listTest = signers.splice(0, 1)[0];
-    await frabric.whitelist(listTest.address);
-    // Whitelisted yet not holder
+    // Not whitelisted
     assert(!(await thread.canPropose(listTest.address)));
-    await erc20.transfer(listTest.address, 1);
+    // Whitelisted yet not holder
+    await frabric.whitelist(listTest.address);
+    assert(!(await thread.canPropose(listTest.address)));
     // Whitelisted and holder
+    await erc20.transfer(listTest.address, 1);
+    assert(!(await thread.canPropose(listTest.address)));
+    // KYCd and holder
+    await frabric.setKYC(listTest.address, ethers.utils.id("kyc"), 0);
     assert(await thread.canPropose(listTest.address));
     // Not whitelisted yet holder
     await frabric.remove(listTest.address);
@@ -98,7 +102,7 @@ describe("Thread", async () => {
   // test picking up the rest of the slack
   it("should't let you remove the Frabric", async () => {
     await expect(
-      thread.proposeParticipantRemoval(frabric.address, 0, [], ethers.utils.id("Proposing removing the Frabric"))
+      thread.proposeParticipantRemoval(frabric.address, 0, 0, [], ethers.utils.id("Proposing removing the Frabric"))
     ).to.be.revertedWith(`Irremovable("${frabric.address}")`);
   });
 

@@ -11,8 +11,6 @@ const TWO = ethers.utils.parseUnits("2");
 let signers, deployer, participant;
 let usd, auction, frbc, fDAO;
 
-// TODO: Test supermajority is used where it should be
-
 describe("FrabricDAO", accounts => {
   before(async () => {
     signers = await ethers.getSigners();
@@ -20,11 +18,12 @@ describe("FrabricDAO", accounts => {
 
     usd = await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD");
     ({ frbc, auction } = await FrabricERC20.deployFRBC(usd.address));
-    await frbc.setWhitelisted(auction.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
-    await frbc.setWhitelisted(participant.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frbc.whitelist(auction.address);
+    await frbc.whitelist(participant.address);
+    await frbc.setKYC(participant.address, ethers.utils.id("kyc"), 0);
     await frbc.mint(participant.address, ethers.utils.parseUnits("5"));
     fDAO = (await (await ethers.getContractFactory("TestFrabricDAO")).deploy(frbc.address)).connect(participant);
-    await frbc.setWhitelisted(fDAO.address, "0x0000000000000000000000000000000000000000000000000000000000000001");
+    await frbc.whitelist(fDAO.address);
     await frbc.mint(fDAO.address, ONE);
     await frbc.transferOwnership(fDAO.address);
     frbc = frbc.connect(participant);
@@ -140,13 +139,18 @@ describe("FrabricDAO", accounts => {
           }
         ];
         if (participant.signTypedData) {
-          signaturess = [await participant.signTypedData(...signArgs)];
+          signatures = [await participant.signTypedData(...signArgs)];
         } else {
           signatures = [await participant._signTypedData(...signArgs)];
         }
       }
 
-      const { id, tx: freeze } = await propose(fDAO, "ParticipantRemoval", false, [other.address, removalFee, signatures]);
+      const { id, tx: freeze } = await propose(
+        fDAO,
+        "ParticipantRemoval",
+        false,
+        [other.address, removalFee, 1, signatures]
+      );
       if (i === 2) {
         let frozenUntil = (await waffle.provider.getBlock("latest")).timestamp + WEEK + (3 * 24 * 60 * 60);
         await expect(freeze).to.emit(frbc, "Freeze").withArgs(other.address, frozenUntil);
@@ -154,6 +158,11 @@ describe("FrabricDAO", accounts => {
         await expect(
           frbc.connect(other).transfer(participant.address, 1)
         ).to.be.revertedWith(`Frozen("${other.address}")`);
+
+        // Make sure this is successfully nonced
+        await expect(
+          fDAO.proposeParticipantRemoval(other.address, removalFee, 1, signatures, ethers.utils.id("info"))
+        ).to.be.revertedWith(`Replay(1, ${frozenUntil + 1})`);
       }
 
       const tx = await queueAndComplete(fDAO, id);

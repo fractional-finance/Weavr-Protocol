@@ -11,8 +11,16 @@ contract TestFrabricDAO is FrabricDAO {
     __FrabricDAO_init("Test Frabric DAO", erc20, 1 weeks, 5);
   }
 
+  function setParent(address _parent) external {
+    IFrabricWhitelistCore(erc20).setParent(_parent);
+  }
+
   function whitelist(address person) external {
-    IFrabricERC20(erc20).setWhitelisted(person, bytes32(0x0000000000000000000000000000000000000000000000000000000000000001));
+    IFrabricWhitelistCore(erc20).whitelist(person);
+  }
+
+  function setKYC(address person, bytes32 hash, uint256 nonce) external {
+    IFrabricWhitelistCore(erc20).setKYC(person, hash, nonce);
   }
 
   function canPropose(address) public pure override returns (bool) {
