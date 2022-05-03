@@ -177,7 +177,6 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     string calldata name,
     string calldata symbol,
     bytes32 descriptor,
-    address _governor,
     bytes calldata data,
     bytes32 info
   ) external override returns (uint256 id) {
@@ -185,9 +184,10 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       revert NotUpgraded(version, 2);
     }
 
-    if (governor[_governor] != GovernorStatus.Active) {
-      revert NotActiveGovernor(_governor, governor[_governor]);
+    if (governor[msg.sender] != GovernorStatus.Active) {
+      revert NotActiveGovernor(msg.sender, governor[msg.sender]);
     }
+
     // Doesn't check for being alphanumeric due to iteration costs
     if (
       (bytes(name).length < 6) || (bytes(name).length > 64) ||
@@ -207,9 +207,9 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     proposal.name = name;
     proposal.symbol = symbol;
     proposal.descriptor = descriptor;
-    proposal.governor = _governor;
+    proposal.governor = msg.sender;
     proposal.data = data;
-    emit ThreadProposal(id, variant, _governor, name, symbol, descriptor, data);
+    emit ThreadProposal(id, variant, msg.sender, name, symbol, descriptor, data);
   }
 
   // This does assume the Thread's API meets expectations compiled into the Frabric

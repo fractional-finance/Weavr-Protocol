@@ -87,7 +87,7 @@ module.exports = {
   },
   increaseTime: (time) => waffle.provider.send("evm_increaseTime", [time]),
 
-  propose: async (dao, proposal, supermajority, args, order) => {
+  propose: async (dao, proposal, supermajority, args, insert) => {
     let ProposalType;
     if (module.exports.CommonProposalType.hasOwnProperty(proposal)) {
       ProposalType = module.exports.CommonProposalType;
@@ -130,16 +130,12 @@ module.exports = {
       args.pop();
     }
 
-    let ordered = args;
-    if (order) {
-      ordered = [];
-      for (let i of order) {
-        ordered.push(args[i]);
-      }
+    if (insert) {
+      args.splice(insert, 0, dao.signer.address);
     }
 
     if (proposal !== "Paper") {
-      await expect(tx).to.emit(dao, proposal + "Proposal").withArgs(id, ...ordered);
+      await expect(tx).to.emit(dao, proposal + "Proposal").withArgs(id, ...args);
     }
 
     return { id, tx };
@@ -164,8 +160,13 @@ module.exports = {
     return tx;
   },
 
-  proposal: async (dao, proposal, supermajority, args, order) => {
-    const { id } = await module.exports.propose(dao, proposal, supermajority, args, order);
+  proposal: async (dao, proposal, supermajority, args, insert, voter) => {
+    const { id } = await module.exports.propose(dao, proposal, supermajority, args, insert);
+    if (voter) {
+      await expect(
+        await dao.connect(voter).vote([id], [ethers.constants.MaxUint256.mask(111)])
+      ).to.emit(dao, "Vote");
+    }
     return { id, tx: await module.exports.queueAndComplete(dao, id) };
   }
 }

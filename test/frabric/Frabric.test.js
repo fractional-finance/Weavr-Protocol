@@ -232,11 +232,12 @@ describe("Frabric", accounts => {
     );
 
     const { tx } = await proposal(
-      frabric,
+      frabric.connect(governor),
       "Thread",
       false,
-      [0, "Test Thread", "TTHR", descriptor, governor.address, data],
-      [0, 4, 1, 2, 3, 5]
+      [0, "Test Thread", "TTHR", descriptor, data],
+      1,
+      frabric.signer
     );
 
     // Grab unknown event arguments due to Waffle's lack of partial event matching

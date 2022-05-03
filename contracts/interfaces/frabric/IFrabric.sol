@@ -89,7 +89,6 @@ interface IFrabric is IFrabricCore {
     string calldata name,
     string calldata symbol,
     bytes32 descriptor,
-    address governor,
     bytes calldata data,
     bytes32 info
   ) external returns (uint256);
