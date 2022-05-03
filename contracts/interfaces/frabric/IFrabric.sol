@@ -39,6 +39,7 @@ interface IFrabric is IFrabricCore {
   event ParticipantProposal(
     uint256 indexed id,
     ParticipantType indexed participantType,
+    address indexed proposer,
     address participant
   );
   event BondRemovalProposal(

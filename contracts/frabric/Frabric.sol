@@ -152,7 +152,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
     id = _createProposal(uint16(FrabricProposalType.Participant), false, info);
     _participants[id] = Participant(participantType, _participant);
-    emit ParticipantProposal(id, participantType, _participant);
+    emit ParticipantProposal(id, participantType, msg.sender, _participant);
   }
 
   function proposeBondRemoval(
