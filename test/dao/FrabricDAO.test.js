@@ -35,8 +35,9 @@ describe("FrabricDAO", accounts => {
   });
 
   it("should have paper proposals", async () => {
-    // Since Paper proposals are literally a NOP dependent on the info string, this is sufficient
-    await proposal(fDAO, "Paper", false, []);
+    // Since Paper proposals are literally a NOP dependent on supermajority/the info string, this is sufficient
+    await proposal(fDAO, "Paper", false, [false]);
+    await proposal(fDAO, "Paper", true, [true]);
   });
 
   it("should allow upgrading", async () => {

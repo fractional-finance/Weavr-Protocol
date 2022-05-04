@@ -32,7 +32,7 @@ interface IFrabricDAO is IDAO {
   function commonProposalBit() external view returns (uint16);
   function maxRemovalFee() external view returns (uint8);
 
-  function proposePaper(bytes32 info) external returns (uint256);
+  function proposePaper(bool supermajority, bytes32 info) external returns (uint256);
   function proposeUpgrade(
     address beacon,
     address instance,

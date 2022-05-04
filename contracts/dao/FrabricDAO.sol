@@ -84,9 +84,9 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     return (pType >> 8) == 1;
   }
 
-  function proposePaper(bytes32 info) external override returns (uint256) {
+  function proposePaper(bool supermajority, bytes32 info) external override returns (uint256) {
     // No dedicated event as the DAO emits type and info
-    return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, false, info);
+    return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, supermajority, info);
   }
 
   // Allows upgrading itself or any contract owned by itself
