@@ -88,7 +88,7 @@ describe("Frabric", accounts => {
   it("should let you add KYC agencies", async () => {
     const [ kyc ] = signers.splice(0, 1);
     await expect(
-      (await proposal(frabric, "Participant", false, [ParticipantType.KYC, kyc.address], 1)).tx
+      (await proposal(frabric, "Participant", false, [ParticipantType.KYC, kyc.address], { insert: 1 })).tx
     ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.KYC, kyc.address);
 
     // Verify they were successfully added
@@ -141,7 +141,7 @@ describe("Frabric", accounts => {
   });
 
   it("should let you add a Governor", async () => {
-    const { id, tx } = await proposal(frabric, "Participant", false, [ParticipantType.Governor, governor.address], 1);
+    const { id, tx } = await proposal(frabric, "Participant", false, [ParticipantType.Governor, governor.address], { insert: 1 });
     await expect(tx).to.emit(frbc, "Whitelisted").withArgs(governor.address, true);
 
     // Approve the participant
@@ -171,7 +171,7 @@ describe("Frabric", accounts => {
   });
 
   it("should let you add a Voucher", async () => {
-    const { id } = await proposal(frabric, "Participant", false, [ParticipantType.Voucher, voucher.address], 1);
+    const { id } = await proposal(frabric, "Participant", false, [ParticipantType.Voucher, voucher.address], { insert: 1 });
 
     // Approve the participant
     const kycHash = ethers.utils.id("Voucher");
@@ -236,8 +236,7 @@ describe("Frabric", accounts => {
       "Thread",
       false,
       [0, "Test Thread", "TTHR", descriptor, data],
-      1,
-      frabric.signer
+      { insert: 1, voter: frabric.signer }
     );
 
     // Grab unknown event arguments due to Waffle's lack of partial event matching

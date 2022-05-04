@@ -10,20 +10,19 @@ interface IIntegratedLimitOrderDEXCore {
   event Order(OrderType indexed orderType, uint256 indexed price);
   event OrderIncrease(address indexed trader, uint256 indexed price, uint256 amount);
   event OrderFill(address indexed orderer, uint256 indexed price, address indexed executor, uint256 amount);
-  event OrderCanceling(address indexed trader, uint256 indexed price);
+  event OrderCancelling(address indexed trader, uint256 indexed price);
   event OrderCancellation(address indexed trader, uint256 indexed price, uint256 amount);
 
   // Part of core to symbolize amount should always be whole while price is atomic
   function atomic(uint256 amount) external view returns (uint256);
 
   function tradeToken() external view returns (address);
-  function canceling(address trader, uint256 price) external view returns (bool);
 
   // sell is here as the FrabricDAO has the ability to sell tokens on their integrated DEX
-  // That means this function API can't change, nor can allowCanceling (also used by FrabricDAO)
+  // That means this function API can't change (along with cancelOrder which FrabricDAO also uses)
   // buy is meant to be used by users, offering greater flexibility, especially as it has a router for a frontend
   function sell(uint256 price, uint256 amount) external returns (uint256);
-  function allowCanceling(uint256 price) external;
+  function cancelOrder(uint256 price, uint256 i) external returns (bool);
 }
 
 interface IIntegratedLimitOrderDEX is IComposable, IIntegratedLimitOrderDEXCore {
@@ -38,8 +37,6 @@ interface IIntegratedLimitOrderDEX is IComposable, IIntegratedLimitOrderDEXCore 
     uint256 price,
     uint256 minimumAmount
   ) external returns (uint256);
-
-  function cancelOrder(uint256 price, uint256 i) external returns (bool);
 
   function pointType(uint256 price) external view returns (IIntegratedLimitOrderDEXCore.OrderType);
   function orderQuantity(uint256 price) external view returns (uint256);

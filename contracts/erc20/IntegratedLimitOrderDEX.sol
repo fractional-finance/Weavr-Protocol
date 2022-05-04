@@ -47,8 +47,6 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   // Indexed by price
   mapping(uint256 => PricePoint) private _points;
 
-  mapping(address => mapping(uint256 => bool)) public canceling;
-
   // Used to flag when a transfer is triggered by the DEX, bypassing frozen
   bool internal _inDEX;
 
@@ -311,13 +309,12 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
       _removeUnsafe(order.trader, 0);
     }
 
-    // Canceling our own order
+    // Cancelling our own order
     bool ours = order.trader == msg.sender;
-    // Or either canceling an order for someone or of someone removed
-    if (!(ours || canceling[order.trader][price] || removed(order.trader))) {
+    // Cancelling the order of someone removed
+    if (!(ours || removed(order.trader))) {
       revert Unauthorized(msg.sender, order.trader);
     }
-    canceling[order.trader][price] = false;
 
     if (point.orderType == OrderType.Buy) {
       tradeTokenBalances[order.trader] += price * order.amount;
@@ -349,11 +346,6 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
 
     // Return if our own order was cancelled
     return ours;
-  }
-
-  function allowCanceling(uint256 price) external override {
-    canceling[msg.sender][price] = true;
-    emit OrderCanceling(msg.sender, price);
   }
 
   function pointType(uint256 price) external view override returns (OrderType) {

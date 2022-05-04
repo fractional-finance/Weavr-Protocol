@@ -31,7 +31,7 @@ interface IDAOCore is IComposable {
   function canPropose(address proposer) external view returns (bool);
   function proposalActive(uint256 id) external view returns (bool);
 
-  function completeProposal(uint256 id) external;
+  function completeProposal(uint256 id, bytes calldata data) external;
   function withdrawProposal(uint256 id) external;
 }
 

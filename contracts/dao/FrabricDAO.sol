@@ -266,7 +266,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
   // Re-entrancy isn't a concern due to completeProposal being safe from re-entrancy
   // That's the only thing which should call this
-  function _completeProposal(uint256 id, uint16 _pType) internal override {
+  function _completeProposal(uint256 id, uint16 _pType, bytes calldata data) internal override {
     if (_isCommonProposal(_pType)) {
       CommonProposalType pType = CommonProposalType(_pType ^ commonProposalBit);
       if (pType == CommonProposalType.Paper) {
@@ -280,7 +280,12 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       } else if (pType == CommonProposalType.TokenAction) {
         TokenAction storage action = _tokenActions[id];
         if (action.amount == 0) {
-          IIntegratedLimitOrderDEXCore(action.token).allowCanceling(action.price);
+          (uint256 i) = abi.decode(data, (uint256));
+          // cancelOrder returns a bool of our own order was cancelled or merely *an* order was cancelled
+          if (!IIntegratedLimitOrderDEXCore(action.token).cancelOrder(action.price, i)) {
+            // Uses address(0) as it's unknown who this trader was
+            revert NotOrderTrader(address(this), address(0));
+          }
         } else {
           bool auction = action.target == IFrabricERC20(erc20).auction();
           if (!auction) {

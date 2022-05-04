@@ -130,7 +130,7 @@ module.exports = {
       args.pop();
     }
 
-    if (insert) {
+    if (typeof(insert) !== "undefined") {
       args.splice(insert, 0, dao.signer.address);
     }
 
@@ -141,7 +141,11 @@ module.exports = {
     return { id, tx };
   },
 
-  queueAndComplete: async (dao, id) => {
+  queueAndComplete: async (dao, id, data) => {
+    if (!data) {
+      data = "0x";
+    }
+
     // Advance the clock by the voting period (+ 1 second)
     module.exports.increaseTime(parseInt(await dao.votingPeriod()) + 1);
 
@@ -154,19 +158,25 @@ module.exports = {
     module.exports.increaseTime(2 * 24 * 60 * 60 + 1);
 
     // Complete it
-    const tx = await dao.completeProposal(id);
+    const tx = await dao.completeProposal(id, data);
     await expect(tx).to.emit(dao, "ProposalStateChange").withArgs(id, module.exports.ProposalState.Executed);
     assert(await dao.passed(id));
     return tx;
   },
 
-  proposal: async (dao, proposal, supermajority, args, insert, voter) => {
-    const { id } = await module.exports.propose(dao, proposal, supermajority, args, insert);
-    if (voter) {
+  proposal: async (dao, proposal, supermajority, args, config) => {
+    config = config ? config : {}; // Allow accessing members even if it's undefined
+    const { id } = await module.exports.propose(dao, proposal, supermajority, args, config.insert);
+    if (config.voter) {
       await expect(
-        await dao.connect(voter).vote([id], [ethers.constants.MaxUint256.mask(111)])
+        await dao.connect(config.voter).vote([id], [ethers.constants.MaxUint256.mask(111)])
       ).to.emit(dao, "Vote");
     }
-    return { id, tx: await module.exports.queueAndComplete(dao, id) };
+
+    let data = null;
+    if (typeof(config.order) !== "undefined") {
+      data = (new ethers.utils.AbiCoder()).encode(["uint256"], [config.order]);
+    }
+    return { id, tx: await module.exports.queueAndComplete(dao, id, data) };
   }
 }

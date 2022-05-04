@@ -20,7 +20,7 @@ contract TestDAO is DAO {
     _createProposal(pType, supermajority, info);
   }
 
-  function _completeProposal(uint256 id, uint16 pType) internal override {
+  function _completeProposal(uint256 id, uint16 pType, bytes calldata) internal override {
     emit Completed(id, pType);
   }
 }

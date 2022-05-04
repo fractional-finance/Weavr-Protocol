@@ -182,14 +182,14 @@ describe("DAO", () => {
   it("shouldn't let you complete proposals which are still queued", async () => {
     let time = (await waffle.provider.getBlock("latest")).timestamp + 1;
     await expect(
-      dao.completeProposal(0)
+      dao.completeProposal(0, "0x")
     ).to.be.revertedWith(`StillQueued(0, ${time}, ${end})`);
   });
 
   it("should let you complete proposals", async () => {
     await increaseTime(parseInt(await dao.queuePeriod()));
     await expect(
-      await dao.completeProposal(0)
+      await dao.completeProposal(0, "0x")
     ).to.emit(dao, "Completed").withArgs(0, type);
     assert(await dao.passed(0));
   });

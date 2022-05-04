@@ -19,7 +19,7 @@ async function onlyGovernor(thread, proposal, args, governor) {
     common.queueAndComplete(thread, id)
   ).to.be.revertedWith(`NotGovernor("${thread.signer.address}", "${governor.address}")`);
   // Explicitly complete it with the governor
-  return await thread.connect(governor).completeProposal(id);
+  return await thread.connect(governor).completeProposal(id, "0x");
 }
 
 describe("Thread", async () => {

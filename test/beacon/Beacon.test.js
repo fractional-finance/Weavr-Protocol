@@ -8,7 +8,7 @@ let TestUpgradeable, dataless;
 const data = (new ethers.utils.AbiCoder()).encode(
   ["address", "bytes"],
   ["0x0000000000000000000000000000000000000003", "0x" + Buffer.from("Upgrade Data").toString("hex")]
-)
+);
 
 function upgradeable(version, data) {
   return TestUpgradeable.deploy(version, data);

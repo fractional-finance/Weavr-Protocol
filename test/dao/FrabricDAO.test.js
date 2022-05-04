@@ -62,10 +62,7 @@ describe("FrabricDAO", accounts => {
 
   it("should allow cancelling orders on a DEX", async () => {
     await expect(
-      (await proposal(fDAO, "TokenAction", false, [frbc.address, fDAO.address, false, 2, 0])).tx
-    ).to.emit(frbc, "OrderCanceling").withArgs(fDAO.address, 2);
-    await expect(
-      await frbc.cancelOrder(2, 0)
+      (await proposal(fDAO, "TokenAction", false, [frbc.address, fDAO.address, false, 2, 0], { order: 0 })).tx
     ).to.emit(frbc, "OrderCancellation").withArgs(fDAO.address, 2, 1);
     expect(await frbc.locked(fDAO.address)).to.equal(ethers.utils.parseUnits("0"));
   });
