@@ -28,7 +28,7 @@ describe("Thread", async () => {
     const owner = signers.splice(0, 1)[0];
     governor = signers.splice(0, 1)[0];
 
-    ({ token, frabric, erc20, beacon, thread } = await deployTestThread(governor.address)); // TODO: Verify init
+    ({ token, frabric, erc20, beacon, thread } = await deployTestThread(governor.address));
     beacon.implementation = beacon["implementation(address)"];
 
     // Move the balance from the owner (deployer)

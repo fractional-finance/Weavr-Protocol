@@ -1,4 +1,5 @@
 const { ethers, upgrades } = require("hardhat");
+const { assert, expect } = require("chai");
 
 const deployBeacon = require("../../scripts/deployBeacon.js");
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
@@ -28,12 +29,32 @@ module.exports = async () => {
     [
       "1 Main Street",
       erc20.address,
-      "0x" + (new Buffer.from("ipfs").toString("hex")).repeat(8),
+      ethers.utils.id("ipfs"),
       frabric.address,
       governor,
       [frabric.address]
     ]
   );
+
+  expect(await thread.votingPeriod()).to.equal(7 * 24 * 60 * 60);
+  expect(await thread.maxRemovalFee()).to.equal(10);
+
+  expect(await thread.contractName()).to.equal(ethers.utils.id("Thread"));
+
+  expect(await thread.descriptor()).to.equal(ethers.utils.id("ipfs"));
+  expect(await thread.frabric()).to.equal(frabric.address);
+  expect(await thread.governor()).to.equal(governor);
+  assert(await thread.irremovable(frabric.address));
+
+  let changes = await thread.queryFilter(thread.filters.FrabricChange());
+  expect(changes.length).to.equal(1);
+  expect(changes[0].args.oldFrabric).to.equal(ethers.constants.AddressZero);
+  expect(changes[0].args.newFrabric).to.equal(frabric.address);
+
+  changes = await thread.queryFilter(thread.filters.GovernorChange());
+  expect(changes.length).to.equal(1);
+  expect(changes[0].args.oldGovernor).to.equal(ethers.constants.AddressZero);
+  expect(changes[0].args.newGovernor).to.equal(governor);
 
   await erc20.initialize(
     "1 Main Street",

@@ -11,7 +11,7 @@ interface IThread is IFrabricDAO {
   event DissolutionProposal(uint256 indexed id, address indexed token, uint256 price);
 
   event DescriptorChange(bytes32 indexed oldDescriptor, bytes32 indexed newDescriptor);
-  event FrabricChange(address indexed oldGovernor, address indexed newGovernor);
+  event FrabricChange(address indexed oldFrabric, address indexed newFrabric);
   event GovernorChange(address indexed oldGovernor, address indexed newGovernor);
 
   enum ThreadProposalType {
