@@ -1,4 +1,4 @@
-const { waffle } = require("hardhat");
+const { ethers, waffle } = require("hardhat");
 const { assert, expect } = require("chai");
 
 module.exports = {

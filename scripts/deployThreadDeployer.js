@@ -20,7 +20,7 @@ module.exports = async (erc20Beacon, auction) => {
   );
 
   // Transfer ownership of the timelock to the ThreadDeployer
-  await timelock.transferOwnership(threadDeployer.address);
+  await (await timelock.transferOwnership(threadDeployer.address)).wait();
 
   return { crowdfundProxy, threadBeacon, timelock, proxy, threadDeployer };
 };
