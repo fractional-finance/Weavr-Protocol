@@ -5,7 +5,7 @@ const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
 
 const { ProposalState, VoteDirection, impermanent, increaseTime } = require("../common.js");
 
-const type = 255;
+const TYPE = 255;
 const INFO = ethers.utils.id("info");
 
 let signers, deployer, other;
@@ -43,7 +43,7 @@ describe("DAO", () => {
 
   it("should check canPropose", async () => {
     await expect(
-      dao.connect(other).propose(type, false, INFO)
+      dao.connect(other).propose(TYPE, false, INFO)
     ).to.be.revertedWith(`NotWhitelisted("${other.address}")`);
   });
 
@@ -53,8 +53,8 @@ describe("DAO", () => {
     await frbc.setKYC(other.address, ethers.utils.id("kyc"), 0);
     await frbc.transfer(other.address, 8);
 
-    const tx = await dao.propose(type, false, INFO);
-    await expect(tx).to.emit(dao, "Proposal").withArgs(0, type, deployer.address, false, INFO);
+    const tx = await dao.propose(TYPE, false, INFO);
+    await expect(tx).to.emit(dao, "Proposal").withArgs(0, TYPE, deployer.address, false, INFO);
     await expect(tx).to.emit(dao, "ProposalStateChange", 0, ProposalState.Active);
     // 10, not 92, due to the 10% vote cap
     await expect(tx).to.emit(dao, "Vote").withArgs(0, VoteDirection.Yes, deployer.address, 10);
@@ -70,8 +70,8 @@ describe("DAO", () => {
   });
 
   it("should create proposals requiring a supermajority", async () => {
-    const tx = await dao.propose(type, true, INFO);
-    await expect(tx).to.emit(dao, "Proposal").withArgs(1, type, deployer.address, true, INFO);
+    const tx = await dao.propose(TYPE, true, INFO);
+    await expect(tx).to.emit(dao, "Proposal").withArgs(1, TYPE, deployer.address, true, INFO);
     assert(await dao.supermajorityRequired(1));
     await expect(tx).to.emit(dao, "ProposalStateChange", 1, ProposalState.Active);
     await expect(tx).to.emit(dao, "Vote").withArgs(1, VoteDirection.Yes, deployer.address, 10);
@@ -90,6 +90,16 @@ describe("DAO", () => {
   it("should let you vote with more than you have yet correct it", async () => {
     // Sanity check to ensure this can't just use the 10% cap
     assert(9 < (parseInt(await frbc.totalSupply()) / 10));
+
+    // Positive variant
+    await expect(
+      await dao.connect(other).vote([0], [9])
+    ).to.emit(dao, "Vote").withArgs(0, VoteDirection.Yes, other.address, 8);
+    expect(await dao.netVotes(0)).to.equal(18);
+    expect(await dao.totalVotes(0), 18);
+    expect(await dao.voteRecord(0, other.address)).to.equal(8);
+
+    // Negative variant
     await expect(
       await dao.connect(other).vote([0], [-9])
     ).to.emit(dao, "Vote").withArgs(0, VoteDirection.No, other.address, 8);
@@ -144,7 +154,6 @@ describe("DAO", () => {
   });
 
   // TODO: Negative net (somewhat tested already by the negative supermajority test)
-  // TODO: Insufficient participation
 
   it("should let you withdraw queued proposals", impermanent(async () => {
     await expect(
@@ -190,7 +199,7 @@ describe("DAO", () => {
     await increaseTime(parseInt(await dao.queuePeriod()));
     await expect(
       await dao.completeProposal(0, "0x")
-    ).to.emit(dao, "Completed").withArgs(0, type);
+    ).to.emit(dao, "Completed").withArgs(0, TYPE);
     assert(await dao.passed(0));
   });
 
@@ -208,4 +217,13 @@ describe("DAO", () => {
       dao.withdrawProposal(0)
     ).to.be.revertedWith(`InactiveProposal(0)`);
   });
+
+  it("shouldn't queue proposals with insufficient participation", impermanent(async () => {
+    await expect(
+      await dao.propose(TYPE, false, INFO)
+    ).to.emit(dao, "Proposal").withArgs(2, TYPE, deployer.address, false, INFO);
+    await dao.vote([2], [1]);
+    await increaseTime(parseInt(await dao.votingPeriod()));
+    await expect(dao.queueProposal(2)).to.be.revertedWith("NotEnoughParticipation(2, 1, 10)");
+  }));
 });

@@ -139,7 +139,7 @@ abstract contract DAO is Composable, IDAO {
     }
   }
 
-  // Labelled unsafe due to its split checks with the various callers and lack of guarantees
+  // Labeled unsafe due to its split checks with the various callers and lack of guarantees
   // on what checks it'll perform. This can only be used in a carefully designed, cohesive ecosystemm
   function _voteUnsafe(
     address voter,
@@ -164,10 +164,17 @@ abstract contract DAO is Composable, IDAO {
     int112 standing = proposal.voters[voter];
     if (standing != 0) {
       proposal.votes -= standing;
-    } else {
-      // If they had previously abstained, increase the amount of total votes
-      proposal.totalVotes += uint112(absVotes);
+      // Decrease from totalVotes as well in case the participant no longer feels as strongly
+      if (standing < 0) {
+        standing = -standing;
+      }
+      proposal.totalVotes -= uint112(standing);
     }
+    // Increase the amount of total votes
+    // If they're now abstaining, these will mean totalVotes is not increased at all
+    // While explicitly abstaining could be considered valid as participation,
+    // requiring opinionation is simpler and fine
+    proposal.totalVotes += uint112(absVotes);
 
     // Set new votes
     proposal.voters[voter] = votes;
@@ -177,10 +184,6 @@ abstract contract DAO is Composable, IDAO {
       proposal.votes += votes;
       direction = votes > 0 ? VoteDirection.Yes : VoteDirection.No;
     } else {
-      // If they're now abstaining, decrease the amount of total votes
-      // While abstaining could be considered valid as participation,
-      // it'd require an extra variable to properly track and requiring opinionation is fine
-      proposal.totalVotes -= uint112(absVotes);
       direction = VoteDirection.Abstain;
     }
 
