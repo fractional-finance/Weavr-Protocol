@@ -8,7 +8,7 @@ const { GovernorStatus, ThreadProposalType } = common;
 let signers, governor, participant;
 // Actually a TestFrabric
 let frabric, token;
-let erc20, thread;
+let erc20, beacon, thread;
 
 // Test only the governor can complete this proposal
 async function onlyGovernor(thread, proposal, args, governor) {
@@ -150,7 +150,37 @@ describe("Thread", async () => {
   });
 
   it("should allow leaving the ecosystem", async () => {
-    // TODO
+    const frabric2 = await (await ethers.getContractFactory("TestFrabric")).deploy();
+    const oldGovernor = governor;
+    governor = signers.splice(0, 1)[0];
+    await frabric2.setGovernor(governor.address, GovernorStatus.Active);
+    await frabric2.whitelist(participant.address);
+    await frabric2.setKYC(participant.address, ethers.utils.id("kyc"), 0);
+    const tx = await onlyGovernor(
+      thread,
+      "EcosystemLeaveWithUpgrades",
+      [frabric2.address, governor.address],
+      governor
+    );
+    await expect(tx).to.emit(thread, "FrabricChange").withArgs(frabric.address, frabric2.address);
+    await expect(tx).to.emit(thread, "GovernorChange").withArgs(oldGovernor.address, governor.address);
+    expect(await thread.frabric()).to.equal(frabric2.address);
+    expect(await thread.governor()).to.equal(governor.address);
+    expect(await thread.upgradesEnabled()).to.equal((await waffle.provider.getBlock("latest")).timestamp + (21 * 24 * 60 * 60));
+
+    // Make sure upgrades don't work yet
+    // Not valid args (Thread beacon, ERC20 instance, Frabric for code) yet doesn't matter
+    await expect(
+      thread.proposeUpgrade(beacon.address, erc20.address, 2, frabric.address, "0x", ethers.utils.id("upgrade"))
+    ).to.be.revertedWith(`ProposingUpgrade("${beacon.address}", "${erc20.address}", "${frabric.address}")`);
+    // Make sure upgrades work in 3 weeks
+    await common.increaseTime((21 * 24 * 60 * 60) + 1);
+    await common.propose(
+      thread.connect(governor),
+      "Upgrade",
+      true,
+      [beacon.address, thread.address, 2, thread.address, "0x"]
+    );
   });
 
   it("should allow dissolving", async () => {

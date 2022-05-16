@@ -71,15 +71,15 @@ contract Thread is FrabricDAO, IThreadInitializable {
     }
   }
 
-  modifier viableGovernor(address _governor) {
-    if (IFrabricCore(frabric).governor(_governor) != IFrabricCore.GovernorStatus.Active) {
-      revert NotActiveGovernor(_governor, IFrabricCore(frabric).governor(_governor));
+  modifier viableGovernor(address _frabric, address _governor) {
+    if (IFrabricCore(_frabric).governor(_governor) != IFrabricCore.GovernorStatus.Active) {
+      revert NotActiveGovernor(_governor, IFrabricCore(_frabric).governor(_governor));
     }
 
     _;
   }
 
-  function _setGovernor(address _governor) private viableGovernor(_governor) {
+  function _setGovernor(address _governor) private viableGovernor(frabric, _governor) {
     // If we're not being initialized, have the new governor trigger this to signify consent
     if ((governor != address(0)) && (msg.sender != _governor)) {
       revert NotGovernor(msg.sender, _governor);
@@ -195,7 +195,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function proposeGovernorChange(
     address _governor,
     bytes32 info
-  ) external override viableGovernor(_governor) returns (uint256 id) {
+  ) external override viableGovernor(frabric, _governor) returns (uint256 id) {
     id = _createProposal(uint16(ThreadProposalType.GovernorChange), true, info);
     _governors[id] = _governor;
     emit GovernorChangeProposal(id, _governor);
@@ -211,7 +211,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     address _frabric,
     address _governor,
     bytes32 info
-  ) external override returns (uint256 id) {
+  ) external override viableFrabric(_frabric) viableGovernor(_frabric, _governor) returns (uint256 id) {
     // A Thread could do proposeFrabricChange, to change their Frabric,
     // and then proposeEcosystemLeaveWithUpgrades to enable upgrades while claiming
     // the Frabric as theirs
