@@ -17,8 +17,9 @@ describe("Bond", accounts => {
     pair = await (await ethers.getContractFactory("TestERC20")).deploy("Bond Test", "BOND");
 
     // Deploy the bond contract
-    // TODO: Check the events/behavior from init
     ({ bond } = await deployBond(usd.address, pair.address));
+    expect(await bond.usd()).to.equal(usd.address);
+    expect(await bond.bondToken()).to.equal(pair.address);
 
     // Deploy a TestFrabric
     frabric = await (await ethers.getContractFactory("TestFrabric")).deploy();
@@ -56,11 +57,19 @@ describe("Bond", accounts => {
   });
 
   it("should let the Frabric call unbond", async () => {
-    // TODO
+    const tx = await frabric.unbond(bond.address, governor.address, 67);
+    await expect(tx).to.emit(bond, "Unbond").withArgs(governor.address, 67);
+    await expect(tx).to.emit(pair, "Transfer").withArgs(bond.address, governor.address, 67);
+    expect(await pair.balanceOf(governor.address)).to.be.equal(67);
+    expect(await pair.balanceOf(bond.address)).to.be.equal(33);
   });
 
   it("should let the Frabric call slash", async () => {
-    // TODO
+    const tx = await frabric.slash(bond.address, governor.address, 33);
+    await expect(tx).to.emit(bond, "Slash").withArgs(governor.address, 33);
+    await expect(tx).to.emit(pair, "Transfer").withArgs(bond.address, frabric.address, 33);
+    expect(await pair.balanceOf(frabric.address)).to.be.equal(33);
+    expect(await pair.balanceOf(bond.address)).to.be.equal(0);
   });
 
   it("shouldn't let you recover the bond token", async () => {

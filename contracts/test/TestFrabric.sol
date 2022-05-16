@@ -5,6 +5,7 @@ import "../erc20/FrabricWhitelist.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
 
 import "../interfaces/dao/IDAO.sol";
+import "../interfaces/frabric/IBond.sol";
 import "../interfaces/frabric/IFrabric.sol";
 
 contract TestFrabric is FrabricWhitelist {
@@ -37,6 +38,18 @@ contract TestFrabric is FrabricWhitelist {
     _setRemoved(person);
   }
 
+  function setGovernor(address person, IFrabricCore.GovernorStatus status) external {
+    governor[person] = status;
+  }
+
+  function unbond(address bond, address _governor, uint256 amount) external {
+    IBondCore(bond).unbond(_governor, amount);
+  }
+
+  function slash(address bond, address _governor, uint256 amount) external {
+    IBondCore(bond).slash(_governor, amount);
+  }
+
   function deployThread(
     address threadDeployer,
     uint8 variant,
@@ -55,10 +68,6 @@ contract TestFrabric is FrabricWhitelist {
       _governor,
       abi.encode(tradeToken, target)
     );
-  }
-
-  function setGovernor(address person, IFrabricCore.GovernorStatus status) external {
-    governor[person] = status;
   }
 
   constructor() Composable("Frabric") initializer {
