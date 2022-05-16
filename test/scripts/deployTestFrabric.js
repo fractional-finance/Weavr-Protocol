@@ -1,11 +1,13 @@
 const hre = require("hardhat");
 const { ethers } = hre;
 
+const { expect } = require("chai");
+
 const deployInitialFrabric = require("../../scripts/deployInitialFrabric.js");
 const deployFrabric = require("../../scripts/deployFrabric.js");
 
 const deployUniswap = require("../scripts/deployUniswap.js");
-const { proposal } = require("../common.js");
+const { ParticipantType, proposal } = require("../common.js");
 
 module.exports = async () => {
   // Redundant with `npx hardhat test`, yet supports running as
@@ -37,6 +39,18 @@ module.exports = async () => {
     frabric
   } = contracts;
 
+  // Verify the Frabric emitted the genesis events
+  const events = await frabric.queryFilter(frabric.filters.ParticipantChange());
+  // This isn't guaranteed to work due to the lack of order but... practically does
+  // This is due to the event order already being based on this arbitrary iteration order AND
+  // because there's only a single entry right now
+  const participants = Object.keys(genesis);
+  expect(events.length).to.equal(participants.length);
+  for (let i in participants) {
+    expect(events[i].args.participantType).to.equal(ParticipantType.Genesis);
+    expect(events[i].args.participant).to.equal(participants[i]);
+  }
+
   const upgrade = await deployFrabric(auction.address, erc20Beacon.address, usd.address, pair, frabric.address);
   contracts.bond = upgrade.bond;
   contracts.threadDeployer = upgrade.threadDeployer;
@@ -57,8 +71,14 @@ module.exports = async () => {
     ]
   );
 
-  await proxy.triggerUpgrade(frabric.address, 2);
+  await expect(
+    await proxy.triggerUpgrade(frabric.address, 2)
+  ).to.emit(proxy, "Upgraded").withArgs(frabric.address, 2);
   contracts.frabric = (await ethers.getContractFactory("Frabric")).attach(contracts.frabric.address);
+  expect(await frabric.version()).to.equal(2);
+  expect(await contracts.frabric.bond()).to.equal(upgrade.bond.address);
+  expect(await contracts.frabric.threadDeployer()).to.equal(upgrade.threadDeployer.address);
+  expect(await contracts.frabric.participant(signers[1].address)).to.equal(ParticipantType.KYC);
 
   // Actually create the pair
   await uniswap.factory.createPair(frbc.address, usd.address);

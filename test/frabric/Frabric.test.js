@@ -53,7 +53,7 @@ describe("Frabric", accounts => {
       usd, pair,
       bond, threadDeployer,
       frbc, frabric
-    } = await deployTestFrabric()); // TODO: Check the events/behavior from upgrade
+    } = await deployTestFrabric());
 
     // Connect as beneficial for testing
     pair = pair.connect(governor);
@@ -62,11 +62,6 @@ describe("Frabric", accounts => {
     frabric = frabric.connect(genesis);
 
     signGlobal[0].verifyingContract = frabric.address;
-  });
-
-  it("should have the expected bond/threadDeployer", async () => {
-    expect(await frabric.bond()).to.equal(bond.address);
-    expect(await frabric.threadDeployer()).to.equal(threadDeployer.address);
   });
 
   it("shouldn't let anyone propose", async () => {
