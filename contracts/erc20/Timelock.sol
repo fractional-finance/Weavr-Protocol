@@ -52,17 +52,11 @@ contract Timelock is Ownable, Composable, ITimelock {
     // If this is a Thread token, and they've enabled upgrades, void the timelock
     // Prevents an attack vector documented in Thread where Threads can upgrade to claw back timelocked tokens
     // Enabling upgrades takes longer than voiding the timelock and actioning the tokens to some effect in response
-    if (
-      // OZ code will return false if this call errors, though some fallback functions may be misinterpreted
-      // If fallback functions return a false value, this won't execute and it's a non-issue
-      // If it returns a true value, and does for the next call as well, it'll clear the lock months which isn't an issue
-      // The only reason non-Thread tokens should be here is on accident which means we're performing recovery
-      // If for some reason this returns true, and the next call errors, that's some weird edge case
-      // with an unsupported token which shouldn't be here and that's that
-      (token.supportsInterface(type(IThread).interfaceId)) &&
-      (IThread(token).upgradesEnabled() != 0)
-    ) {
-      _lock.months = 0;
+    if (token.supportsInterface(type(Ownable).interfaceId)) {
+      address owner = Ownable(token).owner();
+      if ((owner.supportsInterface(type(IThreadTimelock).interfaceId)) && (IThreadTimelock(owner).upgradesEnabled() != 0)) {
+        _lock.months = 0;
+      }
     }
 
     // Enables recovering accidentally sent tokens

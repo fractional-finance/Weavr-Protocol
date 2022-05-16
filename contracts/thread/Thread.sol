@@ -103,6 +103,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     __FrabricDAO_init(string(abi.encodePacked("Thread: ", name)), _erc20, 1 weeks, 10);
 
     __Composable_init("Thread", false);
+    supportsInterface[type(IThreadTimelock).interfaceId] = true;
     supportsInterface[type(IThread).interfaceId] = true;
 
     descriptor = _descriptor;

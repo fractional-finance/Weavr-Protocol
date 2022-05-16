@@ -3,7 +3,11 @@ pragma solidity >=0.8.9;
 
 import "../dao/IFrabricDAO.sol";
 
-interface IThread is IFrabricDAO {
+interface IThreadTimelock {
+  function upgradesEnabled() external view returns (uint256);
+}
+
+interface IThread is IFrabricDAO, IThreadTimelock {
   event DescriptorChangeProposal(uint256 id, bytes32 indexed descriptor);
   event FrabricChangeProposal(uint256 indexed id, address indexed frabric, address indexed governor);
   event GovernorChangeProposal(uint256 indexed id, address indexed governor);
@@ -22,7 +26,6 @@ interface IThread is IFrabricDAO {
     Dissolution
   }
 
-  function upgradesEnabled() external view returns (uint256);
   function descriptor() external view returns (bytes32);
   function governor() external view returns (address);
   function frabric() external view returns (address);
