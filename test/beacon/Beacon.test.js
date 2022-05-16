@@ -109,9 +109,9 @@ describe("Beacon", () => {
 
   it("should support triggering upgrades", async () => {
     const u = await upgradeable(2, true);
-    await expect(
-      await beacon.triggerUpgrade(u.address, 3)
-    ).to.emit(u, "Triggered").withArgs(3, data);
+    const tx = await beacon.triggerUpgrade(u.address, 3);
+    await expect(tx).to.emit(beacon, "Upgraded").withArgs(u.address, version);
+    await expect(tx).to.emit(u, "Triggered").withArgs(3, data);
   });
 
   it("shouldn't support triggering upgrades for the wrong version", async () => {

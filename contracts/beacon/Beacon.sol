@@ -150,5 +150,6 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     // The fact we have upgrade data with this version means that the code this
     // upgraded to should have an upgrade function ready for it
     IUpgradeable(instance).upgrade(version, upgradeData(instance, version));
+    emit Upgraded(instance, version);
   }
 }

@@ -7,6 +7,7 @@ import "../common/IComposable.sol";
 
 interface IFrabricBeacon is IBeacon, IComposable {
   event Upgrade(address indexed instance, uint256 indexed version, address indexed code, bytes data);
+  event Upgraded(address indexed instance, uint256 indexed version);
 
   // Name of the contract this beacon points to
   function beaconName() external view returns (bytes32);
