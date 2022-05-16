@@ -14,8 +14,8 @@ const State = {
   Finished: 3
 }
 
-let signers, deployer, governor;
-let erc20, target;
+let signers, deployer, governor, participant, other;
+let erc20;
 let ferc20, crowdfund;
 
 describe("Crowdfund", async () => {
@@ -24,14 +24,13 @@ describe("Crowdfund", async () => {
     const TestFrabric = await ethers.getContractFactory("TestFrabric");
     const frabric = await TestFrabric.deploy();
 
-    // Add the governor and whitelist the signers
+    // Add the governor and whitelist the participants
     signers = await ethers.getSigners();
-    [ deployer, governor ] = signers.splice(0, 2);
+    [ deployer, governor, participant, other ] = signers.splice(0, 4);
     await frabric.whitelist(governor.address);
     await frabric.setGovernor(governor.address, common.GovernorStatus.Active);
-    for (let i = 0; i < 3; i++) {
-      await frabric.whitelist(signers[i].address);
-    }
+    await frabric.whitelist(participant.address);
+    await frabric.whitelist(other.address);
 
     // Deploy the ThreadDeployer
     const erc20Beacon = await FrabricERC20.deployBeacon();
@@ -40,18 +39,17 @@ describe("Crowdfund", async () => {
 
     // Have the ThreadDeployer deploy everything
     const ERC20 = await ethers.getContractFactory("TestERC20");
-    // TODO: Test with an ERC20 which uses
+    // TODO: Test with an ERC20 which uses 6 decimals
     erc20 = await ERC20.deploy("Test Token", "TEST");
-    target = ethers.BigNumber.from("1000");
     const tx = await frabric.deployThread(
       threadDeployer.address,
       0,
       "Test Thread",
       "THREAD",
-      "0x" + (new Buffer.from("ipfs").toString("hex")).repeat(8),
+      ethers.utils.id("ipfs"),
       governor.address,
       erc20.address,
-      target
+      1000
     );
 
     // Get the ERC20/Crowdfund
@@ -60,33 +58,42 @@ describe("Crowdfund", async () => {
     );
     crowdfund = (await ethers.getContractFactory("Crowdfund")).attach(
       (await threadDeployer.queryFilter(threadDeployer.filters.CrowdfundedThread()))[0].args.crowdfund
-    );
+    ).connect(participant);
 
     // Do basic tests it emits the expected events at setup
-    // TODO: Make this complete
-    await expect(tx).to.emit(crowdfund, "StateChange");
+    expect(await crowdfund.contractName()).to.equal(ethers.utils.id("Crowdfund"));
+    await expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Active);
+    expect(await crowdfund.state()).to.equal(State.Active);
   });
 
   it("should allow depositing", async () => {
-    const amount = ethers.BigNumber.from("100");
-    await erc20.transfer(signers[0].address, amount);
-    await erc20.connect(signers[0]).approve(crowdfund.address, amount);
+    await erc20.transfer(participant.address, 100);
+    await erc20.connect(participant).approve(crowdfund.address, 100);
+    const tx = await crowdfund.deposit(100);
+    await expect(tx).to.emit(erc20, "Transfer").withArgs(participant.address, crowdfund.address, 100);
+    await expect(tx).to.emit(crowdfund, "Deposit").withArgs(participant.address, 100);
+    expect(await erc20.balanceOf(participant.address)).to.equal(0);
+    expect(await erc20.balanceOf(crowdfund.address)).to.equal(100);
+  });
+
+  it("shouldn't allow people who aren't whitelisted to participate", async () => {
     await expect(
-      await crowdfund.connect(signers[0]).deposit(amount)
-    ).to.emit(crowdfund, "Deposit").withArgs(signers[0].address, amount);
-    // TODO: Check balances
+      crowdfund.connect(signers[0]).deposit(1)
+    ).to.be.revertedWith(`NotWhitelisted("${signers[0].address}")`);
   });
 
   it("should allow withdrawing", async () => {
-    const amount = ethers.BigNumber.from("20");
-    await expect(
-      await crowdfund.connect(signers[0]).withdraw(amount)
-    ).to.emit(crowdfund, "Withdraw").withArgs(signers[0].address, amount);
-    // TODO: Check balances
+    const tx = await crowdfund.withdraw(20);
+    await expect(tx).to.emit(erc20, "Transfer").withArgs(crowdfund.address, participant.address, 20);
+    await expect(tx).to.emit(crowdfund, "Withdraw").withArgs(participant.address, 20);
+    expect(await erc20.balanceOf(participant.address)).to.equal(20);
+    expect(await erc20.balanceOf(crowdfund.address)).to.equal(80);
   });
 
   it("shouldn't allow anyone to cancel", async () => {
-    // TODO
+    await expect(
+      crowdfund.cancel()
+    ).to.be.revertedWith(`NotGovernor("${participant.address}", "${governor.address}")`);
   });
 
   it("should allow cancelling", async () => {
@@ -95,14 +102,14 @@ describe("Crowdfund", async () => {
     const tx = await crowdfund.connect(governor).cancel();
     await expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Refunding);
     await expect(tx).to.emit(crowdfund, "Distribution").withArgs(0, erc20.address, balance);
-    // TODO: check state is actually updated
+    expect(await crowdfund.state()).to.equal(State.Refunding);
   });
 
   // Does not test claiming refunds as that's routed through DistributionERC20
 
   it("shouldn't allow depositing when cancelled", async () => {
     await expect(
-      crowdfund.connect(signers[0]).deposit(target)
+      crowdfund.deposit(1)
     ).to.be.revertedWith("InvalidState(2, 0)");
 
     // Revert to the next snapshot for the rest of the tests
@@ -111,12 +118,12 @@ describe("Crowdfund", async () => {
 
   // Less of a test and more transiting the state to where it needs to be for testing
   it("should reach target", async () => {
-    const amount = ethers.BigNumber.from(target).sub(await erc20.balanceOf(crowdfund.address));
-    await erc20.transfer(signers[1].address, amount);
-    await erc20.connect(signers[1]).approve(crowdfund.address, amount);
+    const amount = 1000 - parseInt(await erc20.balanceOf(crowdfund.address));
+    await erc20.transfer(other.address, amount);
+    await erc20.connect(other).approve(crowdfund.address, amount);
     await expect(
-      await crowdfund.connect(signers[1]).deposit(amount)
-    ).to.emit(crowdfund, "Deposit").withArgs(signers[1].address, amount);
+      await crowdfund.connect(other).deposit(amount)
+    ).to.emit(crowdfund, "Deposit").withArgs(other.address, amount);
   });
 
   // TODO also test over depositing from target normalizes to amount needed
@@ -126,22 +133,23 @@ describe("Crowdfund", async () => {
   });
 
   it("should only allow the governor to execute", async () => {
-    // TODO
+    await expect(
+      crowdfund.execute()
+    ).to.be.revertedWith(`NotGovernor("${participant.address}", "${governor.address}")`);
   });
 
   it("should allow executing once it reaches target", async () => {
-    await expect(
-      await crowdfund.connect(governor).execute()
-    ).to.emit(crowdfund, "StateChange").withArgs(State.Executing);
-    // TODO: actually check the state was changed
-
-    expect(await erc20.balanceOf(governor.address)).to.equal(target);
+    const tx = await crowdfund.connect(governor).execute();
+    await expect(tx).to.emit(erc20, "Transfer").withArgs(crowdfund.address, governor.address, 1000);
+    await expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Executing);
+    await expect(await crowdfund.state()).to.equal(State.Executing);
+    expect(await erc20.balanceOf(governor.address)).to.equal(1000);
     expect(await erc20.balanceOf(crowdfund.address)).to.equal(0);
   });
 
   it("shouldn't allow depositing when executing", async () => {
     await expect(
-      crowdfund.connect(signers[0]).deposit(target)
+      crowdfund.deposit(1)
     ).to.be.revertedWith("InvalidState(1, 0)");
   });
 
@@ -152,34 +160,37 @@ describe("Crowdfund", async () => {
     await expect(
       await crowdfund.connect(governor).finish()
     ).to.emit(crowdfund, "StateChange").withArgs(State.Finished);
-    // TODO: actually check the state was changed
+    expect(await crowdfund.state()).to.equal(State.Finished);
   });
 
   it("shouldn't allow depositing when finished", async () => {
-    // TODO
     await expect(
-      crowdfund.connect(signers[0]).deposit(target)
+      crowdfund.deposit(1)
     ).to.be.revertedWith("InvalidState(3, 0)");
   });
 
   it("should allow claiming Thread tokens", async () => {
-    const balance = await crowdfund.balanceOf(signers[0].address);
-    await crowdfund.burn(signers[0].address);
-    expect(await crowdfund.balanceOf(signers[0].address)).to.equal(0);
-    expect(await ferc20.balanceOf(signers[0].address)).to.equal(balance);
+    const balance = await crowdfund.balanceOf(participant.address);
+    await crowdfund.burn(participant.address);
+    expect(await crowdfund.balanceOf(participant.address)).to.equal(0);
+    expect(await ferc20.balanceOf(participant.address)).to.equal(balance);
   });
 
   it("should only allow the governor to refund", async () => {
     common.revert(snapshot);
 
-    // TODO
+    await expect(
+      crowdfund.refund(0)
+    ).to.be.revertedWith(`NotGovernor("${participant.address}", "${governor.address}")`);
   });
 
   it("should allow refunding", async () => {
-    await erc20.connect(governor).approve(crowdfund.address, target);
-    const tx = await crowdfund.connect(governor).refund(target);
+    await erc20.connect(governor).approve(crowdfund.address, 900);
+    const tx = await crowdfund.connect(governor).refund(900);
     await expect(tx).to.emit(crowdfund, "StateChange").withArgs(State.Refunding);
-    await expect(tx).to.emit(crowdfund, "Distribution").withArgs(0, erc20.address, target);
+    await expect(tx).to.emit(erc20, "Transfer").withArgs(governor.address, crowdfund.address, 900);
+    await expect(tx).to.emit(crowdfund, "Distribution").withArgs(0, erc20.address, 900);
+    expect(await crowdfund.state()).to.equal(State.Refunding);
   });
 
   // Does not test depositing when refunding as cancelled and refunding have the
