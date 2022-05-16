@@ -2,7 +2,15 @@ const { ethers, waffle, network } = require("hardhat");
 const { assert, expect } = require("chai");
 
 const deployTestFrabric = require("../scripts/deployTestFrabric.js");
-const { FrabricProposalType, ParticipantType, GovernorStatus, proposal, queueAndComplete } = require("../common.js");
+const {
+  CommonProposalType,
+  FrabricProposalType,
+  ThreadProposalType,
+  ParticipantType,
+  GovernorStatus,
+  proposal,
+  queueAndComplete
+} = require("../common.js");
 
 let signGlobal = [
   {
@@ -43,6 +51,7 @@ let signers, deployer, kyc, genesis, governor, voucher;
 let usd, pair;
 let bond, threadDeployer;
 let frbc, frabric;
+let thread;
 
 describe("Frabric", accounts => {
   before(async () => {
@@ -235,16 +244,36 @@ describe("Frabric", accounts => {
     );
 
     // Grab unknown event arguments due to Waffle's lack of partial event matching
-    const thread = (await threadDeployer.queryFilter(threadDeployer.filters.Thread()))[0].args.thread;
+    thread = (await threadDeployer.queryFilter(threadDeployer.filters.Thread()))[0].args.thread;
     const erc20 = (await threadDeployer.queryFilter(threadDeployer.filters.Thread()))[0].args.erc20;
     const crowdfund = (await threadDeployer.queryFilter(threadDeployer.filters.CrowdfundedThread()))[0].args.crowdfund;
 
     await expect(tx).to.emit(threadDeployer, "Thread").withArgs(thread, 0, governor.address, erc20, descriptor);
     await expect(tx).to.emit(threadDeployer, "CrowdfundedThread").withArgs(thread, usd.address, crowdfund, 1000);
+
+    thread = (await ethers.getContractFactory("Thread")).attach(thread);
   });
 
-  it("should let you create a proposal on a Thread", async () => {
-    // TODO
+  it("should let you propose creating a proposal on a Thread", async () => {
+    assert(await thread.canPropose(frabric.address));
+    const info = ethers.utils.id("Proposal for Thread Paper Proposal");
+    await expect(
+      (await proposal(
+        frabric,
+        "ThreadProposal",
+        false,
+        [
+          thread.address,
+          CommonProposalType.Paper,
+          (new ethers.utils.AbiCoder()).encode(
+            ["bool", "bytes32"],
+            [false, info]
+          )
+        ]
+      )).tx
+    ).to.emit(thread, "Proposal").withArgs(0, CommonProposalType.Paper, frabric.address, false, info);
+
+    // TODO: Other Thread proposal types
   });
 
   // Participant removals are tested by the FrabricDAO test, yet the Frabric

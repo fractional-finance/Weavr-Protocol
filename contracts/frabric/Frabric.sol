@@ -247,7 +247,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
     id = _createProposal(uint16(FrabricProposalType.ThreadProposal), false, info);
     _threadProposals[id] = ThreadProposalStruct(thread, selector, data);
-    emit ThreadProposalProposal(id, thread, _proposalType, info);
+    emit ThreadProposalProposal(id, thread, _proposalType, data);
   }
 
   function _participantRemoval(address _participant) internal override {
@@ -305,7 +305,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     } else if (pType == FrabricProposalType.ThreadProposal) {
       ThreadProposalStruct storage proposal = _threadProposals[id];
       (bool success, bytes memory data) = proposal.thread.call(
-        abi.encodeWithSelector(proposal.selector, proposal.data)
+        abi.encodePacked(proposal.selector, proposal.data)
       );
       if (!success) {
         revert ExternalCallFailed(proposal.thread, proposal.selector, data);

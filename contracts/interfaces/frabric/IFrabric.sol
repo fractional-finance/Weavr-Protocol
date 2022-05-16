@@ -61,7 +61,7 @@ interface IFrabric is IFrabricCore {
     uint256 indexed id,
     address indexed thread,
     uint256 indexed proposalType,
-    bytes32 info
+    bytes data
   );
   event ParticipantChange(ParticipantType indexed participantType, address indexed participant);
   event Vouch(address indexed voucher, address indexed vouchee);
