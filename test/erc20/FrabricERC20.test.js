@@ -20,6 +20,7 @@ describe("FrabricERC20", () => {
 
     ({ auction, frbc } = await FrabricERC20.deployFRBC(usd.address));
 
+    // Deploy a FrabricERC20 which will eventually be set as the parent
     ({ frbc: parent } = await FrabricERC20.deployFRBC(usd.address));
   });
 

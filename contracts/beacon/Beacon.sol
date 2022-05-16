@@ -106,6 +106,9 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
       revert DifferentContract(codeName, beaconName);
     }
 
+    // It may be beneficial to check the contract in question has a version of 0,
+    // signifying it's code, though that should be unnecessary
+
     // Initial code set or moving off release channel
     if ((old != address(0)) && (old != code)) {
       // We could actually check version is atomically incrementing here, yet it's a pain

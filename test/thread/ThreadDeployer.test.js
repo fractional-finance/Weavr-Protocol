@@ -3,11 +3,14 @@ describe("ThreadDeployer", () => {
 
   });
 
+  /*
   it("should have tests", async () => {
-    throw "Untested";
+    // TODO
   });
+  */
 
   /*
+  TODO
   // Tested here as these irremovable contracts are actually init args
   it("should't deploy a Thread which lets you remove the Frabric/Timelock/Crowdfund", async () => {
     for (let irremovable of [frabric, timelock, crowdfund]) {
