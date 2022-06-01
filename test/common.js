@@ -126,10 +126,6 @@ module.exports = {
       args.pop();
     }
 
-    if (proposal === "ParticipantRemoval") {
-      args.pop();
-    }
-
     if (typeof(insert) !== "undefined") {
       args.splice(insert, 0, dao.signer.address);
     }
@@ -147,7 +143,7 @@ module.exports = {
     }
 
     // Advance the clock by the voting period (+ 1 second)
-    module.exports.increaseTime(parseInt(await dao.votingPeriod()) + 1);
+    await module.exports.increaseTime(parseInt(await dao.votingPeriod()) + 1);
 
     // Queue the proposal
     await expect(
@@ -155,7 +151,7 @@ module.exports = {
     ).to.emit(dao, "ProposalStateChange").withArgs(id, module.exports.ProposalState.Queued);
 
     // Advance the clock 48 hours
-    module.exports.increaseTime(2 * 24 * 60 * 60 + 1);
+    await module.exports.increaseTime(2 * 24 * 60 * 60 + 1);
 
     // Complete it
     const tx = await dao.completeProposal(id, data);
