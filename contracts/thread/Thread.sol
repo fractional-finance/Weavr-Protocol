@@ -167,14 +167,13 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function proposeParticipantRemoval(
     address participant,
     uint8 removalFee,
-    uint64 freezeUntilNonce,
     bytes[] calldata signatures,
     bytes32 info
   ) public override(FrabricDAO, IFrabricDAO) returns (uint256) {
     if (irremovable[participant]) {
       revert Irremovable(participant);
     }
-    return super.proposeParticipantRemoval(participant, removalFee, freezeUntilNonce, signatures, info);
+    return super.proposeParticipantRemoval(participant, removalFee, signatures, info);
   }
 
   function proposeDescriptorChange(

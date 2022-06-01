@@ -187,7 +187,6 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   function proposeParticipantRemoval(
     address participant,
     uint8 removalFee,
-    uint64 freezeUntilNonce, // Create a nonce out of freezeUntil
     bytes[] calldata signatures,
     bytes32 info
   ) public virtual override returns (uint256 id) {
@@ -218,6 +217,8 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
         revert UnsupportedInterface(erc20, type(IFreeze).interfaceId);
       }
 
+      // Create a nonce out of freezeUntil, as this will solely increase
+      uint256 freezeUntilNonce = IFreeze(erc20).frozenUntil(participant) + 1;
       for (uint256 i = 0; i < signatures.length; i++) {
         // Vote with the recovered signer. This will tell us how many votes they
         // have in the end, and if these people are voting to freeze their funds,
@@ -232,7 +233,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
             _hashTypedDataV4(
               keccak256(
                 abi.encode(
-                  keccak256("Removal(address participant,uint8 removalFee,uint64 freezeUntil)"),
+                  keccak256("Removal(address participant,uint8 removalFee,uint64 freezeUntilNonce)"),
                   participant,
                   removalFee,
                   freezeUntilNonce
@@ -242,13 +243,6 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
             signatures[i]
           )
         );
-      }
-
-      // Forces signatures to use the same time which must be greater than the existing time,
-      // and therefore unique
-      uint256 expectedNonce = IFreeze(erc20).frozenUntil(participant) + 1;
-      if (freezeUntilNonce != expectedNonce) {
-        revert Replay(freezeUntilNonce, expectedNonce);
       }
 
       // If the votes of these holders doesn't meet the required participation threshold, throw
