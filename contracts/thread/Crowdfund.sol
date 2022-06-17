@@ -11,7 +11,7 @@ import "../interfaces/thread/IThread.sol";
 
 import "../erc20/DistributionERC20.sol";
 
-// Uses DistributionERC20 for the distribution logic
+/// @dev Uses DistributionERC20 for the distribution logic
 contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   using SafeERC20 for IERC20;
 
@@ -31,11 +31,21 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   // Amount of tokens which have yet to be converted to Thread tokens
   // Equivalent to the amount of funds deposited and not withdrawn if none have
   // been burnt yet
+  /// @dev    Outstanding value is safe cast as mintage matches target and target is uint112.
+  /// @return The amount of tokens which have yet to be converted to Thread tokens
   function outstanding() public view override returns (uint112) {
     // Safe cast as mintage matches target and target is uint112
     return uint112(totalSupply());
   }
 
+  /// @dev Crowdfund Initialization
+  /// @param name       Name of the Crowdfund
+  /// @param symbol     Symbol of the Crowdfund
+  /// @param _whitelist Frabric's Whitelist
+  /// @param _governor  Appointed Governor's address
+  /// @param _thread    Thread's address
+  /// @param _token     ERC20 used for the Crowdfund
+  /// @param _target    Value of deposits needed to satisfy the Crowdfund
   function initialize(
     string memory name,
     string memory symbol,
@@ -58,14 +68,14 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     thread = _thread;
     token = _token;
     if (_target == 0) {
-      // Reuse ZeroPrice as the fundraising target is presumably the asset price
+      /// @dev Reuse ZeroPrice as the fundraising target is presumably the asset price
       revert ZeroPrice();
     }
     target = _target;
     state = State.Active;
     emit StateChange(state);
 
-    // Normalize 1 of the raise token to the Thread token to ensure normalization won't fail
+    /// @dev Normalize 1 of the raise token to the Thread token to ensure normalization won't fail
     normalizeRaiseToThread(1);
   }
 
@@ -74,6 +84,9 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
 
   // Match the decimals of the underlying ERC20 which this ERC20 maps to
   // If no decimals are specified, assumes 18
+  /// @notice Match the decimals of the underlying ERC20 which this ERC20 maps to
+  /// @dev If no decimals are specified, assumes 18
+  /// @return Number of decimals in uint8 format
   function decimals() public view override returns (uint8) {
     try IERC20Metadata(token).decimals() returns (uint8 result) {
       return result;
@@ -102,6 +115,11 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   // Don't allow Crowdfund tokens to be transferred, yet mint/burn will still call this hook
   // Internal variable to allow transfers which is only set when minting/burning
   // Could also override transfer/transferFrom with reverts
+  /// @notice       This function checks if transfers of Crowdfund tokens are enable
+  /// @dev          This _hook is called for mint/burn or any kind of Crowdfund tokens transfer
+  /// @param from   Token's Sender
+  /// @param to     Token's Receiver
+  /// @param amount Amount to transfer
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
     super._beforeTokenTransfer(from, to, amount);
     if (!transferAllowed) {
@@ -109,12 +127,20 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     }
   }
 
+  /// @dev    This function burns Crowdfund tokens
+  /// @param  depositor Depositor's address
+  /// @param  amount Amount to be burned
   function _burn(address depositor, uint256 amount) internal override {
     transferAllowed = true;
     super._burn(depositor, amount);
     transferAllowed = false;
   }
 
+
+  /// @notice  This function deposits funds into the Crowdfund
+  /// @dev     This function will revert unless the state of the Crowdfund is Active
+  /// @param   amount Amount to be burned
+  /// @return  Amount deposited
   function deposit(uint112 amount) external override returns (uint112) {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
@@ -160,6 +186,9 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   }
 
   // Enable withdrawing funds before the target is reached
+  /// @notice This function enables withdrawing funds before the target is reached
+  /// @dev    This function will revert unless the state of the Crowdfund is Active
+  /// @param  amount Amount to withdraw
   function withdraw(uint112 amount) external override {
     if (state != State.Active) {
       revert InvalidState(state, State.Active);
@@ -174,7 +203,9 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     IERC20(token).safeTransfer(msg.sender, amount);
   }
 
-  // Cancel a Crowdfund before execution starts
+  
+  /// @notice Cancel a Crowdfund before execution starts
+  /// @dev    This function will revert unless called by the Governor
   function cancel() external override {
     if (msg.sender != governor) {
       revert NotGovernor(msg.sender, governor);
@@ -197,7 +228,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     emit StateChange(state);
   }
 
-  // Transfer the funds from a Crowdfund to the governor for execution
+  /// @notice Transfers the funds from a Crowdfund to the governor for execution
   function execute() external override {
     if (msg.sender != governor) {
       revert NotGovernor(msg.sender, governor);
@@ -214,7 +245,9 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     IERC20(token).safeTransfer(governor, target);
   }
 
-  // Take a executing Crowdfund which externally failed and return the leftover funds
+  /// @notice         Take a executing Crowdfund which externally failed and return the leftover funds
+  /// @dev            It will Revert unless calle dby the Governor
+  /// @param amount   Amount to be refunded
   function refund(uint112 amount) external override {
     if (msg.sender != governor) {
       revert NotGovernor(msg.sender, governor);
@@ -235,6 +268,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     }
   }
 
+  /// @notice  It sets the Crowdfund's State to Finished
+  /// @dev     It will Revert unless calle dby the Governor
   function finish() external override {
     if (msg.sender != governor) {
       revert NotGovernor(msg.sender, governor);
@@ -246,7 +281,9 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     emit StateChange(state);
   }
 
-  // Allow users to burn Crowdfund tokens to receive Thread tokens
+  /// @notice           Allow users to burn Crowdfund tokens to receive Thread tokens
+  /// @dev              It will revert unless the Crowdfund's state is set to Finished
+  /// @param depositor  Depositor's address
   function burn(address depositor) external override {
     if (state != State.Finished) {
       revert InvalidState(state, State.Finished);
