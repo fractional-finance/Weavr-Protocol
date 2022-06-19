@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+/** 
+ * @title Frabric decentralized Real estate market
+ * @author Fractional Finance
+ * @notice This contract implements the FrabricDAO
+ * @dev This is an Upgradeable Contract
+ */
+
 import { StorageSlotUpgradeable as StorageSlot } from "@openzeppelin/contracts-upgradeable/utils/StorageSlotUpgradeable.sol";
 
 import "../interfaces/frabric/IBond.sol";
@@ -20,14 +27,25 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
   address public override bond;
   address public override threadDeployer;
-
+  
+ /**
+  * @dev Participant struct definition
+  * @param pType (ParticipantType) Type of participant
+  * @param addr (address) Address of the participant
+  */
   struct Participant {
     ParticipantType pType;
     address addr;
   }
-  // The proposal structs are private as their events are easily grabbed and contain the needed information
+  /// @dev The proposal structs are private as their events are easily grabbed and contain the needed information
   mapping(uint256 => Participant) private _participants;
 
+ /**
+  * @dev BondRemoval struct definition
+  * @param governor (address) Address of the governor
+  * @param slash (bool) Slash funds option
+  * @param addr (uint256) Amount to be slashed
+  */
   struct BondRemoval {
     address governor;
     bool slash;
@@ -35,6 +53,15 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   }
   mapping(uint256 => BondRemoval) private _bondRemovals;
 
+ /**
+  * @dev Thread struct definition
+  * @param variant (uint8) Variant of the Thread smart contract
+  * @param governor (address) Address of the governor
+  * @param symbol (string) Symbol of the Thread Token
+  * @param descriptor Thread's descriptor
+  * @param name (string) Name of the Thread Token
+  * @param data (bytes) Thread's data 
+  */
   struct Thread {
     uint8 variant;
     address governor;
@@ -46,6 +73,12 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   }
   mapping(uint256 => Thread) private _threads;
 
+  /**
+  * @dev ThreadProposal struct definition
+  * @param thread (address) Address of the Thread
+  * @param select (bytes4) ThreadProposal's selector 
+  * @param data (bytes) ThreadProposal's data 
+  */
   struct ThreadProposalStruct {
     address thread;
     bytes4 selector;
@@ -57,6 +90,9 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
   mapping(uint16 => bytes4) private _proposalSelectors;
 
+  /// @notice This funtion is used to validate an upgrade.
+  /// @param _version (uint256) Version to be validated 
+  /// @param data     (bytes) AbiEncoded _bond and _threadDeployer addresses/
   function validateUpgrade(uint256 _version, bytes calldata data) external view override {
     if (_version != 2) {
       revert InvalidVersion(_version, 2);
@@ -71,6 +107,8 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
   }
 
+  
+  /// @param kyc (address) Address of the wallet to be whitelisted 
   function _addKYC(address kyc) private {
     IFrabricWhitelistCore(erc20).whitelist(kyc);
     participant[kyc] = ParticipantType.KYC;
@@ -78,35 +116,42 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     IFrabricWhitelistCore(erc20).setKYC(kyc, keccak256(abi.encodePacked("KYC ", kyc)), 0);
   }
 
+  /// @notice This funtion triggers the upgrade to a new version.
+  /// @param _version (uint256) Version to upgrade to 
+  /// @param data (bytes) AbiEncoded _bond, _threadDeployer and kyc addresses/
   function upgrade(uint256 _version, bytes calldata data) external override {
     address beacon = StorageSlot.getAddressSlot(
-      // Beacon storage slot
+      /// @dev Beacon storage slot
       0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50
     ).value;
     if (msg.sender != beacon) {
       revert NotBeacon(msg.sender, beacon);
     }
 
-    // While this isn't possible for this version (2), it is possible if this was
-    // code version 3 yet triggerUpgrade was never called for version 2
-    // In that scenario, this could be called with version 2 data despite expecting
-    // version 3 data
+   /**
+    * @dev While this isn't possible for this version (2), it is possible if this was
+    * code version 3 yet triggerUpgrade was never called for version 2
+    * In that scenario, this could be called with version 2 data despite expecting
+    * version 3 data
+    */
     if (_version != (version + 1)) {
       revert InvalidVersion(_version, version + 1);
     }
     version++;
 
-    // Drop support for IInitialFrabric
-    // While we do still match it, and it shouldn't hurt to keep it around,
-    // we never want to encourage its usage, nor do we want to forget about it
-    // if we ever do introduce an incompatibility
+   /** 
+    * @dev Drop support for IInitialFrabric
+    * While we do still match it, and it shouldn't hurt to keep it around,
+    * we never want to encourage its usage, nor do we want to forget about it
+    * if we ever do introduce an incompatibility
+    */
     supportsInterface[type(IInitialFrabric).interfaceId] = false;
 
-    // Add support for the new Frabric interfaces
+    /// @dev Add support for the new Frabric interfaces
     supportsInterface[type(IFrabricCore).interfaceId] = true;
     supportsInterface[type(IFrabric).interfaceId] = true;
 
-    // Set bond, threadDeployer, and an initial KYC
+    /// @dev Set bond, threadDeployer, and an initial KYC
     address kyc;
     (bond, threadDeployer, kyc) = abi.decode(data, (address, address, address));
 
@@ -123,14 +168,21 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() Composable("Frabric") initializer {
-    // Only set in the constructor as this has no value being in the live contract
+    /// @dev Only set in the constructor as this has no value being in the live contract
     supportsInterface[type(IUpgradeable).interfaceId] = true;
   }
 
+  /// @notice This function checks if the proposer is allow to make a proposal.
+  /// @param proposer (address) Proposer's address.
   function canPropose(address proposer) public view override(DAO, IDAOCore) returns (bool) {
     return uint8(participant[proposer]) >= uint8(ParticipantType.Genesis);
   }
 
+  /// @notice This function allows to propose a new partecipant to the FrabricDAO.
+  /// @param participantType (ParticipantType) Type of the partecipant.
+  /// @param _participant (address) New participant's address.
+  /// @param info (bytes32) Proposal's information.
+  /// @return id of the new participant (uint256).
   function proposeParticipant(
     ParticipantType participantType,
     address _participant,
@@ -155,6 +207,12 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     emit ParticipantProposal(id, participantType, msg.sender, _participant);
   }
 
+  /// @notice Propose a Bond Removal.
+  /// @param _governor (address) Governor's address
+  /// @param slash (bool) Slash active/inactive
+  /// @param amount (uint256) Amount of bond to be removed
+  /// @param info (bytes32) Proposal's information
+  /// @return id of the proposal (uint256)
   function proposeBondRemoval(
     address _governor,
     bool slash,
@@ -164,14 +222,24 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     id = _createProposal(uint16(FrabricProposalType.RemoveBond), false, info);
     _bondRemovals[id] = BondRemoval(_governor, slash, amount);
     if (governor[_governor] < GovernorStatus.Active) {
-      // Arguably a misuse as this actually checks they were never an active governor
-      // Not that they aren't currently an active governor, which the error name suggests
-      // This should be better to handle from an integration perspective however
+     /** 
+      * @dev Arguably a misuse as this actually checks they were never an active governor
+      * Not that they aren't currently an active governor, which the error name suggests
+      * This should be better to handle from an integration perspective however
+      */
       revert NotActiveGovernor(_governor, governor[_governor]);
     }
     emit BondRemovalProposal(id, _governor, slash, amount);
   }
 
+  /// @notice This function allow to propose a new Thread
+  /// @param variant    (uint8) Variant of the Thread contract
+  /// @param name       (string) Name of the Thread
+  /// @param symbol     (string) Symbol of the Thread
+  /// @param descriptor (bytes32) ?
+  /// @param data       (bytes) ?
+  /// @param info       (bytes32) Proposal's information
+  /// @return id of the proposal
   function proposeThread(
     uint8 variant,
     string calldata name,
@@ -188,17 +256,19 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       revert NotActiveGovernor(msg.sender, governor[msg.sender]);
     }
 
-    // Doesn't check for being alphanumeric due to iteration costs
+    /// @dev Doesn't check for being alphanumeric due to iteration costs
     if (
       (bytes(name).length < 6) || (bytes(name).length > 64) ||
       (bytes(symbol).length < 2) || (bytes(symbol).length > 5)
     ) {
       revert InvalidName(name, symbol);
     }
-    // Validate the data now before creating the proposal
-    // ThreadProposal doesn't have this same level of validation yet not only are
-    // Threads a far more integral part of the system, ThreadProposal deals with an enum
-    // for proposal type. This variant field is a uint256 which has a much larger impact scope
+   /** 
+    * @dev Validate the data now before creating the proposal
+    * ThreadProposal doesn't have this same level of validation yet not only are
+    * Threads a far more integral part of the system, ThreadProposal deals with an enum
+    * for proposal type. This variant field is a uint256 which has a much larger impact scope
+    */
     IThreadDeployer(threadDeployer).validate(variant, data);
 
     id = _createProposal(uint16(FrabricProposalType.Thread), false, info);
@@ -212,24 +282,34 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     emit ThreadProposal(id, variant, msg.sender, name, symbol, descriptor, data);
   }
 
-  // This does assume the Thread's API meets expectations compiled into the Frabric
-  // They can individually change their Frabric, invalidating this entirely, or upgrade their code, potentially breaking specific parts
-  // These are both valid behaviors intended to be accessible by Threads
+ /**
+  * @dev This does assume the Thread's API meets expectations compiled into the Frabric
+  * They can individually change their Frabric, invalidating this entirely, or upgrade their code, potentially breaking specific parts
+  * These are both valid behaviors intended to be accessible by Threads
+  * @notice This function allow to propose a new Thread's proposal
+  * @param thread         (uint8) Variant of the Thread contract
+  * @param _proposalType  (string) Name of the Thread
+  * @param data           (bytes) ?
+  * @param info           (bytes32) Proposal's information
+  * @return id of the proposal
+  */
   function proposeThreadProposal(
     address thread,
     uint16 _proposalType,
     bytes calldata data,
     bytes32 info
   ) external returns (uint256 id) {
-    // Technically not needed given we check for interface support, yet a healthy check to have
+    /// @dev Technically not needed given we check for interface support, yet a healthy check to have
     if (IComposable(thread).contractName() != keccak256("Thread")) {
       revert DifferentContract(IComposable(thread).contractName(), keccak256("Thread"));
     }
 
-    // Lock down the selector to prevent arbitrary calls
-    // While data is still arbitrary, it has reduced scope thanks to this, and can only be decoded in expected ways
-    // data isn't validated to be technically correct as the UI is trusted to sanity check it
-    // and present it accurately for humans to deliberate on
+   /** 
+    * @dev Lock down the selector to prevent arbitrary calls
+    * While data is still arbitrary, it has reduced scope thanks to this, and can only be decoded in expected ways
+    * data isn't validated to be technically correct as the UI is trusted to sanity check it
+    * and present it accurately for humans to deliberate on
+    */
     bytes4 selector;
     if (_isCommonProposal(_proposalType)) {
       if (!thread.supportsInterface(type(IFrabricDAO).interfaceId)) {
@@ -262,11 +342,13 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     FrabricProposalType pType = FrabricProposalType(_pType);
     if (pType == FrabricProposalType.Participant) {
       Participant storage _participant = _participants[id];
-      // This check also exists in proposeParticipant, yet that doesn't prevent
-      // the same participant from being proposed multiple times simultaneously
-      // This is an edge case which should never happen, yet handling it means
-      // checking here to ensure if they already exist, they're not overwritten
-      // While we could error here, we may as well delete the invalid proposal and move on with life
+     /** 
+      * @dev This check also exists in proposeParticipant, yet that doesn't prevent
+      * the same participant from being proposed multiple times simultaneously
+      * This is an edge case which should never happen, yet handling it means
+      * checking here to ensure if they already exist, they're not overwritten
+      * While we could error here, we may as well delete the invalid proposal and move on with life
+      */
       if (participant[_participant.addr] != ParticipantType.Null) {
         delete _participants[id];
         return;
@@ -276,7 +358,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
         _addKYC(_participant.addr);
         delete _participants[id];
       } else {
-        // Whitelist them until they're KYCd
+        /// @dev Whitelist them until they're KYCd
         IFrabricWhitelistCore(erc20).whitelist(_participant.addr);
       }
 
@@ -295,8 +377,10 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
     } else if (pType == FrabricProposalType.Thread) {
       Thread storage proposal = _threads[id];
-      // This governor may no longer be viable for usage yet the Thread will check
-      // When proposing this proposal type, we validate we upgraded which means this has been set
+     /** 
+      * @dev This governor may no longer be viable for usage yet the Thread will check
+      * When proposing this proposal type, we validate we upgraded which means this has been set
+      */
       IThreadDeployer(threadDeployer).deploy(
         proposal.variant, proposal.name, proposal.symbol, proposal.descriptor, proposal.governor, proposal.data
       );
@@ -316,11 +400,16 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
   }
 
+  /// @notice This function allow to vouch a new participant
+  /// @param _participant    (uint8) Variant of the Thread contract
+  /// @param signature       (bytes) 
   function vouch(address _participant, bytes calldata signature) external override {
-    // Places signer in a variable to make the information available for the error
-    // While generally, the errors include an abundance of information with the expectation they'll be caught in a call,
-    // and even if they are executed on chain, we don't care about the increased gas costs for the extreme minority,
-    // this calculation is extensive enough it's worth the variable (which shouldn't even change gas costs?)
+   /**
+    * @dev Places signer in a variable to make the information available for the error
+    * While generally, the errors include an abundance of information with the expectation they'll be caught in a call,
+    * and even if they are executed on chain, we don't care about the increased gas costs for the extreme minority,
+    * this calculation is extensive enough it's worth the variable (which shouldn't even change gas costs?)
+    */
     address signer = ECDSA.recover(
       _hashTypedDataV4(
         keccak256(
@@ -341,11 +430,16 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       vouchers[signer] += 1;
     }
 
-    // The fact whitelist can only be called once for a given participant makes this secure against replay attacks
+    /// @dev The fact whitelist can only be called once for a given participant makes this secure against replay attacks
     IFrabricWhitelistCore(erc20).whitelist(_participant);
     emit Vouch(signer, _participant);
   }
 
+  /// @notice This function allows to approve a new Participant
+  /// @param pType (ParticipantType) Type of participant
+  /// @param approving (address) Participant to be approved
+  /// @param kycHash (bytes32) Is a zk-proof of the  KYC process
+  /// @param signature (bytes) Signature of the ...
   function approve(
     ParticipantType pType,
     address approving,
@@ -371,7 +465,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
             pType,
             approving,
             kycHash,
-            0 // For now, don't allow updating KYC hashes
+            0 /// @dev For now, don't allow updating KYC hashes
           )
         )
       ),
