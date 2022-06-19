@@ -9,6 +9,12 @@ import "../interfaces/frabric/IBond.sol";
 import "../interfaces/frabric/IFrabric.sol";
 import "../interfaces/thread/IThread.sol";
 
+/** 
+ * @title Thread contract
+ * @author Fractional Finance
+ * @notice This contract implements the Thread
+ * @dev This is an Upgradeable Contract
+ */
 contract Thread is FrabricDAO, IThreadInitializable {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
