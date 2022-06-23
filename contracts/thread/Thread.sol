@@ -36,7 +36,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   }
   mapping(uint256 => Dissolution) private _dissolutions;
 
-  modifier viableFrabric(address _frabric) {
+  function _viableFrabric(address _frabric) private {
     // Technically not needed, healthy to have
     if (IComposable(_frabric).contractName() != keccak256("Frabric")) {
       revert DifferentContract(IComposable(_frabric).contractName(), keccak256("Frabric"));
@@ -57,7 +57,10 @@ contract Thread is FrabricDAO, IThreadInitializable {
     if (!IComposable(_frabric).supportsInterface(type(IFrabricCore).interfaceId)) {
       revert UnsupportedInterface(_frabric, type(IFrabricCore).interfaceId);
     }
+  }
 
+  modifier viableFrabric(address _frabric) {
+    _viableFrabric(_frabric);
     _;
   }
 
@@ -187,7 +190,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     address _frabric,
     address _governor,
     bytes32 info
-  ) external override viableFrabric(_frabric) returns (uint256 id) {
+  ) external override viableFrabric(_frabric) viableGovernor(_frabric, _governor) returns (uint256 id) {
     id = _createProposal(uint16(ThreadProposalType.FrabricChange), true, info);
     // This could use a struct yet this is straightforward and simple
     _frabrics[id] = _frabric;
