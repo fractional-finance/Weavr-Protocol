@@ -89,23 +89,16 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     super._transfer(from, to, amount);
   }
 
-  /**
-  * @notice Query token balance of an account
-  * @param account Address to query balance of
-  * @dev Redefine ERC20 balanceOf function as an override so the DEX can call it
-  * @return uint256 Token balance of `account`
-  */
+  /// @inheritdoc IntegratedLimitOrderDEX
+  /// @dev Redefine ERC20 balanceOf function as an override so the DEX can call it
   function balanceOf(
     address account
   ) public view override(IERC20Upgradeable, ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint256) {
     return super.balanceOf(account);
   }
 
-  /**
-  * @notice Query decimals of token
-  * @dev Redefine ERC20 decimals function as an override so the DEX can call it
-  * @return uint8 Decimals of token
-  */
+  /// @inheritdoc IntegratedLimitOrderDEX
+  /// @dev Redefine ERC20 decimals function as an override so the DEX can call it
   function decimals() public view override(ERC20Upgradeable, IntegratedLimitOrderDEX) returns (uint8) {
     return super.decimals();
   }
@@ -141,12 +134,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     _burning = false;
   }
 
-  /**
-  * @notice Check if tokens owned by address `person` are frozen
-  * @param person Address to check
-  * @dev Helper function to simplify calling and allow IntegratedLimitOrderDEX to abstract this away
-  * @return bool True if tokens owned by `person` are frozen, false otherwise
-  */
+  /// @inheritdoc IntegratedLimitOrderDEX
+  /// @dev Helper function to simplify calling and allow IntegratedLimitOrderDEX to abstract this away 
   function frozen(address person) public view override(IFreeze, IntegratedLimitOrderDEX) returns (bool) {
     return block.timestamp <= frozenUntil[person];
   }
@@ -256,22 +245,16 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
   // Whitelisting functions
 
-  /**
-  * @notice Check if a user `person` is currently whitelisted
-  * @param person Address of user to be checked
-  * @return bool True is user `person` is whitelisted, false otherwise
-  */
+  /// @inheritdoc IntegratedLimitOrderDEX
+  /// @dev Redefine function as an override so the DEX can call it
   function whitelisted(
     address person
   ) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IFrabricWhitelistCore) returns (bool) {
     return super.whitelisted(person);
   }
 
-  /**
-  * @notice Check if a user `person` has been removed
-  * @param person Address of user to be checked
-  * @return bool True is user `person` has been removed, false otherwise
-  */
+  /// @inheritdoc IntegratedLimitOrderDEX
+  /// @dev Redefine function as an override so the DEX can call it
   function removed(
     address person
   ) public view override(IntegratedLimitOrderDEX, FrabricWhitelist, IFrabricWhitelistCore) returns (bool) {

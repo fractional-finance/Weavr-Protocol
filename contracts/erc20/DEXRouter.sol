@@ -39,8 +39,8 @@ contract DEXRouter is Composable, IDEXRouter {
   * @param token Token address to be purchased
   * @param tradeToken Token address to be sold
   * @param payment Amount of tradeToken (`tradeToken`) to be sold
-  * @param price Purchase price
-  * @param minimumAmount Minimum amount of tokens (`token`) received
+  * @param price Purchase price in whole tokens
+  * @param minimumAmount Minimum amount of tokens (`token`) received (in whole tokens)
   * @return filled uint256 quantity of succesfully purchased tokens (`token`) 
   */
   function buy(
