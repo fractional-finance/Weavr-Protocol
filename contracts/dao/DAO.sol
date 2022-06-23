@@ -254,12 +254,16 @@ abstract contract DAO is Composable, IDAO {
     }
 
     // Proposal should've gotten enough votes to pass
+    // Since votes is a signed integer, anything greater than 0 signifies more
+    // people votes yes than no
     int112 passingVotes = 0;
     if (proposal.supermajority) {
       // Utilize a 66% supermajority requirement
-      // If 0 represents 50%, a further 16% of votes must be positive
+      // With 33% of the votes being against, and 33% of the votes being for,
+      // totalVotes will be at 0. In order for a supermajority of 66%, the
+      // other 33% must be in excess of this neutral state, hence / 3
       // Doesn't add 1 to handle rounding due to the following if statement
-      passingVotes = int112(proposal.totalVotes / 6);
+      passingVotes = int112(proposal.totalVotes / 3);
     }
 
     // In case of a tie, err on the side of caution and fail the proposal
@@ -323,7 +327,7 @@ abstract contract DAO is Composable, IDAO {
 
     int112 passingVotes = 0;
     if (proposal.supermajority) {
-      passingVotes = int112(proposal.totalVotes / 6);
+      passingVotes = int112(proposal.totalVotes / 3);
     }
 
     // If votes are tied, it would've failed queueProposal
