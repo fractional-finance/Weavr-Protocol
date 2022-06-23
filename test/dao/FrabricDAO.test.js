@@ -167,13 +167,16 @@ describe("FrabricDAO", accounts => {
 
         // Make sure this is successfully nonced
         // The previously valid signatures should now no longer match to valid signers, causing NotEnoughParticipation
-        await expect(
-          fDAO.connect(other).proposeParticipantRemoval(other.address, removalFee, signatures, ethers.utils.id("info"))
-        ).to.be.revertedWith(`NotEnoughParticipation(${
+        // If this message is inlined, hardhat internally errors for some reason
+        let message = `NotEnoughParticipation(${
           ethers.constants.MaxUint256.toString()
         }, 0, ${
           (await frbc.totalSupply()).sub(await frbc.balanceOf(fDAO.address)).div(10).toString()
-        })`);
+        })`;
+
+        await expect(
+          fDAO.connect(other).proposeParticipantRemoval(other.address, removalFee, signatures, ethers.utils.id("info"))
+        ).to.be.revertedWith(message);
       }
 
       const tx = await queueAndComplete(fDAO, id);
