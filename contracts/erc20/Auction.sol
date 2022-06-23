@@ -49,7 +49,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
 
   // Private as auction list can be aquired from events or getter functions for active auctions
   mapping(uint256 => AuctionStruct) private _auctions;
-  // Balance tracker of user addresses across multiple tokens
+  /// @notice Balance tracker of user addresses across multiple tokens
   mapping(address => mapping(address => uint256)) public override balances;
 
   /// @notice Auction contract initialization
@@ -73,8 +73,6 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   * @param start Absolute start time in seconds. Will be set to current time if past value provided
   * @param length Auction length
   * @return id id of newly created auction
-  *
-  * Emits an {Auctions} event
    */
   function list(
     address seller,
@@ -117,10 +115,8 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     emit Auctions(_nextID, seller, _token, _traded, _amount, batches, start, length);
 
     for (uint256 i = 0; i < batches; i++) {
-      /**
-        * This could be futher optimised by moving it outside the loop with 
-        * a duplicated loop body. Deemed not worth it.
-       */
+      // This could be futher optimized by moving it outside the loop with 
+      // a duplicated loop body. Deemed not worth it.
       if (i == (batches - 1)) {
         // Correct for potential rounding errors
         batchAmount = _amount;
@@ -144,7 +140,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   }
 
   /**
-  * @dev In the event of an unexpected fallback function, or non-EIP165 compliant supportsInterface function,
+  * In the event of an unexpected fallback function, or non-EIP165 compliant supportsInterface function,
   * this check may always return true, preventing all bids and triggering a burn.
   * To handle this, this contract defines a scope for ERC20 compatibility such that the token must:
   * - Support EIP165
@@ -156,9 +152,6 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   * If a contract does not implement EIP165 and thows an error here the ERC165Checker lib
   * will return false, eliminating the requirement for a try/catch block.
   * Notably, WETH has a fallback function with no return value, making it non-EIP165 compliant
-  * @param _token Token contract address to check whitelisting status of user on
-  * @param person User address to check whitelisting status of
-  * @return bool False for a whitelisted user, true not a non-whitelisted user
   */
   function notWhitelisted(address _token, address person) private view returns (bool) {
     return (
@@ -176,8 +169,6 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   * @notice Sumbit a new bid on an auction
   * @param id Id of auction to bid on
   * @param bidAmount Bid size
-  *
-  * Emits a {Bid} event
   */
   function bid(uint256 id, uint256 bidAmount) external override nonReentrant {
     AuctionStruct storage auction = _auctions[id];
@@ -245,8 +236,6 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   /**
   * @notice Complete an auction
   * @param id Auction id to be completed
-  *
-  * Emits an {AuctionComplete} evet
   */
   function complete(uint256 id) external override {
     AuctionStruct memory auction = _auctions[id];
@@ -286,7 +275,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   }
 
   /**
-  * @notice Withdraw token balance of a user
+  * @notice Withdraw token balance of a user (`trader`)
   * @param _token Address of token to be withdrawn
   * @param trader Address of user to have balance withdrawn
   */

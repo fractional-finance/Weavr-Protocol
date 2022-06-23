@@ -33,14 +33,11 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   uint256 private _nextID;
   // Mapping chosen over array for gas efficiency and potential for struct extensibility
   mapping(uint256 => DistributionStruct) private _distributions;
+  /// @notice Mapping to keep track of which users have claimed over all distributions
   mapping(uint256 => mapping(address => bool)) public override claimed;
 
   uint256[100] private __gap;
 
-  /**
-  * @param name Name of new token
-  * @param symbol Symbol of new token
-  */
   function __DistributionERC20_init(string memory name, string memory symbol) internal {
     __ReentrancyGuard_init();
     __ERC20_init(name, symbol);
@@ -53,12 +50,8 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     supportsInterface[type(IDistributionERC20).interfaceId] = true;
   }
 
-  /**
-  * @dev Does not hook into _transfer as _mint does not pass through it
-  * @param from Sender address
-  * @param to Recipient address
-  * @param amount Amount of tokens sent
-  */
+
+  // Does not hook into _transfer as _mint does not pass through it
   function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     super._afterTokenTransfer(from, to, amount);
     // Delegate to self to track voting power, if not already tracked
@@ -68,7 +61,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   }
 
   /**
-  * @dev Disable delegation to enable distributions, removing the need to track
+  * Disable delegation to enable distributions, removing the need to track
   * both historic balances and voting power. Also reduces potential legal liability, which
   * could be a future concern. Vote delegation may be enabled in the future, but it would
   * require duplication of the checkpointing code to keep voting private varibles in ERC20Votes
@@ -79,14 +72,6 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     revert Delegation();
   }
 
-  /**
-  * @dev Distribution implementation
-  * @param token Token address to be distributed
-  * @param amount Amount of tokens (`token`) to be distributed
-  * @return id Id of the distribution in the _distributions mapping
-  *
-  * Emits a {Distribution} events
-  */
   function _distribute(address token, uint112 amount) internal returns (uint256 id) {
     if (amount == 0) {
       revert ZeroAmount();
@@ -132,8 +117,6 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   * @notice Claim tokens from a distribution
   * @param id Id of distribution to be claimed from
   * @param person Address of user claiming distributed tokens
-  *
-  * Emits a {Claim} event
   */
   function claim(uint256 id, address person) external override {
     if (claimed[id][person]) {
