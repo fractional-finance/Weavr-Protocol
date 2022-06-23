@@ -19,6 +19,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
   address public override governor;
   address public override frabric;
+  uint256 private frabricVotingPeriod;
 
   // Irremovable ecosystem contracts which hold Thread tokens
   mapping(address => bool) public override irremovable;
@@ -109,6 +110,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     descriptor = _descriptor;
     // Doesn't bother faking a proposal, yet this will still emit XChange
     _setFrabric(_frabric);
+    frabricVotingPeriod = IDAOCore(frabric).votingPeriod();
     _setGovernor(_governor);
 
     for (uint256 i = 0; i < _irremovable.length; i++) {
@@ -281,7 +283,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
       // to be perfect with time, enabling upgrades only enables Upgrade proposals to be created
       // That means there's an additional delay of the Thread's voting period (1 week)
       // while the actual Upgrade proposal occurs, granting that time
-      upgradesEnabled = block.timestamp + IDAOCore(frabric).votingPeriod() + (1 weeks);
+      upgradesEnabled = block.timestamp + frabricVotingPeriod + (1 weeks);
 
     } else if (pType == ThreadProposalType.Dissolution) {
       // Prevent the Thread from being locked up in a Dissolution the governor won't honor for whatever reason
