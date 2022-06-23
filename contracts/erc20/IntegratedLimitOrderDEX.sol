@@ -344,7 +344,9 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     }
 
     // Withdraw our own funds to prevent the need for another transaction
-    _withdrawTradeToken(msg.sender);
+    if (ours) {
+      _withdrawTradeToken(msg.sender);
+    }
 
     // Return if our own order was cancelled
     return ours;
