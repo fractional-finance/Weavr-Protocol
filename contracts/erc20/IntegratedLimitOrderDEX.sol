@@ -128,7 +128,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
         if (h == 0) {
           _inDEX = false;
           point.orderType = OrderType.Null;
-          return 0;
+          return filled;
         }
 
         // We could also call continue here, yet this should be a bit more efficient
