@@ -39,7 +39,7 @@ interface ICrowdfund is IDistributionERC20 {
   function execute() external;
   function refund(uint112 amount) external;
   function finish() external;
-  function burn(address depositor) external;
+  function redeem(address depositor) external;
 }
 
 interface ICrowdfundInitializable is ICrowdfund {

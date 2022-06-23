@@ -173,7 +173,7 @@ describe("Crowdfund", async () => {
 
   it("should allow claiming Thread tokens", async () => {
     const balance = await crowdfund.balanceOf(participant.address);
-    await crowdfund.burn(participant.address);
+    await crowdfund.redeem(participant.address);
     expect(await crowdfund.balanceOf(participant.address)).to.equal(0);
     expect(await ferc20.balanceOf(participant.address)).to.equal(balance);
   });

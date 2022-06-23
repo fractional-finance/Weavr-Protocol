@@ -253,8 +253,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     emit StateChange(state);
   }
 
-  // Allow users to burn Crowdfund tokens to receive Thread tokens
-  function burn(address depositor) external override {
+  // Allow redeeming Crowdfund tokens to receive Thread tokens
+  function redeem(address depositor) external override {
     if (state != State.Finished) {
       revert InvalidState(state, State.Finished);
     }
