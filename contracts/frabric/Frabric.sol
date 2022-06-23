@@ -354,13 +354,15 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   ) external override {
     if ((pType == ParticipantType.Null) && passed[uint160(approving)]) {
       address temp = _participants[uint160(approving)].addr;
+      if (temp == address(0)) {
+        // While approving is actually a proposal ID, it's the most info we have
+        revert ParticipantAlreadyApproved(approving);
+      }
       pType = _participants[uint160(approving)].pType;
       delete _participants[uint160(approving)];
       approving = temp;
     } else if ((pType != ParticipantType.Individual) && (pType != ParticipantType.Corporation)) {
       revert InvalidParticipantType(pType);
-    } else {
-      pType = pType;
     }
 
     address signer = ECDSA.recover(
@@ -381,6 +383,9 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       revert InvalidKYCSignature(signer, participant[signer]);
     }
 
+    if (participant[approving] != ParticipantType.Null) {
+      revert ParticipantAlreadyApproved(approving);
+    }
     participant[approving] = pType;
     if (pType == ParticipantType.Governor) {
       governor[approving] = GovernorStatus.Active;
