@@ -13,6 +13,8 @@ import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/u
 // Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 
+import { IERC20MetadataUpgradeable as IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 import "../interfaces/erc20/IAuction.sol";
 import "../interfaces/beacon/IFrabricBeacon.sol";
@@ -168,7 +170,8 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
       // Because this is an ILO DEX, amount here will be atomic yet the ILO DEX
       // will expect it to be whole
-      if ((amount / 1e18 * 1e18) != amount) {
+      uint256 whole = 10 ** IERC20Metadata(token).decimals();
+      if ((amount / whole * whole) != amount) {
         revert NotRoundAmount(amount);
       }
     // Only allow a zero amount to cancel an order at a given price
@@ -305,7 +308,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
             // These orders cannot be cancelled at this time without the DAO wash trading
             // through the order, yet that may collide with others orders at the same price
             // point, so this isn't actually a viable method
-            IIntegratedLimitOrderDEXCore(action.token).sell(action.price, action.amount / 1e18);
+            IIntegratedLimitOrderDEXCore(action.token).sell(action.price, action.amount / (10 ** IERC20Metadata(action.token).decimals()));
 
           // Technically, TokenAction could not acknowledge Auction
           // By transferring the tokens to another contract, the Auction can be safely created
