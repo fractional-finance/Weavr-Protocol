@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import "../erc20/FrabricWhitelist.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
