@@ -2,6 +2,7 @@ const { ethers, waffle } = require("hardhat");
 const { expect } = require("chai");
 
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
+const deployAuction = require("../../scripts/deployAuction.js");
 const deployCrowdfundProxy = require("../../scripts/deployCrowdfundProxy.js");
 const deployThreadDeployer = require("../../scripts/deployThreadDeployer.js");
 
@@ -34,7 +35,8 @@ describe("Crowdfund", async () => {
 
     // Deploy the ThreadDeployer
     const erc20Beacon = await FrabricERC20.deployBeacon();
-    const { threadDeployer } = await deployThreadDeployer(erc20Beacon.address, ethers.constants.AddressZero);
+    const auction = await deployAuction();
+    const { threadDeployer } = await deployThreadDeployer(erc20Beacon.address, auction.auction.address);
     await threadDeployer.transferOwnership(frabric.address);
 
     // Have the ThreadDeployer deploy everything

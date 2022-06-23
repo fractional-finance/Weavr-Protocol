@@ -202,6 +202,10 @@ abstract contract DAO is Composable, IDAO {
   // it's a very minor gas cost which does offer savings when multiple proposals
   // are voted on at the same time
   function vote(uint256[] memory ids, int112[] memory votes) external override {
+    if (ids.length != votes.length) {
+      revert DifferentLengths(ids.length, votes.length);
+    }
+
     // Require the caller to be KYCd
     if (!IFrabricWhitelistCore(erc20).hasKYC(msg.sender)) {
       revert NotKYC(msg.sender);

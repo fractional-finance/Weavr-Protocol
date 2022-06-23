@@ -65,6 +65,7 @@ interface IDAO is IDAOCore {
   function voteRecord(uint256 id, address voter) external view returns (int112);
 }
 
+error DifferentLengths(uint256 lengthA, uint256 lengthB);
 error InactiveProposal(uint256 id);
 error ActiveProposal(uint256 id, uint256 time, uint256 endTime);
 error ProposalFailed(uint256 id, int256 votes);

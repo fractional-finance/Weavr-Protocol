@@ -38,6 +38,16 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     __Pausable_init();
     __DistributionERC20_init(name, symbol);
     __FrabricWhitelist_init(parent);
+
+    // We can't check if an arbitrary address is an ERC20
+    // We can call a function guaranteed to exist under the ERC20 spec, which will error if it doesn't exist,
+    // and filter any mis-interpreted boolean values
+    // This will also identify ERC777s as ERC20s, yet only if they use an extension
+    // We could use IERC20Metadata's decimals, yet that's an ERC20 extension and 0 decimal tokens exist.
+    // so we'd lose the ability to boolean filter. No sane ERC20 will have a supply of 0/1 though
+    if (IERC20(tradeToken).totalSupply() < 2) {
+      revert UnsupportedInterface(tradeToken, type(IERC20).interfaceId);
+    }
     __IntegratedLimitOrderDEX_init(tradeToken);
 
     __Composable_init("FrabricERC20", false);
@@ -56,6 +66,9 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     // Mint the supply
     mint(msg.sender, supply);
 
+    if (!_auction.supportsInterface(type(IAuction).interfaceId)) {
+      revert UnsupportedInterface(_auction, type(IAuction).interfaceId);
+    }
     auction = _auction;
 
     _removal = false;

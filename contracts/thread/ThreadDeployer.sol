@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
+
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -11,6 +13,8 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
+import "../interfaces/beacon/IFrabricBeacon.sol";
+import "../interfaces/erc20/IAuction.sol";
 import { IFrabricWhitelistCore, IFrabricERC20, IFrabricERC20Initializable } from "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/thread/IThread.sol";
 import "../interfaces/thread/ICrowdfund.sol";
@@ -21,6 +25,7 @@ import "../common/Composable.sol";
 import "../interfaces/thread/IThreadDeployer.sol";
 
 contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitializable {
+  using ERC165Checker for address;
   using SafeERC20 for IERC20;
 
   // 6% fee given to the Frabric
@@ -47,6 +52,27 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;
     supportsInterface[type(IThreadDeployer).interfaceId] = true;
 
+    if (
+      (!_crowdfundProxy.supportsInterface(type(IFrabricBeacon).interfaceId)) ||
+      (IFrabricBeacon(_crowdfundProxy).beaconName() != keccak256("Crowdfund"))
+    ) {
+      revert UnsupportedInterface(_crowdfundProxy, type(IFrabricBeacon).interfaceId);
+    }
+
+    if (
+      (!_erc20Beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) ||
+      (IFrabricBeacon(_erc20Beacon).beaconName() != keccak256("FrabricERC20"))
+    ) {
+      revert UnsupportedInterface(_erc20Beacon, type(IFrabricBeacon).interfaceId);
+    }
+
+    if (
+      (!_threadBeacon.supportsInterface(type(IFrabricBeacon).interfaceId)) ||
+      (IFrabricBeacon(_threadBeacon).beaconName() != keccak256("Thread"))
+    ) {
+      revert UnsupportedInterface(_threadBeacon, type(IFrabricBeacon).interfaceId);
+    }
+
     // This is technically a beacon to keep things consistent
     // That said, it can't actually upgrade itself and has no owner to upgrade it
     // Because of that, it's called a proxy instead of a beacon
@@ -56,6 +82,14 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     erc20Beacon = _erc20Beacon;
     threadBeacon = _threadBeacon;
 
+    if (!_auction.supportsInterface(type(IAuctionCore).interfaceId)) {
+      revert UnsupportedInterface(_auction, type(IAuctionCore).interfaceId);
+    }
+
+    if (!_timelock.supportsInterface(type(ITimelock).interfaceId)) {
+      revert UnsupportedInterface(_timelock, type(ITimelock).interfaceId);
+    }
+
     auction = _auction;
     timelock = _timelock;
   }
@@ -64,9 +98,12 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
   constructor() Composable("ThreadDeployer") initializer {}
 
   // Validates a variant and byte data
-  function validate(uint8 variant, bytes calldata data) external override pure {
+  function validate(uint8 variant, bytes calldata data) external override view {
     if (variant == 0) {
-      abi.decode(data, (address, uint112));
+      (address tradeToken, ) = abi.decode(data, (address, uint112));
+      if (IERC20(tradeToken).totalSupply() < 2) {
+        revert UnsupportedInterface(tradeToken, type(IERC20).interfaceId);
+      }
     } else {
       revert UnknownVariant(variant);
     }

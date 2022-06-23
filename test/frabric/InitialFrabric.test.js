@@ -13,7 +13,9 @@ describe("InitialFrabric", accounts => {
   before(async () => {
     genesis = (await ethers.getSigners()).splice(1, 5);
 
-    const { frbc } = await FrabricERC20.deployFRBC(ethers.constants.AddressZero);
+    const { frbc } = await FrabricERC20.deployFRBC(
+      (await (await ethers.getContractFactory("TestERC20")).deploy("Test Token", "TEST")).address
+    );
 
     const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
     const beacon = await deployBeacon("single", InitialFrabric);
