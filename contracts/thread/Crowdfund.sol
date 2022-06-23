@@ -27,6 +27,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   address public override thread;
   address public override token;
   uint112 public override target;
+  uint64 public override lastDepositTime;
 
   // Amount of tokens which have yet to be converted to Thread tokens
   // Equivalent to the amount of funds deposited and not withdrawn if none have
@@ -154,6 +155,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     if ((IERC20(token).balanceOf(address(this)) - balance) != amount) {
       revert FeeOnTransfer(token);
     }
+    lastDepositTime = uint64(block.timestamp);
     emit Deposit(msg.sender, amount);
 
     return amount;
@@ -166,6 +168,11 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     }
     if (amount == 0) {
       revert ZeroAmount();
+    }
+
+    // If the target has been reached, give the governor 24 hours to execute
+    if ((outstanding() == target) && (uint64(block.timestamp - 24 hours) < lastDepositTime)) {
+      revert CrowdfundReached();
     }
 
     _burn(msg.sender, amount);
