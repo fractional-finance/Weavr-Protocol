@@ -277,7 +277,7 @@ abstract contract DAO is Composable, IDAO {
     }
 
     proposal.state = ProposalState.Queued;
-    proposal.stateStartTime = uint32(block.timestamp);
+    proposal.stateStartTime = uint64(block.timestamp);
     emit ProposalStateChange(id, proposal.state);
   }
 
