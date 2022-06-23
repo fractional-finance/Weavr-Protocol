@@ -14,6 +14,8 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
+// While this is considered a Limit Order DEX, it will match for the exact prices specified
+// It will not find a better price, even if one is available, due to constaints by the EVM
 abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composable, IIntegratedLimitOrderDEX {
   using SafeERC20 for IERC20;
 
