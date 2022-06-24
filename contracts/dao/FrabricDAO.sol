@@ -5,12 +5,13 @@ import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgra
 import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
 import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-
-// Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
-// EIP712 was created over 4 years ago and has undegone multiple versions since
-// Metamask supports multiple various versions of EIP712 and is committed to maintaing "v3" and "v4" support
-// The only distinction between the two is the support for arrays/structs in structs, which aren't used by these contracts
-// Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
+/**
+ * Using a draft contract isn't great, as is using EIP712 which is technically still under "Review"
+ * EIP712 was created over 4 years ago and has undegone multiple versions since
+ * Metamask supports multiple various versions of EIP712 and is committed to maintaing "v3" and "v4" support
+ * The only distinction between the two is the support for arrays/structs in structs, which aren't used by these contracts
+ * Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
+ */
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
@@ -21,12 +22,20 @@ import "./DAO.sol";
 
 import "../interfaces/dao/IFrabricDAO.sol";
 
-// Implements proposals mutual to both Threads and the Frabric
-// This could be merged directly into DAO, as the Thread and Frabric contracts use this
-// yet DAO is only used by this
-// This offers smaller, more compartamentalized code, and directly integrating the two
-// doesn't actually offer any efficiency benefits. The new structs, the new variables, and
-// the new code are still needed, meaning it really just inlines _completeProposal
+
+/** 
+ * @title FrabricDAO Contract
+ * @author Fractional Finance
+ * @notice This contract implements the IntegratedLimitOrderDex for FrabricERC20
+ * @dev Upgradable contract
+ *
+ * Implements proposals mutual to both Threads and the Frabric
+ * This could be merged directly into DAO, as the Thread and Frabric contracts use this
+ * yet DAO is only used by this
+ * This offers smaller, more compartamentalized code, and directly integrating the two
+ * doesn't actually offer any efficiency benefits. The new structs, the new variables, and
+ * the new code are still needed, meaning it really just inlines _completeProposal
+ */
 abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
