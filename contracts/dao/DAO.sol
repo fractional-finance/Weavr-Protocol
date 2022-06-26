@@ -49,6 +49,7 @@ abstract contract DAO is Composable, IDAO {
   address public override erc20;
   uint64 public override votingPeriod;
   uint64 public override queuePeriod;
+  uint64 public override lapsePeriod;
 
   uint256 private _nextProposalID;
   mapping(uint256 => ProposalStruct) private _proposals;
@@ -64,6 +65,7 @@ abstract contract DAO is Composable, IDAO {
     erc20 = _erc20;
     votingPeriod = _votingPeriod;
     queuePeriod = 48 hours;
+    lapsePeriod = 48 hours;
   }
 
   function requiredParticipation() public view returns (uint112) {
@@ -364,6 +366,14 @@ abstract contract DAO is Composable, IDAO {
     if (block.timestamp < end) {
       revert StillQueued(id, block.timestamp, end);
     }
+
+    // If no one executed this proposal for so long it lapsed, cancel it
+    if (block.timestamp > (end + lapsePeriod)) {
+      delete _proposals[id];
+      emit ProposalStateChange(id, ProposalState.Cancelled);
+      return;
+    }
+
     delete _proposals[id];
     // Solely used for getter functionality
     // While we could use it for state checks, we already need to check it's specifically Queued

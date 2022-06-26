@@ -47,6 +47,7 @@ interface IDAO is IDAOCore {
   event Vote(uint256 indexed id, VoteDirection indexed direction, address indexed voter, uint112 votes);
 
   function queuePeriod() external view returns (uint64);
+  function lapsePeriod() external view returns (uint64);
   function requiredParticipation() external view returns (uint112);
 
   function vote(uint256[] calldata id, int112[] calldata votes) external;
