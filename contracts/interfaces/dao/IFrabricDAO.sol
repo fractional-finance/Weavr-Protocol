@@ -58,6 +58,7 @@ interface IFrabricDAO is IDAO {
   ) external returns (uint256);
 }
 
+error Irremovable(address participant);
 error InvalidRemovalFee(uint8 fee, uint8 max);
 error Minting();
 error MintingDifferentToken(address specified, address token);

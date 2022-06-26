@@ -69,5 +69,4 @@ interface IThreadInitializable is IThread {
 
 error NotGovernor(address caller, address governor);
 error ProposingUpgrade(address beacon, address instance, address code);
-error Irremovable(address participant);
 error NotLeaving(address frabric, address newFrabric);

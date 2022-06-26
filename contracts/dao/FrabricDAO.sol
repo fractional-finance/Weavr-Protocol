@@ -191,6 +191,10 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     bytes[] calldata signatures,
     bytes32 info
   ) public virtual override returns (uint256 id) {
+    if (participant == address(this)) {
+      revert Irremovable(participant);
+    }
+
     if (removalFee > maxRemovalFee) {
       revert InvalidRemovalFee(removalFee, maxRemovalFee);
     }
