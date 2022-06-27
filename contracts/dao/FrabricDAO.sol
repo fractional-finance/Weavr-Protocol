@@ -82,6 +82,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     __DAO_init(_erc20, _votingPeriod);
     supportsInterface[type(IFrabricDAO).interfaceId] = true;
 
+    // Ensure this is a valid percentage
     if (_maxRemovalFee > 100) {
       revert InvalidRemovalFee(_maxRemovalFee, 100);
     }

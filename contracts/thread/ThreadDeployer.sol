@@ -100,7 +100,11 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
 
   // Validates a variant and byte data
   function validate(uint8 variant, bytes calldata data) external override view {
+    // CrowdfundedThread variant. To be converted to an enum later
     if (variant == 0) {
+      if (data.length != 64) {
+        revert DifferentLengths(data.length, 64);
+      }
       (address tradeToken, ) = abi.decode(data, (address, uint112));
       if (IERC20(tradeToken).totalSupply() < 2) {
         revert UnsupportedInterface(tradeToken, type(IERC20).interfaceId);
@@ -198,6 +202,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     bytes32 descriptor = _descriptor;
     address governor = _governor;
 
+    // CrowdfundedThread variant. To be converted to an enum later
     if (variant != 0) {
       revert UnknownVariant(variant);
     }

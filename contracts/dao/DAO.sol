@@ -85,6 +85,7 @@ abstract contract DAO is Composable, IDAO {
     // Uses the current total supply instead of the historical total supply in
     // order to represent the current community
     // Subtracts any reserves held by the DAO itself as those can't be voted with
+    // Requires 10% participation
     return uint112(IERC20(erc20).totalSupply() - IERC20(erc20).balanceOf(address(this))) / 10;
   }
 
@@ -168,7 +169,7 @@ abstract contract DAO is Composable, IDAO {
     int112 votes,
     int112 absVotes
   ) private {
-    // Cap voting power per user at 10% of the current total supply
+    // Cap voting power per user at 10% of the current total supply, a legally valuable number
     // This will hopefully not be executed 99% of the time and then only for select Threads
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
     // 10% isn't requiredParticipation, despite currently having the same value,

@@ -353,6 +353,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
 
     if (participant[signer] != ParticipantType.Voucher) {
+      // Declared optimal growth number
       if (vouchers[signer] == 6) {
         revert OutOfVouchers(signer);
       }
