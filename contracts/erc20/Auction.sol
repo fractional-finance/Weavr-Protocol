@@ -100,10 +100,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
         batchAmount = _amount;
       }
 
-      id = _nextID;
-      _nextID++;
-
-      AuctionStruct storage auction = _auctions[id];
+      AuctionStruct storage auction = _auctions[_nextID + i];
       auction.seller = seller;
       auction.token = _token;
       auction.traded = _traded;
@@ -115,6 +112,9 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       _amount -= batchAmount;
       start += length;
     }
+
+    id = _nextID;
+    _nextID += batches;
   }
 
   // If for some reason there's a contract with a screwed up fallback function,
@@ -224,7 +224,9 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       if (notWhitelisted(auction.token, auction.seller)) {
         // In a try/catch to ensure this auction completes no matter what
         // In the worst case, these funds will be left here forever
-        try IFrabricERC20(auction.token).burn(auction.amount) {} catch {}
+        try IFrabricERC20(auction.token).burn(auction.amount) {} catch {
+          emit BurnFailed(auction.token, auction.amount);
+        }
       } else {
         balances[auction.token][auction.seller] += auction.amount;
       }

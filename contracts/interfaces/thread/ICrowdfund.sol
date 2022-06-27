@@ -51,7 +51,7 @@ interface ICrowdfundInitializable is ICrowdfund {
     address _thread,
     address _token,
     uint112 _target
-  ) external;
+  ) external returns (uint256);
 }
 
 error CrowdfundTransfer();

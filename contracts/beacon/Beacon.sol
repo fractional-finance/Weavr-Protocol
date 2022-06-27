@@ -135,7 +135,7 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     emit Upgrade(instance, version, code, data);
   }
 
-  function triggerUpgrade(address instance, uint256 version) public override {
+  function triggerUpgrade(address instance, uint256 version) external override {
     uint256 currVersion = IComposable(instance).version();
     if (currVersion != (version - 1)) {
       revert InvalidVersion(currVersion, version - 1);

@@ -23,7 +23,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   // Thread isn't needed, just its ERC20
   // This keeps data relative and accessible though, being able to jump to a Thread via its Crowdfund
   // Being able to jump to its token isn't enough as the token doesn't know of the Thread
-  State public state;
+  ICrowdfund.State public state;
   address public override thread;
   address public override token;
   uint112 public override target;
@@ -45,7 +45,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     address _thread,
     address _token,
     uint112 _target
-  ) external override initializer {
+  ) external override initializer returns (uint256) {
     __DistributionERC20_init(
       string(abi.encodePacked("Crowdfund ", name)),
       string(abi.encodePacked("CF-", symbol))
@@ -66,8 +66,9 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     state = State.Active;
     emit StateChange(state);
 
-    // Normalize 1 of the raise token to the Thread token to ensure normalization won't fail
-    normalizeRaiseToThread(1);
+    // Normalize the target in the raise token to the Thread token to ensure normalization won't fail
+    // Also return it, so the ThreadDeployer doesn't have to call this again
+    return normalizeRaiseToThread(target);
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor

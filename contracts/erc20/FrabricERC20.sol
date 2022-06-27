@@ -34,6 +34,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     address tradeToken,
     address _auction
   ) external override initializer {
+    // Intended to be owned by its DAO
     __Ownable_init();
     __Pausable_init();
     __DistributionERC20_init(name, symbol);

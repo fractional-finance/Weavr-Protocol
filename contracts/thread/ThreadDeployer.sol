@@ -46,6 +46,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     address _auction,
     address _timelock
   ) external override initializer {
+    // Intended to be owned by the Frabric
     __Ownable_init();
 
     __Composable_init("ThreadDeployer", false);
@@ -214,7 +215,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     address parent = IDAOCore(msg.sender).erc20();
 
     // Initialize the Crowdfund
-    ICrowdfundInitializable(crowdfund).initialize(
+    uint256 threadBaseTokenSupply = ICrowdfundInitializable(crowdfund).initialize(
       name,
       symbol,
       parent,
@@ -223,8 +224,6 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
       tradeToken,
       target
     );
-
-    uint256 threadBaseTokenSupply = ICrowdfund(crowdfund).normalizeRaiseToThread(target);
 
     // Initialize the ERC20 now that we can call the Crowdfund contract for decimals
     uint256 frabricShare = initERC20(

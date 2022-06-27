@@ -135,10 +135,7 @@ abstract contract DAO is Composable, IDAO {
     emit ProposalStateChange(id, proposal.state);
 
     // Automatically vote in favor for the creator if they have votes and are actively KYCd
-    int112 votes = int112(uint112(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
-    if ((votes != 0) && IFrabricWhitelistCore(erc20).hasKYC(msg.sender)) {
-      _voteUnsafe(msg.sender, id, proposal, votes, votes);
-    }
+    _voteUnsafe(id, msg.sender);
   }
 
   // Labeled unsafe due to its split checks with the various callers and lack of guarantees
@@ -294,6 +291,11 @@ abstract contract DAO is Composable, IDAO {
       revert NotQueued(id, proposal.state);
     }
 
+    // If the supply has shrunk, this will potentially apply a value greater than the modern 10%
+    // If the supply has expanded, this will use the historic vote cap which is smaller than the modern 10%
+    // The latter is more accurate and more likely
+    int112 tenPercent = int112(uint112(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
+
     int112 newVotes = proposal.votes;
     uint160 prevVoter = 0;
     for (uint i = 0; i < voters.length; i++) {
@@ -311,10 +313,6 @@ abstract contract DAO is Composable, IDAO {
       }
 
       int112 votes = int112(uint112(IERC20(erc20).balanceOf(voter)));
-      // If the supply has shrunk, this will potentially apply a value greater than the modern 10%
-      // If the supply has expanded, this will use the historic vote cap which is smaller than the modern 10%
-      // The latter is more accurate and more likely
-      int112 tenPercent = int112(uint112(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
       if (votes > tenPercent) {
         votes = tenPercent;
       }
