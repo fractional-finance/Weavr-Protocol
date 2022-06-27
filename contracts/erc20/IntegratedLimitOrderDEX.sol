@@ -35,13 +35,13 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   struct OrderStruct {
     address trader;
     /**
-    * Right now, we don't allow removed parties to be added back due to leftover
-    * data such as DEX orders. With a versioning system, this could be effectively
-    * handled. While this won't be implemented right now, as it's a pain with a
-    * lot of security considerations not worth handling right now, this does leave
-    * our options open (even though we could probably add it later without issue
-    * as it fits into an existing storage slot)
-    */
+     * Right now, we don't allow removed parties to be added back due to leftover
+     * data such as DEX orders. With a versioning system, this could be effectively
+     * handled. While this won't be implemented right now, as it's a pain with a
+     * lot of security considerations not worth handling right now, this does leave
+     * our options open (even though we could probably add it later without issue
+     * as it fits into an existing storage slot)
+     */
     uint8 version;
     uint256 amount;
   }
@@ -229,14 +229,14 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     }
 
     /**
-    * If they're currently frozen, don't let them place new orders
-    * Their existing orders are allowed to stand however
-    * If they were put up for a low value, anyone can snipe them
-    * If they were put up for a high value, no one will bother buying them, and
-    * they'll be removed if the removal proposal passes
-    * If they were put up for their actual value, then this is them leaving the
-    * ecosystem and that's that
-    */
+     * If they're currently frozen, don't let them place new orders
+     * Their existing orders are allowed to stand however
+     * If they were put up for a low value, anyone can snipe them
+     * If they were put up for a high value, no one will bother buying them, and
+     * they'll be removed if the removal proposal passes
+     * If they were put up for their actual value, then this is them leaving the
+     * ecosystem and that's that
+     */
     if (frozen(trader)) {
       revert Frozen(trader);
     }
@@ -274,12 +274,12 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   }
 
   /**
-  * @notice Execute a token purchase order
-  * @param trader User executing the trade
-  * @param price Purchase price per whole token (presumably 1e18 atomic units)
-  * @param minimumAmount Minimum amount of tokens received (in whole tokens)
-  * @return filled uint256 quantity of succesfully purchased tokens (in atomic units)
-  */
+   * @notice Execute a token purchase order
+   * @param trader User executing the trade
+   * @param price Purchase price per whole token (presumably 1e18 atomic units)
+   * @param minimumAmount Minimum amount of tokens received (in whole tokens)
+   * @return filled uint256 quantity of succesfully purchased tokens (in atomic units)
+   */
   function buy(
     address trader,
     uint256 price,
@@ -295,13 +295,13 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     // We could pass and verify a signature. It's just not worth it at this time
   
     /**
-    * Supports fee on transfer tokens
-    * The Crowdfund contract actually verifies its token isn't fee on transfer
-    * The Thread initializer uses the same token for both that and this
-    * That said, any token which can have its fee set may be set to 0 during Crowdfund,
-    * allowing it to pass, yet set to non-0 later in its life, causing this to fail
-    * USDT notably has fee on transfer code, currently set to 0, that may someday activate
-    */
+     * Supports fee on transfer tokens
+     * The Crowdfund contract actually verifies its token isn't fee on transfer
+     * The Thread initializer uses the same token for both that and this
+     * That said, any token which can have its fee set may be set to 0 during Crowdfund,
+     * allowing it to pass, yet set to non-0 later in its life, causing this to fail
+     * USDT notably has fee on transfer code, currently set to 0, that may someday activate
+     */
     uint256 amount = received / price;
     if (amount < minimumAmount) {
       revert LessThanMinimumAmount(amount, minimumAmount);
@@ -322,11 +322,11 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   }
 
   /**
-  * @notice Execute a token sell order
-  * @param price Sell price per whole token (presumably 1e18 atomic units)
-  * @param amount Amount of tokens to be sold (in whole tokens)
-  * @return filled uint256 quantity of succesfully sold tokens 
-  */
+   * @notice Execute a token sell order
+   * @param price Sell price per whole token (presumably 1e18 atomic units)
+   * @param amount Amount of tokens to be sold (in whole tokens)
+   * @return filled uint256 quantity of succesfully sold tokens 
+   */
   function sell(
     uint256 price,
     uint256 amount
@@ -341,11 +341,11 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   }
 
   /**
-  * @notice Cancel an existing order of either the caller or a removed user
-  * @param price Price that the order to be cancelled exists at
-  * @param i Index of order at given price point
-  * @return bool True if caller's own order was cancelled, false otherwise
-  */
+   * @notice Cancel an existing order of either the caller or a removed user
+   * @param price Price that the order to be cancelled exists at
+   * @param i Index of order at given price point
+   * @return bool True if caller's own order was cancelled, false otherwise
+   */
   function cancelOrder(uint256 price, uint256 i) external override nonReentrant returns (bool) {
     PricePoint storage point = _points[price];
     OrderStruct storage order = point.orders[i];
@@ -411,21 +411,21 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
   }
 
   /**
-  * @notice Get address of trader for a given order
-  * @param price Price that the order to be queried exists at
-  * @param i Index of order at given price point
-  * @return address Address of the trader for the given order
-  */
+   * @notice Get address of trader for a given order
+   * @param price Price that the order to be queried exists at
+   * @param i Index of order at given price point
+   * @return address Address of the trader for the given order
+   */
   function orderTrader(uint256 price, uint256 i) external view override returns (address) {
     return _points[price].orders[i].trader;
   }
 
   /**
-  * @notice Get size of a given order
-  * @param price Price that the order to be queried exists at
-  * @param i Index of order at given price point
-  * @return uint256 Size of queried order (atomic)
-  */
+   * @notice Get size of a given order
+   * @param price Price that the order to be queried exists at
+   * @param i Index of order at given price point
+   * @return uint256 Size of queried order (atomic)
+   */
   function orderAmount(uint256 price, uint256 i) external view override returns (uint256) {
     OrderStruct memory order = _points[price].orders[i];
     // The FrabricERC20 whitelisted function will check both whitelisted and removed

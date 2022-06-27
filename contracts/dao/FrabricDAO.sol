@@ -361,7 +361,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
            * so it must have an owner for its funds. This means creating a new contract per Frabric/Thread
            * (or achieving global ERC777 adoptance yet that would be incredibly problematic for several reasons)
            * The easiest solution is just to write a few lines into this contract to handle it
-          */
+           */
           } else if (auction) {
             IERC20(action.token).safeIncreaseAllowance(action.target, action.amount);
             IAuctionCore(action.target).list(

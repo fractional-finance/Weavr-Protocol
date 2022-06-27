@@ -13,13 +13,13 @@ import "../interfaces/erc20/IAuction.sol";
 import "../interfaces/erc20/IFrabricERC20.sol";
 
 /**
-* @title FrabricERC20 Contract
-* @author Fractional Finance
-* @notice This contract implements the FrabricERC20 system, with a limit order DEX, governance and distribution built in
-* @dev FrabricERC20 tokens include a built in limit order DEX as well as governance and distribution functionality.
-* The owner may also mint tokens, with an optional whitelist, defaulting to a parent whitelist.
-* Owners may pause transfers - this functionality is intended for migrations and dissolutions
-*/
+ * @title FrabricERC20 Contract
+ * @author Fractional Finance
+ * @notice This contract implements the FrabricERC20 system, with a limit order DEX, governance and distribution built in
+ * @dev FrabricERC20 tokens include a built in limit order DEX as well as governance and distribution functionality.
+ * The owner may also mint tokens, with an optional whitelist, defaulting to a parent whitelist.
+ * Owners may pause transfers - this functionality is intended for migrations and dissolutions
+ */
 contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionERC20, FrabricWhitelist, IntegratedLimitOrderDEX, IFrabricERC20Initializable {
   using ERC165Checker for address;
 
@@ -33,14 +33,14 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   bool private _removal;
 
   /**
-  * @notice Initialize a new FrabircERC20 contract
-  * @param name Name of new token
-  * @param symbol Symbol of new token
-  * @param supply Total supply of new token
-  * @param parent Address of parent contract
-  * @param tradeToken Address of token used as purchasing token in integrated DEX
-  * @param _auction Address of auction contract for token
-  */
+   * @notice Initialize a new FrabircERC20 contract
+   * @param name Name of new token
+   * @param symbol Symbol of new token
+   * @param supply Total supply of new token
+   * @param parent Address of parent contract
+   * @param tradeToken Address of token used as purchasing token in integrated DEX
+   * @param _auction Address of auction contract for token
+   */
   function initialize(
     string memory name,
     string memory symbol,
@@ -63,11 +63,11 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     supportsInterface[type(IFrabricERC20).interfaceId] = true;
 
     /**
-    * Whitelist the initializer.
-    * If this is the Frabric's deployer, they are expected to remove
-    * their own whitelisting.
-    * If this is the ThreadDeployer, this is intended behavior 
-    */
+     * Whitelist the initializer.
+     * If this is the Frabric's deployer, they are expected to remove
+     * their own whitelisting.
+     * If this is the ThreadDeployer, this is intended behavior 
+     */
     _whitelist(msg.sender);
 
     // Mint the supply
@@ -104,30 +104,28 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   }
 
   /**
-  * @notice Mint new tokens, only available to owner
-  * @param to Address for newly minted tokens to be credited to
-  * @param amount Amount of new tokens to be minted
-  * @dev Redefine ERC20 mint function as an override so the DEX can call it
-  */
+   * @notice Mint new tokens, only available to owner
+   * @param to Address for newly minted tokens to be credited to
+   * @param amount Amount of new tokens to be minted
+   * @dev Redefine ERC20 mint function as an override so the DEX can call it
+   */
   function mint(address to, uint256 amount) public override onlyOwner {
     _mint(to, amount);
 
     /**
-    * This check ensures the supply is within the bound of signed<int>.max set by the DAO contract.
-    * uint112 is becoming a more frequently chosen bound by Uniswap and others, and is perfectly functional.
-    * DistributedERC20 is bounded by uint112, hence it is also used here. This also removes the requirement
-    * for the DAO to use uint120.
-    */
+     * This check ensures the supply is within the bound of signed<int>.max set by the DAO contract.
+     * uint112 is becoming a more frequently chosen bound by Uniswap and others, and is perfectly functional.
+     * DistributedERC20 is bounded by uint112, hence it is also used here. This also removes the requirement
+     * for the DAO to use uint120.
+     */
     if (totalSupply() > uint256(uint112(type(int112).max))) {
       revert SupplyExceedsInt112(totalSupply(), type(int112).max);
     }
   }
 
-  /**
-  * @notice Burn `amount` tokens
-  * @param amount Amount of new tokens to be burned
-  * @dev Redefine ERC20 burn function as an override so the DEX can call it
-  */
+  /// @notice Burn `amount` tokens
+  /// @param amount Amount of new tokens to be burned
+  /// @dev Redefine ERC20 burn function as an override so the DEX can call it
   function burn(uint256 amount) external override {
     _burning = true;
     _burn(msg.sender, amount);
@@ -141,10 +139,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   }
 
   function _freeze(address person, uint64 until) private {
-    /**
-    * If an address is already frozen until the specified time, keep the existing freeze lock in place.
-    * This prevents multiple freezes from overlapping or reducing the freeze time.
-    */
+    // If an address is already frozen until the specified time, keep the existing freeze lock in place.
+    // This prevents multiple freezes from overlapping or reducing the freeze time.
     if (frozenUntil[person] >= until) {
       return;
     }
@@ -152,11 +148,9 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     emit Freeze(person, until);
   }
 
-  /**
-  * @notice Freeze tokens on an address (`person`) until a given time (`until`). Only callable by contract owner
-  * @param person Address to have tokens frozen
-  * @param until Absolute time in seconds to freeze tokens of `person` until
-  */
+  /// @notice Freeze tokens on an address (`person`) until a given time (`until`). Only callable by contract owner
+  /// @param person Address to have tokens frozen
+  /// @param until Absolute time in seconds to freeze tokens of `person` until
   function freeze(address person, uint64 until) external override onlyOwner {
     _freeze(person, until);
   }
@@ -164,10 +158,8 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   /// @notice Trigger an existing freeze on `person` from a parent contract
   /// @param person Address to have freeze triggered on
   function triggerFreeze(address person) external override {
-    /**
-    * supportsInterface removes the need for an address 0 check.
-    * Even if the address was 0 and 0 values were returnd it would not be an issue 
-    */
+    // supportsInterface removes the need for an address 0 check.
+    // Even if the address was 0 and 0 values were returnd it would not be an issue 
     if (!parent.supportsInterface(type(IFreeze).interfaceId)) {
       return;
     }
@@ -185,12 +177,12 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     _setRemoved(person);
   
     /**
-    * If a fee is not specified, carry the parent fee.
-    * Checks if it supports IRemovalFee, as that is not a requirement on the
-    * parent. Solely IFrabricWhitelistCore is, and doing this check keeps the
-    * parent bounds minmal. Note this is only a minor gas
-    * cost given how infrequent removals are 
-    */
+     * If a fee is not specified, carry the parent fee.
+     * Checks if it supports IRemovalFee, as that is not a requirement on the
+     * parent. Solely IFrabricWhitelistCore is, and doing this check keeps the
+     * parent bounds minmal. Note this is only a minor gas
+     * cost given how infrequent removals are 
+     */
     if (
       (fee == 0) &&
       // Redundant due to supportsInterface check
@@ -203,12 +195,12 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     removalFee[person] = fee;
 
     /**
-    * Clear the locked amount.
-    * If this was not cleared, it would be easier to implement readding users.
-    * The InegratedLimitOrderDEX would be able to successfully
-    * correct this field as old orders are cleared.
-    * This would cause issues though and the current solution is sufficient
-    */
+     * Clear the locked amount.
+     * If this was not cleared, it would be easier to implement readding users.
+     * The InegratedLimitOrderDEX would be able to successfully
+     * correct this field as old orders are cleared.
+     * This would cause issues though and the current solution is sufficient
+     */
     locked[person] = 0;
 
     uint256 balance = balanceOf(person);
@@ -274,25 +266,25 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
   }
 
   /**
-  * @notice Set KYC status for a user (`person`), only callable by owner
-  * @param person Address of user (`person`) to have KYC status added
-  * @param hash KYC hash to be stored on chain
-  * @param nonce Number used once for each KYC, to prevent replays
-  */
+   * @notice Set KYC status for a user (`person`), only callable by owner
+   * @param person Address of user (`person`) to have KYC status added
+   * @param hash KYC hash to be stored on chain
+   * @param nonce Number used once for each KYC, to prevent replays
+   */
   function setKYC(address person, bytes32 hash, uint256 nonce) external override onlyOwner {
     _setKYC(person, hash, nonce);
   }
 
   /**
-  * @notice Remove user `person` from the whitelist, only callable by owner
-  * @param person Address of user to be removed
-  * @param fee Fee associated with removal of user `person`
-  * 
-  * nonReentrant modifier here could be considered overkill considering onlyOwner is also user,
-  * except this must not be the initial vector while reentrancy hapens though functions labelled
-  * nonReentrant. While the only external calls should be to trusted code in ecosystem, _removeUnsafe
-  * is not a function to have unprotected in any way.
-  */
+   * @notice Remove user `person` from the whitelist, only callable by owner
+   * @param person Address of user to be removed
+   * @param fee Fee associated with removal of user `person`
+   * 
+   * nonReentrant modifier here could be considered overkill considering onlyOwner is also user,
+   * except this must not be the initial vector while reentrancy hapens though functions labelled
+   * nonReentrant. While the only external calls should be to trusted code in ecosystem, _removeUnsafe
+   * is not a function to have unprotected in any way.
+   */
   function remove(address person, uint8 fee) external override onlyOwner nonReentrant {
     // This will only apply to the Frabric/Thread in question
     // For a Frabric removal, this will remove them from the global whitelist,

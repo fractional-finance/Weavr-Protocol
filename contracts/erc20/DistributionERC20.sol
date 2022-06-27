@@ -61,13 +61,13 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   }
 
   /**
-  * Disable delegation to enable distributions, removing the need to track
-  * both historic balances and voting power. Also reduces potential legal liability, which
-  * could be a future concern. Vote delegation may be enabled in the future, but it would
-  * require duplication of the checkpointing code to keep voting private varibles in ERC20Votes
-  * as purely votes. It is better to duplicate it in the future if required, retaining
-  * control over the process. 
-  */
+   * Disable delegation to enable distributions, removing the need to track
+   * both historic balances and voting power. Also reduces potential legal liability, which
+   * could be a future concern. Vote delegation may be enabled in the future, but it would
+   * require duplication of the checkpointing code to keep voting private varibles in ERC20Votes
+   * as purely votes. It is better to duplicate it in the future if required, retaining
+   * control over the process. 
+   */
   function _delegate(address, address) internal pure override {
     revert Delegation();
   }
@@ -90,34 +90,32 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   }
 
   /**
-  * @notice Distribute a token
-  * @param token Token address to be distributed
-  * @param amount Amount of tokens (`token`) to be distributed
-  * @return id Id of the distribution in the _distributions mapping
-  */
+   * @notice Distribute a token
+   * @param token Token address to be distributed
+   * @param amount Amount of tokens (`token`) to be distributed
+   * @return id Id of the distribution in the _distributions mapping
+   */
   function distribute(address token, uint112 amount) public override nonReentrant returns (uint256) {
     uint256 balance = IERC20(token).balanceOf(address(this));
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
     /**
-    * Notably, USDT does have a fee-on-transfer propery, albeit set to 0.
-    * In the future, USDT distributions and any downstream flows could break.
-    * Fee-on-transfer tokens are very challenging to integrate as they require a
-    * reentrancy vulnerable balance check. As Crowdfund inherits from this contract,
-    * you could buy crowdfund tokens with funds destined for this distribution. 
-    * This requires reentrancy checks on every function, or banning fee-on-transfer tokens
-    * from the protocol. The latter was chosen here
-    */
+     * Notably, USDT does have a fee-on-transfer propery, albeit set to 0.
+     * In the future, USDT distributions and any downstream flows could break.
+     * Fee-on-transfer tokens are very challenging to integrate as they require a
+     * reentrancy vulnerable balance check. As Crowdfund inherits from this contract,
+     * you could buy crowdfund tokens with funds destined for this distribution. 
+     * This requires reentrancy checks on every function, or banning fee-on-transfer tokens
+     * from the protocol. The latter was chosen here
+     */
     if (IERC20(token).balanceOf(address(this)) != (balance + amount)) {
       revert FeeOnTransfer(token);
     }
     return _distribute(token, amount);
   }
 
-  /**
-  * @notice Claim tokens from a distribution
-  * @param id Id of distribution to be claimed from
-  * @param person Address of user claiming distributed tokens
-  */
+  /// @notice Claim tokens from a distribution
+  /// @param id Id of distribution to be claimed from
+  /// @param person Address of user claiming distributed tokens
   function claim(uint256 id, address person) external override {
     if (claimed[id][person]) {
       revert AlreadyClaimed(id, person);
