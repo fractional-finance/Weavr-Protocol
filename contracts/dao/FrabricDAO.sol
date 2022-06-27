@@ -23,18 +23,25 @@ import "./DAO.sol";
 
 import "../interfaces/dao/IFrabricDAO.sol";
 
-// Implements proposals mutual to both Threads and the Frabric
-// This could be merged directly into DAO, as the Thread and Frabric contracts use this
-// yet DAO is only used by this
-// This offers smaller, more compartamentalized code, and directly integrating the two
-// doesn't actually offer any efficiency benefits. The new structs, the new variables, and
-// the new code are still needed, meaning it really just inlines _completeProposal
+/**
+ * @title FrabricDAO Contract
+ * @author Fractional Finance
+ *
+ * @dev Implements proposals mutual to both Threads and the Frabric
+ * This could be merged directly into DAO, as the Thread and Frabric contracts use this,
+ * yet DAO is only used by this
+ * This offers smaller, more compartamentalized code, and directly integrating the two
+ * doesn't actually offer any efficiency benefits. The new structs, the new variables, and
+ * the new code are still needed, meaning it really just inlines _completeProposal
+ */
 abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
+  /// @notice Bit value indicating a proposal is a common proposal
   uint16 constant public override commonProposalBit = 1 << 8;
 
+  /// @notice Maximum percentage fee to enforce upon removal of a participant
   uint8 public override maxRemovalFee;
 
   struct Upgrade {
@@ -86,17 +93,32 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     return (pType >> 8) == 1;
   }
 
+  /**
+   * @notice Create a new paper proposal (a statement agreed upon by the DAO without technical action)
+   * @param supermajority true if a supermajority is required for the proposal to pass
+   * @param info Statement to be put to a vote
+   * @return uint256 ID of the created proposal
+   */
   function proposePaper(bool supermajority, bytes32 info) external override returns (uint256) {
     // No dedicated event as the DAO emits type and info
     return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, supermajority, info);
   }
 
-  // Allows upgrading itself or any contract owned by itself
-  // Specifying any irrelevant beacon will work yet won't have any impact
-  // Specifying an arbitrary contract would also work if it has functions/
-  // a fallback function which don't error when called
-  // Between human review, function definition requirements, and the lack of privileges bestowed,
-  // this is considered to be appropriately managed
+  /**
+   * @notice Propose a contract upgrade for this contract or one owned by it
+   * @param beacon Address of the beacon contract facilitating upgrades
+   * @param instance Address of the contract instance to be upgraded
+   * @param version Version number of the new contract
+   * @param code Address of the contract with the new code
+   * @param data Data to be passed to new contract when triggering the upgrade
+   * @param info Additional information about proposal
+   * @return id ID of created proposal
+   * @dev Specifying any irrelevant beacon will work yet won't have any impact
+   * Specifying an arbitrary contract would also work if it has functions/
+   * a fallback function which doesn't error when called
+   * Between human review, function definition requirements, and the lack of privileges bestowed,
+   * this is considered to be appropriately managed
+   */
   function proposeUpgrade(
     address beacon,
     address instance,
@@ -134,6 +156,17 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     emit UpgradeProposal(id, beacon, instance, version, code, data);
   }
 
+  /**
+   * @notice Create a proposal to mint, transfer, sell, auction tokens, or cancel a standing sell order.
+   * Combined actions are supported
+   * @param token Address of the token to act on
+   * @param target Target address for the action. Either the recipient, this contract if selling on the DEX,
+   * or the auction contract if selling at auction
+   * @param price Price of tokens to create/cancel a DEX sell order at
+   * @param amount Quantity of tokens to act with. 0 if cancelling an order
+   * @param info Information on this proposal
+   * @return id Id of created proposal
+   */
   function proposeTokenAction(
     address token,
     address target,
@@ -184,6 +217,15 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     emit TokenActionProposal(id, token, target, mint, price, amount);
   }
 
+  /**
+   * @notice Propose removal of `participant`
+   * @param participant Address of participant proposed for removal
+   * @param removalFee Percentage fee to charge `participant` on removal, intended to recover financial damage
+   * @param signatures Array of signatures from users voting on this proposal in advance, in order to freeze the
+   * funds of the participant for the duration of this proposal
+   * @param info Any extra information about the proposal
+   * @return id ID of created proposal
+   */
   function proposeParticipantRemoval(
     address participant,
     uint8 removalFee,
