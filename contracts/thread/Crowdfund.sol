@@ -128,8 +128,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
       revert ZeroAmount();
     }
 
-    if (!IFrabricWhitelistCore(whitelist).whitelisted(msg.sender)) {
-      revert NotWhitelisted(msg.sender);
+    if (!IFrabricWhitelistCore(whitelist).hasKYC(msg.sender)) {
+      revert NotKYC(msg.sender);
     }
 
     // Mint before transferring to prevent re-entrancy causing the Crowdfund to exceed its target
