@@ -102,7 +102,7 @@ describe("Thread", async () => {
   // test picking up the rest of the slack
   it("should't let you remove the Frabric", async () => {
     await expect(
-      thread.proposeParticipantRemoval(frabric.address, 0, 0, [], ethers.utils.id("Proposing removing the Frabric"))
+      thread.proposeParticipantRemoval(frabric.address, 0, [], ethers.utils.id("Proposing removing the Frabric"))
     ).to.be.revertedWith(`Irremovable("${frabric.address}")`);
   });
 

@@ -52,12 +52,12 @@ interface IFrabricDAO is IDAO {
   function proposeParticipantRemoval(
     address participant,
     uint8 removalFee,
-    uint64 freezeUntilNonce,
     bytes[] calldata signatures,
     bytes32 info
   ) external returns (uint256);
 }
 
+error Irremovable(address participant);
 error InvalidRemovalFee(uint8 fee, uint8 max);
 error Minting();
 error MintingDifferentToken(address specified, address token);

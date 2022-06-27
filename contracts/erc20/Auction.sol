@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -14,6 +14,11 @@ import "../common/Composable.sol";
 
 import "../interfaces/erc20/IAuction.sol";
 
+/**
+ * @title Auction contract
+ * @author Fractional Finance
+ * @notice Implements an Auction house for ERC20s
+ */
 contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializable {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
@@ -40,6 +45,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   }
   mapping(uint256 => AuctionStruct) private _auctions;
 
+  /// @notice Mapping of coin -> user -> balance
   mapping(address => mapping(address => uint256)) public override balances;
 
   function initialize() external override initializer {
@@ -52,6 +58,17 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() Composable("Auction") initializer {}
 
+  /**
+   * @notice Create a new auction or batch of auctions
+   * @param seller Auction seller address
+   * @param _token Address of token being sold
+   * @param _traded Address of token used for payment
+   * @param _amount Amount of tokens being sold
+   * @param batches Number of batches to execute the auction in
+   * @param start Absolute start time in seconds. Will be set to current time if a past value is provided
+   * @param length Auction length in seconds
+   * @return id ID of newly created auction
+   */
   function list(
     address seller,
     address _token,
@@ -100,10 +117,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
         batchAmount = _amount;
       }
 
-      id = _nextID;
-      _nextID++;
-
-      AuctionStruct storage auction = _auctions[id];
+      AuctionStruct storage auction = _auctions[_nextID + i];
       auction.seller = seller;
       auction.token = _token;
       auction.traded = _traded;
@@ -115,6 +129,9 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       _amount -= batchAmount;
       start += length;
     }
+
+    id = _nextID;
+    _nextID += batches;
   }
 
   // If for some reason there's a contract with a screwed up fallback function,
@@ -147,6 +164,9 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     );
   }
 
+  /// @notice Place a bid on an auction
+  /// @param id ID of the auction to bid on
+  /// @param bidAmount Bid size
   function bid(uint256 id, uint256 bidAmount) external override nonReentrant {
     AuctionStruct storage auction = _auctions[id];
 
@@ -206,6 +226,8 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     emit Bid(id, auction.bidder, auction.bid);
   }
 
+  /// @notice Complete an auction
+  /// @param id Auction ID to be completed
   function complete(uint256 id) external override {
     AuctionStruct memory auction = _auctions[id];
     // Prevents re-entrancy regarding this auction and returns a gas refund
@@ -224,7 +246,9 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
       if (notWhitelisted(auction.token, auction.seller)) {
         // In a try/catch to ensure this auction completes no matter what
         // In the worst case, these funds will be left here forever
-        try IFrabricERC20(auction.token).burn(auction.amount) {} catch {}
+        try IFrabricERC20(auction.token).burn(auction.amount) {} catch {
+          emit BurnFailed(auction.token, auction.amount);
+        }
       } else {
         balances[auction.token][auction.seller] += auction.amount;
       }
@@ -237,6 +261,10 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     emit AuctionComplete(id);
   }
 
+
+  /// @notice Withdraw token balance of a user (`trader`)
+  /// @param _token Address of the token to be withdrawn
+  /// @param trader Address of the user to have balance of withdrawn
   function withdraw(address _token, address trader) external override {
     uint256 _amount = balances[_token][trader];
     balances[_token][trader] = 0;
@@ -244,6 +272,12 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   }
 
   // These functions will only work for auctions which have yet to complete
+
+  /**
+   * @notice Check if an auction is currently active
+   * @param id ID of the auction to be checked
+   * @return bool true if auction is active, false otherwise
+   */
   function active(uint256 id) external view override returns (bool) {
     return (_auctions[id].start <= block.timestamp) && (block.timestamp <= _auctions[id].end);
   }
@@ -253,21 +287,44 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   // provide it while the auction is active. This is the data which may have
   // value on chain
 
+  /// @notice Get the token being sold of the active auction with ID `id`
+  /// @param id ID of auction to be queried
+  /// @return address Token being sold
   function token(uint256 id) external view override returns (address) {
     return _auctions[id].token;
   }
+
+  /// @notice Get the token used to bid on the active auction with ID `id`
+  /// @param id ID of auction to be queried
+  /// @return address Token used to bid
   function traded(uint256 id) external view override returns (address) {
     return _auctions[id].traded;
   }
+
+  /// @notice Get the amount of tokens being sold in the active auction with ID `id`
+  /// @param id ID of auction to be queried
+  /// @return uint256 Amount of tokens being sold
   function amount(uint256 id) external view override returns (uint256) {
     return _auctions[id].amount;
   }
+
+  /// @notice Get the current highest bidder of auction with ID `id`
+  /// @param id ID of the auction to be queried
+  /// @return address Current highest bidder for auction with ID `id`
   function highBidder(uint256 id) external view override returns (address) {
     return _auctions[id].bidder;
   }
+
+  /// @notice Get the high bid amount for auction with ID `id`
+  /// @param id ID of auction to be queried
+  /// @return uint256 High bid amount of auction with ID `id`
   function highBid(uint256 id) external view override returns (uint256) {
     return _auctions[id].bid;
   }
+
+  /// @notice Get the end time for auction with ID `id`
+  /// @param id ID of auction to be queried
+  /// @return uint64 Currently scheduled end time in seconds for auction with ID `id`
   function end(uint256 id) external view override returns (uint64) {
     return _auctions[id].end;
   }

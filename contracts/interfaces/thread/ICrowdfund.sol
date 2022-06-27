@@ -27,6 +27,7 @@ interface ICrowdfund is IDistributionERC20 {
   function token() external view returns (address);
   function target() external view returns (uint112);
   function outstanding() external view returns (uint112);
+  function lastDepositTime() external view returns (uint64);
 
   function state() external view returns (State);
 
@@ -38,7 +39,7 @@ interface ICrowdfund is IDistributionERC20 {
   function execute() external;
   function refund(uint112 amount) external;
   function finish() external;
-  function burn(address depositor) external;
+  function redeem(address depositor) external;
 }
 
 interface ICrowdfundInitializable is ICrowdfund {
@@ -50,7 +51,7 @@ interface ICrowdfundInitializable is ICrowdfund {
     address _thread,
     address _token,
     uint112 _target
-  ) external;
+  ) external returns (uint256);
 }
 
 error CrowdfundTransfer();

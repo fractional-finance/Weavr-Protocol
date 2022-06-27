@@ -282,7 +282,7 @@ describe("Frabric", accounts => {
     // Remove the governor as they have additional code in the hook, making them
     // the singular complete case
     await expect(
-      (await proposal(frabric, "ParticipantRemoval", false, [governor.address, 0, 0, []])).tx
+      (await proposal(frabric, "ParticipantRemoval", false, [governor.address, 0, []])).tx
     ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.Removed, governor.address);
     expect(await frbc.whitelisted(governor.address)).to.equal(false);
     expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Removed);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { IERC20MetadataUpgradeable as IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
@@ -23,10 +23,11 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
   // Thread isn't needed, just its ERC20
   // This keeps data relative and accessible though, being able to jump to a Thread via its Crowdfund
   // Being able to jump to its token isn't enough as the token doesn't know of the Thread
-  State public state;
+  ICrowdfund.State public state;
   address public override thread;
   address public override token;
   uint112 public override target;
+  uint64 public override lastDepositTime;
 
   // Amount of tokens which have yet to be converted to Thread tokens
   // Equivalent to the amount of funds deposited and not withdrawn if none have
@@ -44,7 +45,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     address _thread,
     address _token,
     uint112 _target
-  ) external override initializer {
+  ) external override initializer returns (uint256) {
     __DistributionERC20_init(
       string(abi.encodePacked("Crowdfund ", name)),
       string(abi.encodePacked("CF-", symbol))
@@ -65,8 +66,9 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     state = State.Active;
     emit StateChange(state);
 
-    // Normalize 1 of the raise token to the Thread token to ensure normalization won't fail
-    normalizeRaiseToThread(1);
+    // Normalize the target in the raise token to the Thread token to ensure normalization won't fail
+    // Also return it, so the ThreadDeployer doesn't have to call this again
+    return normalizeRaiseToThread(target);
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -126,8 +128,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
       revert ZeroAmount();
     }
 
-    if (!IFrabricWhitelistCore(whitelist).whitelisted(msg.sender)) {
-      revert NotWhitelisted(msg.sender);
+    if (!IFrabricWhitelistCore(whitelist).hasKYC(msg.sender)) {
+      revert NotKYC(msg.sender);
     }
 
     // Mint before transferring to prevent re-entrancy causing the Crowdfund to exceed its target
@@ -154,6 +156,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     if ((IERC20(token).balanceOf(address(this)) - balance) != amount) {
       revert FeeOnTransfer(token);
     }
+    lastDepositTime = uint64(block.timestamp);
     emit Deposit(msg.sender, amount);
 
     return amount;
@@ -166,6 +169,11 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     }
     if (amount == 0) {
       revert ZeroAmount();
+    }
+
+    // If the target has been reached, give the governor 24 hours to execute
+    if ((outstanding() == target) && (uint64(block.timestamp - 24 hours) < lastDepositTime)) {
+      revert CrowdfundReached();
     }
 
     _burn(msg.sender, amount);
@@ -246,8 +254,8 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     emit StateChange(state);
   }
 
-  // Allow users to burn Crowdfund tokens to receive Thread tokens
-  function burn(address depositor) external override {
+  // Allow redeeming Crowdfund tokens to receive Thread tokens
+  function redeem(address depositor) external override {
     if (state != State.Finished) {
       revert InvalidState(state, State.Finished);
     }

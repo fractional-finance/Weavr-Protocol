@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
@@ -13,6 +13,8 @@ import { ECDSAUpgradeable as ECDSA } from "@openzeppelin/contracts-upgradeable/u
 // Therefore, this usage is fine, now and in the long-term, as long as one of those two versions is indefinitely supported
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 
+import { IERC20MetadataUpgradeable as IERC20Metadata } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 import "../interfaces/erc20/IAuction.sol";
 import "../interfaces/beacon/IFrabricBeacon.sol";
@@ -21,18 +23,25 @@ import "./DAO.sol";
 
 import "../interfaces/dao/IFrabricDAO.sol";
 
-// Implements proposals mutual to both Threads and the Frabric
-// This could be merged directly into DAO, as the Thread and Frabric contracts use this
-// yet DAO is only used by this
-// This offers smaller, more compartamentalized code, and directly integrating the two
-// doesn't actually offer any efficiency benefits. The new structs, the new variables, and
-// the new code are still needed, meaning it really just inlines _completeProposal
+/**
+ * @title FrabricDAO Contract
+ * @author Fractional Finance
+ *
+ * @dev Implements proposals mutual to both Threads and the Frabric
+ * This could be merged directly into DAO, as the Thread and Frabric contracts use this,
+ * yet DAO is only used by this
+ * This offers smaller, more compartamentalized code, and directly integrating the two
+ * doesn't actually offer any efficiency benefits. The new structs, the new variables, and
+ * the new code are still needed, meaning it really just inlines _completeProposal
+ */
 abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
   using SafeERC20 for IERC20;
   using ERC165Checker for address;
 
+  /// @notice Bit value indicating a proposal is a common proposal
   uint16 constant public override commonProposalBit = 1 << 8;
 
+  /// @notice Maximum percentage fee to enforce upon removal of a participant
   uint8 public override maxRemovalFee;
 
   struct Upgrade {
@@ -73,6 +82,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     __DAO_init(_erc20, _votingPeriod);
     supportsInterface[type(IFrabricDAO).interfaceId] = true;
 
+    // Ensure this is a valid percentage
     if (_maxRemovalFee > 100) {
       revert InvalidRemovalFee(_maxRemovalFee, 100);
     }
@@ -84,17 +94,32 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     return (pType >> 8) == 1;
   }
 
+  /**
+   * @notice Create a new paper proposal (a statement agreed upon by the DAO without technical action)
+   * @param supermajority true if a supermajority is required for the proposal to pass
+   * @param info Statement to be put to a vote
+   * @return uint256 ID of the created proposal
+   */
   function proposePaper(bool supermajority, bytes32 info) external override returns (uint256) {
     // No dedicated event as the DAO emits type and info
     return _createProposal(uint16(CommonProposalType.Paper) | commonProposalBit, supermajority, info);
   }
 
-  // Allows upgrading itself or any contract owned by itself
-  // Specifying any irrelevant beacon will work yet won't have any impact
-  // Specifying an arbitrary contract would also work if it has functions/
-  // a fallback function which don't error when called
-  // Between human review, function definition requirements, and the lack of privileges bestowed,
-  // this is considered to be appropriately managed
+  /**
+   * @notice Propose a contract upgrade for this contract or one owned by it
+   * @param beacon Address of the beacon contract facilitating upgrades
+   * @param instance Address of the contract instance to be upgraded
+   * @param version Version number of the new contract
+   * @param code Address of the contract with the new code
+   * @param data Data to be passed to new contract when triggering the upgrade
+   * @param info Additional information about proposal
+   * @return id ID of created proposal
+   * @dev Specifying any irrelevant beacon will work yet won't have any impact
+   * Specifying an arbitrary contract would also work if it has functions/
+   * a fallback function which doesn't error when called
+   * Between human review, function definition requirements, and the lack of privileges bestowed,
+   * this is considered to be appropriately managed
+   */
   function proposeUpgrade(
     address beacon,
     address instance,
@@ -132,6 +157,17 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     emit UpgradeProposal(id, beacon, instance, version, code, data);
   }
 
+  /**
+   * @notice Create a proposal to mint, transfer, sell, auction tokens, or cancel a standing sell order.
+   * Combined actions are supported
+   * @param token Address of the token to act on
+   * @param target Target address for the action. Either the recipient, this contract if selling on the DEX,
+   * or the auction contract if selling at auction
+   * @param price Price of tokens to create/cancel a DEX sell order at
+   * @param amount Quantity of tokens to act with. 0 if cancelling an order
+   * @param info Information on this proposal
+   * @return id Id of created proposal
+   */
   function proposeTokenAction(
     address token,
     address target,
@@ -168,7 +204,8 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
       // Because this is an ILO DEX, amount here will be atomic yet the ILO DEX
       // will expect it to be whole
-      if ((amount / 1e18 * 1e18) != amount) {
+      uint256 whole = 10 ** IERC20Metadata(token).decimals();
+      if ((amount / whole * whole) != amount) {
         revert NotRoundAmount(amount);
       }
     // Only allow a zero amount to cancel an order at a given price
@@ -181,13 +218,25 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     emit TokenActionProposal(id, token, target, mint, price, amount);
   }
 
+  /**
+   * @notice Propose removal of `participant`
+   * @param participant Address of participant proposed for removal
+   * @param removalFee Percentage fee to charge `participant` on removal, intended to recover financial damage
+   * @param signatures Array of signatures from users voting on this proposal in advance, in order to freeze the
+   * funds of the participant for the duration of this proposal
+   * @param info Any extra information about the proposal
+   * @return id ID of created proposal
+   */
   function proposeParticipantRemoval(
     address participant,
     uint8 removalFee,
-    uint64 freezeUntilNonce, // Create a nonce out of freezeUntil
     bytes[] calldata signatures,
     bytes32 info
   ) public virtual override returns (uint256 id) {
+    if (participant == address(this)) {
+      revert Irremovable(participant);
+    }
+
     if (removalFee > maxRemovalFee) {
       revert InvalidRemovalFee(removalFee, maxRemovalFee);
     }
@@ -211,6 +260,8 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
         revert UnsupportedInterface(erc20, type(IFreeze).interfaceId);
       }
 
+      // Create a nonce out of freezeUntil, as this will solely increase
+      uint256 freezeUntilNonce = IFreeze(erc20).frozenUntil(participant) + 1;
       for (uint256 i = 0; i < signatures.length; i++) {
         // Vote with the recovered signer. This will tell us how many votes they
         // have in the end, and if these people are voting to freeze their funds,
@@ -225,7 +276,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
             _hashTypedDataV4(
               keccak256(
                 abi.encode(
-                  keccak256("Removal(address participant,uint8 removalFee,uint64 freezeUntil)"),
+                  keccak256("Removal(address participant,uint8 removalFee,uint64 freezeUntilNonce)"),
                   participant,
                   removalFee,
                   freezeUntilNonce
@@ -235,13 +286,6 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
             signatures[i]
           )
         );
-      }
-
-      // Forces signatures to use the same time which must be greater than the existing time,
-      // and therefore unique
-      uint256 expectedNonce = IFreeze(erc20).frozenUntil(participant) + 1;
-      if (freezeUntilNonce != expectedNonce) {
-        revert Replay(freezeUntilNonce, expectedNonce);
       }
 
       // If the votes of these holders doesn't meet the required participation threshold, throw
@@ -305,7 +349,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
             // These orders cannot be cancelled at this time without the DAO wash trading
             // through the order, yet that may collide with others orders at the same price
             // point, so this isn't actually a viable method
-            IIntegratedLimitOrderDEXCore(action.token).sell(action.price, action.amount / 1e18);
+            IIntegratedLimitOrderDEXCore(action.token).sell(action.price, action.amount / (10 ** IERC20Metadata(action.token).decimals()));
 
           // Technically, TokenAction could not acknowledge Auction
           // By transferring the tokens to another contract, the Auction can be safely created

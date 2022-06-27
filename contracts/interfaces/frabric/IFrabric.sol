@@ -65,7 +65,6 @@ interface IFrabric is IFrabricCore {
   );
   event ParticipantChange(ParticipantType indexed participantType, address indexed participant);
   event Vouch(address indexed voucher, address indexed vouchee);
-  event KYC(address indexed kyc, address indexed participant);
 
   function participant(address participant) external view returns (ParticipantType);
 

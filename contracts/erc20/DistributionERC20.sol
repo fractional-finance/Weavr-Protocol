@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -11,7 +11,11 @@ import "../common/Composable.sol";
 
 import "../interfaces/erc20/IDistributionERC20.sol";
 
-// ERC20 Votes expanded with distribution functionality
+/**
+ * @title DistributionERC20
+ * @author Fractional Finance
+ * @notice This contract expands ERC20Votes with distribution functionality
+ */
 abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpgradeable, Composable, IDistributionERC20 {
   using SafeERC20 for IERC20;
 
@@ -30,6 +34,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   // It's also better to use a mapping as we can extend the struct later if needed
   uint256 private _nextID;
   mapping(uint256 => DistributionStruct) private _distributions;
+  /// @notice Mapping of distribution -> user -> whether or not it's been claimed
   mapping(uint256 => mapping(address => bool)) public override claimed;
 
   uint256[100] private __gap;
@@ -84,6 +89,12 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     emit Distribution(id, token, amount);
   }
 
+  /**
+   * @notice Distribute a token to the holder of this token
+   * @param token Token to be distributed
+   * @param amount Amount of tokens to be distributed
+   * @return id ID of the distribution
+   */
   function distribute(address token, uint112 amount) public override nonReentrant returns (uint256) {
     uint256 balance = IERC20(token).balanceOf(address(this));
     IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
@@ -101,6 +112,9 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     return _distribute(token, amount);
   }
 
+  /// @notice Claim tokens from a distribution
+  /// @param id ID of the distribution to claim
+  /// @param person User to claim tokens for
   function claim(uint256 id, address person) external override {
     if (claimed[id][person]) {
       revert AlreadyClaimed(id, person);

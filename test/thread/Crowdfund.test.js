@@ -2,6 +2,7 @@ const { ethers, waffle } = require("hardhat");
 const { expect } = require("chai");
 
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
+const deployAuction = require("../../scripts/deployAuction.js");
 const deployCrowdfundProxy = require("../../scripts/deployCrowdfundProxy.js");
 const deployThreadDeployer = require("../../scripts/deployThreadDeployer.js");
 
@@ -14,6 +15,7 @@ const State = {
   Finished: 3
 }
 
+let frabric;
 let signers, deployer, governor, participant, other;
 let erc20;
 let ferc20, crowdfund;
@@ -22,19 +24,23 @@ describe("Crowdfund", async () => {
   before(async () => {
     // Deploy the test Frabric
     const TestFrabric = await ethers.getContractFactory("TestFrabric");
-    const frabric = await TestFrabric.deploy();
+    frabric = await TestFrabric.deploy();
 
     // Add the governor and whitelist the participants
     signers = await ethers.getSigners();
     [ deployer, governor, participant, other ] = signers.splice(0, 4);
     await frabric.whitelist(governor.address);
     await frabric.setGovernor(governor.address, common.GovernorStatus.Active);
+
     await frabric.whitelist(participant.address);
+    await frabric.setKYC(participant.address, ethers.utils.id("kyc"), 0);
     await frabric.whitelist(other.address);
+    await frabric.setKYC(other.address, ethers.utils.id("kyc"), 0);
 
     // Deploy the ThreadDeployer
     const erc20Beacon = await FrabricERC20.deployBeacon();
-    const { threadDeployer } = await deployThreadDeployer(erc20Beacon.address, ethers.constants.AddressZero);
+    const auction = await deployAuction();
+    const { threadDeployer } = await deployThreadDeployer(erc20Beacon.address, auction.auction.address);
     await threadDeployer.transferOwnership(frabric.address);
 
     // Have the ThreadDeployer deploy everything
@@ -76,10 +82,14 @@ describe("Crowdfund", async () => {
     expect(await erc20.balanceOf(crowdfund.address)).to.equal(100);
   });
 
-  it("shouldn't allow people who aren't whitelisted to participate", async () => {
+  it("shouldn't allow people who aren't KYCd to participate", async () => {
     await expect(
       crowdfund.connect(signers[0]).deposit(1)
-    ).to.be.revertedWith(`NotWhitelisted("${signers[0].address}")`);
+    ).to.be.revertedWith(`NotKYC("${signers[0].address}")`);
+    await frabric.whitelist(signers[0].address);
+    await expect(
+      crowdfund.connect(signers[0]).deposit(1)
+    ).to.be.revertedWith(`NotKYC("${signers[0].address}")`);
   });
 
   it("should allow withdrawing", async () => {
@@ -171,7 +181,7 @@ describe("Crowdfund", async () => {
 
   it("should allow claiming Thread tokens", async () => {
     const balance = await crowdfund.balanceOf(participant.address);
-    await crowdfund.burn(participant.address);
+    await crowdfund.redeem(participant.address);
     expect(await crowdfund.balanceOf(participant.address)).to.equal(0);
     expect(await ferc20.balanceOf(participant.address)).to.equal(balance);
   });

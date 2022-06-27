@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -14,6 +14,8 @@ import "../interfaces/erc20/IFrabricERC20.sol";
 
 import "../interfaces/erc20/IIntegratedLimitOrderDEX.sol";
 
+// While this is considered a Limit Order DEX, it will match for the exact prices specified
+// It will not find a better price, even if one is available, due to constaints by the EVM
 abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composable, IIntegratedLimitOrderDEX {
   using SafeERC20 for IERC20;
 
@@ -128,7 +130,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
         if (h == 0) {
           _inDEX = false;
           point.orderType = OrderType.Null;
-          return 0;
+          return filled;
         }
 
         // We could also call continue here, yet this should be a bit more efficient
@@ -342,7 +344,9 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     }
 
     // Withdraw our own funds to prevent the need for another transaction
-    _withdrawTradeToken(msg.sender);
+    if (ours) {
+      _withdrawTradeToken(msg.sender);
+    }
 
     // Return if our own order was cancelled
     return ours;

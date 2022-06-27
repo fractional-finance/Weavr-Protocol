@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import "../interfaces/erc20/IFrabricERC20.sol";
 
@@ -19,6 +19,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
 
   address public override governor;
   address public override frabric;
+  uint256 private frabricVotingPeriod;
 
   // Irremovable ecosystem contracts which hold Thread tokens
   mapping(address => bool) public override irremovable;
@@ -35,7 +36,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
   }
   mapping(uint256 => Dissolution) private _dissolutions;
 
-  modifier viableFrabric(address _frabric) {
+  function _viableFrabric(address _frabric) private {
     // Technically not needed, healthy to have
     if (IComposable(_frabric).contractName() != keccak256("Frabric")) {
       revert DifferentContract(IComposable(_frabric).contractName(), keccak256("Frabric"));
@@ -56,7 +57,10 @@ contract Thread is FrabricDAO, IThreadInitializable {
     if (!IComposable(_frabric).supportsInterface(type(IFrabricCore).interfaceId)) {
       revert UnsupportedInterface(_frabric, type(IFrabricCore).interfaceId);
     }
+  }
 
+  modifier viableFrabric(address _frabric) {
+    _viableFrabric(_frabric);
     _;
   }
 
@@ -109,6 +113,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     descriptor = _descriptor;
     // Doesn't bother faking a proposal, yet this will still emit XChange
     _setFrabric(_frabric);
+    frabricVotingPeriod = IDAOCore(frabric).votingPeriod();
     _setGovernor(_governor);
 
     for (uint256 i = 0; i < _irremovable.length; i++) {
@@ -162,14 +167,13 @@ contract Thread is FrabricDAO, IThreadInitializable {
   function proposeParticipantRemoval(
     address participant,
     uint8 removalFee,
-    uint64 freezeUntilNonce,
     bytes[] calldata signatures,
     bytes32 info
   ) public override(FrabricDAO, IFrabricDAO) returns (uint256) {
     if (irremovable[participant]) {
       revert Irremovable(participant);
     }
-    return super.proposeParticipantRemoval(participant, removalFee, freezeUntilNonce, signatures, info);
+    return super.proposeParticipantRemoval(participant, removalFee, signatures, info);
   }
 
   function proposeDescriptorChange(
@@ -185,7 +189,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     address _frabric,
     address _governor,
     bytes32 info
-  ) external override viableFrabric(_frabric) returns (uint256 id) {
+  ) external override viableFrabric(_frabric) viableGovernor(_frabric, _governor) returns (uint256 id) {
     id = _createProposal(uint16(ThreadProposalType.FrabricChange), true, info);
     // This could use a struct yet this is straightforward and simple
     _frabrics[id] = _frabric;
@@ -281,7 +285,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
       // to be perfect with time, enabling upgrades only enables Upgrade proposals to be created
       // That means there's an additional delay of the Thread's voting period (1 week)
       // while the actual Upgrade proposal occurs, granting that time
-      upgradesEnabled = block.timestamp + IDAOCore(frabric).votingPeriod() + (1 weeks);
+      upgradesEnabled = block.timestamp + frabricVotingPeriod + (1 weeks);
 
     } else if (pType == ThreadProposalType.Dissolution) {
       // Prevent the Thread from being locked up in a Dissolution the governor won't honor for whatever reason

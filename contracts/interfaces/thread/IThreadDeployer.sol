@@ -46,5 +46,5 @@ interface IThreadDeployerInitializable is IThreadDeployer {
   ) external;
 }
 
-error UnknownVariant(uint256 id);
+error UnknownVariant(uint8 id);
 error NonStaticDecimals(uint8 beforeDecimals, uint8 afterDecimals);

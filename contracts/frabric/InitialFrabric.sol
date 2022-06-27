@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import "../dao/FrabricDAO.sol";
 
@@ -13,7 +13,7 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
     address _erc20,
     address[] calldata genesis
   ) external override initializer {
-    __FrabricDAO_init("Frabric Protocol", _erc20, 2 weeks, 100);
+    __FrabricDAO_init("Frabric Protocol", _erc20, 1 days, 100);
 
     __Composable_init("Frabric", false);
     supportsInterface[type(IInitialFrabric).interfaceId] = true;

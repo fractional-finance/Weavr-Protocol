@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
@@ -26,12 +26,26 @@ import "../interfaces/erc20/IDEXRouter.sol";
 // only to sell them or provide liquidity (a form of holding yet one requiring equal
 // capital lockup while providing a service others can take advantage of)
 
+/**
+ * @title DEXRouter contract
+ * @author Fractional Finance
+ * @notice This contract implements a router for DEXs, preventing Threads from upgrading to drain approvals
+ */
 contract DEXRouter is Composable, IDEXRouter {
   constructor() Composable("DEXRouter") initializer {
     __Composable_init("DEXRouter", true);
     supportsInterface[type(IDEXRouter).interfaceId] = true;
   }
 
+  /**
+   * @notice Purchase tokens from their DEX
+   * @param token Token to be purchased
+   * @param tradeToken Token to be used to purchase said token
+   * @param payment Amount of `tradeToken` to be used in this purchase
+   * @param price Price per whole token
+   * @param minimumAmount Minimum amount of tokens to be received (in whole tokens)
+   * @return filled uint256 quantity of succesfully purchased tokens
+   */
   function buy(
     address token,
     address tradeToken,

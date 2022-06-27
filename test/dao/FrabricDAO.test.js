@@ -133,11 +133,15 @@ describe("FrabricDAO", accounts => {
           },
           {
             Removal: [
-              { name: "participant", type: "address" }
+              { name: "participant", type: "address" },
+              { name: "removalFee", type: "uint8" },
+              { name: "freezeUntilNonce", type: "uint64" }
             ]
           },
           {
-            participant: other.address
+            participant: other.address,
+            removalFee,
+            freezeUntilNonce: 1
           }
         ];
         if (participant.signTypedData) {
@@ -148,10 +152,10 @@ describe("FrabricDAO", accounts => {
       }
 
       const { id, tx: freeze } = await propose(
-        fDAO,
+        fDAO.connect((i === 2) ? other : fDAO.signer),
         "ParticipantRemoval",
         false,
-        [other.address, removalFee, 1, signatures]
+        [other.address, removalFee, signatures]
       );
       if (i === 2) {
         let frozenUntil = (await waffle.provider.getBlock("latest")).timestamp + WEEK + (3 * 24 * 60 * 60);
@@ -162,9 +166,17 @@ describe("FrabricDAO", accounts => {
         ).to.be.revertedWith(`Frozen("${other.address}")`);
 
         // Make sure this is successfully nonced
+        // The previously valid signatures should now no longer match to valid signers, causing NotEnoughParticipation
+        // If this message is inlined, hardhat internally errors for some reason
+        let message = `NotEnoughParticipation(${
+          ethers.constants.MaxUint256.toString()
+        }, 0, ${
+          (await frbc.totalSupply()).sub(await frbc.balanceOf(fDAO.address)).div(10).toString()
+        })`;
+
         await expect(
-          fDAO.proposeParticipantRemoval(other.address, removalFee, 1, signatures, ethers.utils.id("info"))
-        ).to.be.revertedWith(`Replay(1, ${frozenUntil + 1})`);
+          fDAO.connect(other).proposeParticipantRemoval(other.address, removalFee, signatures, ethers.utils.id("info"))
+        ).to.be.revertedWith(message);
       }
 
       const tx = await queueAndComplete(fDAO, id);

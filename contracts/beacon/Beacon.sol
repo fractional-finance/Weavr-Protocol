@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import { ERC165CheckerUpgradeable as ERC165Checker } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol";
 
@@ -135,7 +135,7 @@ contract Beacon is Ownable, Composable, IFrabricBeacon {
     emit Upgrade(instance, version, code, data);
   }
 
-  function triggerUpgrade(address instance, uint256 version) public override {
+  function triggerUpgrade(address instance, uint256 version) external override {
     uint256 currVersion = IComposable(instance).version();
     if (currVersion != (version - 1)) {
       revert InvalidVersion(currVersion, version - 1);

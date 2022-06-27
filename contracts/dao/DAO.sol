@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { IVotesUpgradeable as IVotes } from "@openzeppelin/contracts-upgradeable/governance/utils/IVotesUpgradeable.sol";
@@ -10,7 +10,12 @@ import "../common/Composable.sol";
 
 import "../interfaces/dao/IDAO.sol";
 
-// DAO around a FrabricERC20
+/**
+ * @title DAO Contract
+ * @author Fractional Finance
+ * @notice This contracts, based around a FrabricERC20, implements the core logic used by all DAOs in the ecosystem
+ * @dev Upgradeable contract
+ */
 abstract contract DAO is Composable, IDAO {
   struct ProposalStruct {
     // The following are embedded into easily accessible events
@@ -46,13 +51,19 @@ abstract contract DAO is Composable, IDAO {
     uint32 voteBlock;
   }
 
+  /// @notice Address of the FrabricERC20 used by this DAO
   address public override erc20;
+  /// @notice Proposal voting period length in seconds
   uint64 public override votingPeriod;
+  /// @notice Time before a passed proposal can be enacted
   uint64 public override queuePeriod;
+  /// @notice Time a proposal can be enacted before no longer being completable
+  uint64 public override lapsePeriod;
 
   uint256 private _nextProposalID;
   mapping(uint256 => ProposalStruct) private _proposals;
 
+  /// @notice Whether or not a proposal passed
   mapping(uint256 => bool) public override passed;
 
   uint256[100] private __gap;
@@ -64,15 +75,23 @@ abstract contract DAO is Composable, IDAO {
     erc20 = _erc20;
     votingPeriod = _votingPeriod;
     queuePeriod = 48 hours;
+    lapsePeriod = 48 hours;
   }
 
+
+  /// @notice Get required amount of participation for a proposal to passable
+  /// @return uint112 Amount of participation required
   function requiredParticipation() public view returns (uint112) {
     // Uses the current total supply instead of the historical total supply in
     // order to represent the current community
     // Subtracts any reserves held by the DAO itself as those can't be voted with
+    // Requires 10% participation
     return uint112(IERC20(erc20).totalSupply() - IERC20(erc20).balanceOf(address(this))) / 10;
   }
 
+  /// @notice Check if `proposer` can propose
+  /// @return bool true if `proposer` can propose, false otherwise
+  /// @dev Check to be implemented by inheriting contracts
   function canPropose(address proposer) public virtual view returns (bool);
   modifier beforeProposal() {
     if (!canPropose(msg.sender)) {
@@ -90,9 +109,14 @@ abstract contract DAO is Composable, IDAO {
     );
   }
 
-  // proposal.state == ProposalState.Active isn't reliable as expired proposals which didn't pass
-  // will forever have their state set to ProposalState.Active
-  // This call will check the proposal's expiry status as well
+  /**
+   * @notice Check if proposal `id` is currently active
+   * @param id ID of proposal to be checked
+   * @return bool true if proposal `id` is active, false otherwise
+   * @dev proposal.state == ProposalState.Active is not reliable as expired proposals
+   * which didn't pass will forever have their state set to ProposalState.Active
+   * This call will check the proposal's expiry status as well
+  */
   function proposalActive(uint256 id) external view override returns (bool) {
     return proposalActive(_proposals[id]);
   }
@@ -133,10 +157,7 @@ abstract contract DAO is Composable, IDAO {
     emit ProposalStateChange(id, proposal.state);
 
     // Automatically vote in favor for the creator if they have votes and are actively KYCd
-    int112 votes = int112(uint112(IVotes(erc20).getPastVotes(msg.sender, proposal.voteBlock)));
-    if ((votes != 0) && IFrabricWhitelistCore(erc20).hasKYC(msg.sender)) {
-      _voteUnsafe(msg.sender, id, proposal, votes, votes);
-    }
+    _voteUnsafe(id, msg.sender);
   }
 
   // Labeled unsafe due to its split checks with the various callers and lack of guarantees
@@ -148,7 +169,7 @@ abstract contract DAO is Composable, IDAO {
     int112 votes,
     int112 absVotes
   ) private {
-    // Cap voting power per user at 10% of the current total supply
+    // Cap voting power per user at 10% of the current total supply, a legally valuable number
     // This will hopefully not be executed 99% of the time and then only for select Threads
     // This isn't perfect yet we are somewhat sybil resistant thanks to requiring KYC
     // 10% isn't requiredParticipation, despite currently having the same value,
@@ -198,10 +219,16 @@ abstract contract DAO is Composable, IDAO {
     }
   }
 
-  // While it's not expected for this to be called in batch due to UX complexities,
-  // it's a very minor gas cost which does offer savings when multiple proposals
-  // are voted on at the same time
+  /**
+   * @notice Vote on one or multiple proposals, where all must be active
+   * @param ids Array of proposal IDs to vote on
+   * @param votes Array of number of votes to cast for each corresponding proposal ID
+   */
   function vote(uint256[] memory ids, int112[] memory votes) external override {
+    if (ids.length != votes.length) {
+      revert DifferentLengths(ids.length, votes.length);
+    }
+
     // Require the caller to be KYCd
     if (!IFrabricWhitelistCore(erc20).hasKYC(msg.sender)) {
       revert NotKYC(msg.sender);
@@ -239,6 +266,8 @@ abstract contract DAO is Composable, IDAO {
     }
   }
 
+  /// @notice Queue a successful proposal to be enacted
+  /// @param id ID of proposal to be enacted
   function queueProposal(uint256 id) external override {
     ProposalStruct storage proposal = _proposals[id];
 
@@ -254,12 +283,16 @@ abstract contract DAO is Composable, IDAO {
     }
 
     // Proposal should've gotten enough votes to pass
+    // Since votes is a signed integer, anything greater than 0 signifies more
+    // people votes yes than no
     int112 passingVotes = 0;
     if (proposal.supermajority) {
       // Utilize a 66% supermajority requirement
-      // If 0 represents 50%, a further 16% of votes must be positive
+      // With 33% of the votes being against, and 33% of the votes being for,
+      // totalVotes will be at 0. In order for a supermajority of 66%, the
+      // other 33% must be in excess of this neutral state, hence / 3
       // Doesn't add 1 to handle rounding due to the following if statement
-      passingVotes = int112(proposal.totalVotes / 6);
+      passingVotes = int112(proposal.totalVotes / 3);
     }
 
     // In case of a tie, err on the side of caution and fail the proposal
@@ -273,16 +306,25 @@ abstract contract DAO is Composable, IDAO {
     }
 
     proposal.state = ProposalState.Queued;
-    proposal.stateStartTime = uint32(block.timestamp);
+    proposal.stateStartTime = uint64(block.timestamp);
     emit ProposalStateChange(id, proposal.state);
   }
 
+
+  /// @notice Cancel enacting a queued proposal if the voters no longer have sufficient voting power
+  /// @param id ID of queued proposal to be cancelled
+  /// @param voters Sorted list of voters who voted in favour of proposal `id`
   function cancelProposal(uint256 id, address[] calldata voters) external override {
     // Must be queued. Even if it's completable, if it has yet to be completed, allow this
     ProposalStruct storage proposal = _proposals[id];
     if (proposal.state != ProposalState.Queued) {
       revert NotQueued(id, proposal.state);
     }
+
+    // If the supply has shrunk, this will potentially apply a value greater than the modern 10%
+    // If the supply has expanded, this will use the historic vote cap which is smaller than the modern 10%
+    // The latter is more accurate and more likely
+    int112 tenPercent = int112(uint112(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
 
     int112 newVotes = proposal.votes;
     uint160 prevVoter = 0;
@@ -301,10 +343,6 @@ abstract contract DAO is Composable, IDAO {
       }
 
       int112 votes = int112(uint112(IERC20(erc20).balanceOf(voter)));
-      // If the supply has shrunk, this will potentially apply a value greater than the modern 10%
-      // If the supply has expanded, this will use the historic vote cap which is smaller than the modern 10%
-      // The latter is more accurate and more likely
-      int112 tenPercent = int112(uint112(IVotes(erc20).getPastTotalSupply(proposal.voteBlock) / 10));
       if (votes > tenPercent) {
         votes = tenPercent;
       }
@@ -323,7 +361,7 @@ abstract contract DAO is Composable, IDAO {
 
     int112 passingVotes = 0;
     if (proposal.supermajority) {
-      passingVotes = int112(proposal.totalVotes / 6);
+      passingVotes = int112(proposal.totalVotes / 3);
     }
 
     // If votes are tied, it would've failed queueProposal
@@ -338,10 +376,12 @@ abstract contract DAO is Composable, IDAO {
 
   function _completeProposal(uint256 id, uint16 proposalType, bytes calldata data) internal virtual;
 
-  // Does not require canonically ordering when executing proposals in case a proposal has invalid actions, halting everything
-  // It would make a more robust system for specific proposal types, such as Thread's FrabricChange,
-  // if only the most recent instance of such a proposal could be edited though
-  // That is left for Thread to implement outside of the API of DAO
+  /**
+   * @notice Complete a queued proposal `id`
+   * @param id ID of the proposal to be completed
+   * @param data Arbitrary data to complete this specific proposal with
+   * @dev Does not require canonically ordering when executing proposals in case a proposal has invalid actions, halting everything
+   */
   function completeProposal(uint256 id, bytes calldata data) external override {
     // Safe against re-entrancy (regarding multiple execution of the same proposal)
     // as long as this block is untouched. While multiple proposals can be executed
@@ -356,6 +396,14 @@ abstract contract DAO is Composable, IDAO {
     if (block.timestamp < end) {
       revert StillQueued(id, block.timestamp, end);
     }
+
+    // If no one executed this proposal for so long it lapsed, cancel it
+    if (block.timestamp > (end + lapsePeriod)) {
+      delete _proposals[id];
+      emit ProposalStateChange(id, ProposalState.Cancelled);
+      return;
+    }
+
     delete _proposals[id];
     // Solely used for getter functionality
     // While we could use it for state checks, we already need to check it's specifically Queued
@@ -366,7 +414,9 @@ abstract contract DAO is Composable, IDAO {
     _completeProposal(id, pType, data);
   }
 
-  // Enables withdrawing a proposal
+
+  /// @notice Lets the proposal creator withdraw an active/queued proposal
+  /// @param id ID of proposal to be withdrawn
   function withdrawProposal(uint256 id) external override {
     ProposalStruct storage proposal = _proposals[id];
     // A proposal which didn't pass will pass this check
@@ -382,28 +432,51 @@ abstract contract DAO is Composable, IDAO {
     emit ProposalStateChange(id, ProposalState.Cancelled);
   }
 
-  // Next proposal ID. Mainly useful for tests, yet also a quick way to get the
-  // amount of proposals created
+  /// @notice Get the ID of the next proposal to be created
+  /// @return uint256 ID of the next proposal to be created
   function nextProposalID() external view override returns (uint256) {
     return _nextProposalID;
   }
 
-  // Will only work with proposals which have yet to complete in some form
-  // After that, the sole information available onchain is passed and proposalVote
-  // as mappings aren't deleted
+  /**
+   * @notice Check if a supermajority (circ. supply / 6) is required to approve proposal `id`
+   * @param id ID of proposal to be checked
+   * @return bool True if proposal `id` requires a supermajority to pass
+   * @dev Will only work with proposals which have yet to complete in some form
+   * After that, the sole information available onchain is passed, and voteRecord
+   * as mappings are not deleted
+   */
   function supermajorityRequired(uint256 id) external view override returns (bool) {
     return _proposals[id].supermajority;
   }
+
+  /// @notice Get the vote block (block created at - 1) for proposal `id`
+  /// @param id ID of proposal to be checked
+  /// @return uint32 Vote block for proposal `id`
   function voteBlock(uint256 id) external view override returns (uint32) {
     return _proposals[id].voteBlock;
   }
+
+  /// @notice Get net number of token votes in approval of proposal `id`
+  /// @param id ID of proposal to be checked
+  /// @return int112 Number of net token votes in approval of proposal `id`
   function netVotes(uint256 id) public view override returns (int112) {
     return _proposals[id].votes;
   }
+
+  /// @notice Get total number of token votes cast on proposal `id`
+  /// @param id ID of proposal to be checked
+  /// @return uint112 Number of total votes cast on proposal `id`
   function totalVotes(uint256 id) external view override returns (uint112) {
     return _proposals[id].totalVotes;
   }
 
+  /**
+   * @notice Get voting record of address `voter` for proposal `id`
+   * @param id ID of the proposal to be checked
+   * @param voter Address of the voter to get the record of
+   * @return int112 Votes cast by `voter` on proposal `id`
+   */
   function voteRecord(uint256 id, address voter) external view override returns (int112) {
     return _proposals[id].voters[voter];
   }

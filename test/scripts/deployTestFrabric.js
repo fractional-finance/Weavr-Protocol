@@ -7,7 +7,7 @@ const deployInitialFrabric = require("../../scripts/deployInitialFrabric.js");
 const deployFrabric = require("../../scripts/deployFrabric.js");
 
 const deployUniswap = require("../scripts/deployUniswap.js");
-const { ParticipantType, proposal } = require("../common.js");
+const { ParticipantType, GovernorStatus, proposal } = require("../common.js");
 
 module.exports = async () => {
   // Redundant with `npx hardhat test`, yet supports running as
@@ -55,6 +55,7 @@ module.exports = async () => {
   contracts.bond = upgrade.bond;
   contracts.threadDeployer = upgrade.threadDeployer;
 
+  let governor = signers.pop().address;
   await proposal(
     frabric.connect(signers[2]),
     "Upgrade",
@@ -65,8 +66,8 @@ module.exports = async () => {
       2,
       upgrade.frabricCode,
       (new ethers.utils.AbiCoder()).encode(
-        ["address", "address", "address"],
-        [upgrade.bond.address, upgrade.threadDeployer.address, signers[1].address]
+        ["address", "address", "address", "address"],
+        [upgrade.bond.address, upgrade.threadDeployer.address, signers[1].address, governor]
       )
     ]
   );
@@ -79,6 +80,8 @@ module.exports = async () => {
   expect(await contracts.frabric.bond()).to.equal(upgrade.bond.address);
   expect(await contracts.frabric.threadDeployer()).to.equal(upgrade.threadDeployer.address);
   expect(await contracts.frabric.participant(signers[1].address)).to.equal(ParticipantType.KYC);
+  expect(await contracts.frabric.participant(governor)).to.equal(ParticipantType.Governor);
+  expect(await contracts.frabric.governor(governor)).to.equal(GovernorStatus.Active);
 
   // Actually create the pair
   await uniswap.factory.createPair(frbc.address, usd.address);

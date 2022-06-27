@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPLv3
-pragma solidity ^0.8.9;
+pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -27,6 +27,7 @@ contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
   bool private _burning;
 
   function initialize(address _usd, address _bondToken) external override initializer {
+    // Intended to be own by the Frabric
     __Ownable_init();
     __DistributionERC20_init("Frabric Bond", "bFBRC");
 
@@ -47,8 +48,6 @@ contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
   constructor() Composable("Bond") initializer {}
 
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
-    super._beforeTokenTransfer(from, to, amount);
-
     // from == address(0) means it's being minted
     // _burning means it's being burnt
     // These are the only valid reasons this token should be transferred and these
@@ -56,6 +55,8 @@ contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
     if ((from != address(0)) && (!_burning)) {
       revert BondTransfer();
     }
+
+    super._beforeTokenTransfer(from, to, amount);
   }
 
   function bond(uint256 amount) external override {
