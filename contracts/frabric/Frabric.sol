@@ -71,11 +71,23 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
   }
 
+  function _changeParticipant(address _participant, ParticipantType pType) private {
+    participant[_participant] = pType;
+    emit ParticipantChange(pType, _participant);
+  }
+
+  function _changeParticipantAndKYC(address _participant, ParticipantType pType, bytes32 kycHash) private {
+    _changeParticipant(_participant, pType);
+    IFrabricWhitelistCore(erc20).setKYC(_participant, kycHash, 0);
+  }
+
+  function _whitelistAndAdd(address _participant, ParticipantType pType, bytes32 kycHash) private {
+    IFrabricWhitelistCore(erc20).whitelist(_participant);
+    _changeParticipantAndKYC(_participant, pType, kycHash);
+  }
+
   function _addKYC(address kyc) private {
-    IFrabricWhitelistCore(erc20).whitelist(kyc);
-    participant[kyc] = ParticipantType.KYC;
-    emit ParticipantChange(ParticipantType.KYC, kyc);
-    IFrabricWhitelistCore(erc20).setKYC(kyc, keccak256(abi.encodePacked("KYC ", kyc)), 0);
+    _whitelistAndAdd(kyc, ParticipantType.KYC, keccak256(abi.encodePacked("KYC ", kyc)));
   }
 
   function upgrade(uint256 _version, bytes calldata data) external override {
@@ -106,11 +118,15 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     supportsInterface[type(IFrabricCore).interfaceId] = true;
     supportsInterface[type(IFrabric).interfaceId] = true;
 
-    // Set bond, threadDeployer, and an initial KYC
+    // Set bond, threadDeployer, and an initial KYC/governor
     address kyc;
-    (bond, threadDeployer, kyc) = abi.decode(data, (address, address, address));
+    address _governor;
+    (bond, threadDeployer, kyc, _governor) = abi.decode(data, (address, address, address, address));
 
     _addKYC(kyc);
+
+    _whitelistAndAdd(_governor, ParticipantType.Governor, keccak256("Initial Governor"));
+    governor[_governor] = GovernorStatus.Active;
 
     _proposalSelectors[uint16(CommonProposalType.Paper)       ^ commonProposalBit] = IFrabricDAO.proposePaper.selector;
     _proposalSelectors[uint16(CommonProposalType.Upgrade)     ^ commonProposalBit] = IFrabricDAO.proposeUpgrade.selector;
@@ -119,6 +135,9 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     _proposalSelectors[uint16(IThread.ThreadProposalType.DescriptorChange)] = IThread.proposeDescriptorChange.selector;
     _proposalSelectors[uint16(IThread.ThreadProposalType.GovernorChange)]   = IThread.proposeGovernorChange.selector;
     _proposalSelectors[uint16(IThread.ThreadProposalType.Dissolution)]      = IThread.proposeDissolution.selector;
+
+    // Correct the voting time as well
+    votingPeriod = 2 weeks;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -254,8 +273,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     if (governor[_participant] != GovernorStatus.Null) {
       governor[_participant] = GovernorStatus.Removed;
     }
-    participant[_participant] = ParticipantType.Removed;
-    emit ParticipantChange(ParticipantType.Removed, _participant);
+    _changeParticipant(_participant, ParticipantType.Removed);
   }
 
   function _completeSpecificProposal(uint256 id, uint256 _pType) internal override {
@@ -386,13 +404,10 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     if (participant[approving] != ParticipantType.Null) {
       revert ParticipantAlreadyApproved(approving);
     }
-    participant[approving] = pType;
+
+    _changeParticipantAndKYC(approving, pType, kycHash);
     if (pType == ParticipantType.Governor) {
       governor[approving] = GovernorStatus.Active;
     }
-    emit ParticipantChange(pType, approving);
-
-    IFrabricWhitelistCore(erc20).setKYC(approving, kycHash, 0);
-    emit KYC(signer, approving);
   }
 }
