@@ -11,3 +11,5 @@ coverage.json
 
 .vscode
 .idea
+.gitsigners
+genesis.json
