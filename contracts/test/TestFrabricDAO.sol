@@ -32,6 +32,6 @@ contract TestFrabricDAO is FrabricDAO {
   }
 
   function _completeSpecificProposal(uint256, uint256 pType) internal pure override {
-    revert UnhandledEnumCase("TestFrabricDAO: _completeSpecificProposal was called", pType);
+    revert errors.UnhandledEnumCase("TestFrabricDAO: _completeSpecificProposal was called", pType);
   }
 }

@@ -74,7 +74,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
   // Distribution implementation
   function _distribute(address token, uint112 amount) internal returns (uint256 id) {
     if (amount == 0) {
-      revert ZeroAmount();
+      revert errors.ZeroAmount();
     }
 
     id = _nextID;
@@ -128,7 +128,7 @@ abstract contract DistributionERC20 is ReentrancyGuardUpgradeable, ERC20VotesUpg
     );
     // Also verifies this is an actual distribution and not an unset ID
     if (amount == 0) {
-      revert ZeroAmount();
+      revert errors.ZeroAmount();
     }
 
     IERC20(distribution.token).safeTransfer(person, uint112(amount));

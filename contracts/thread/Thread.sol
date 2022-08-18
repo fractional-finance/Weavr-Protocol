@@ -47,7 +47,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     // setParent is executed, confirming the FrabricWhitelist interface
     // is supported by it
     if (!_frabric.supportsInterface(type(IDAOCore).interfaceId)) {
-      revert UnsupportedInterface(_frabric, type(IDAOCore).interfaceId);
+      revert errors.UnsupportedInterface(_frabric, type(IDAOCore).interfaceId);
     }
 
     // Converts to IComposable before calling supportsInterface again to save on gas
@@ -55,7 +55,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     // EIP165 validity. Since we've already performed these, now we can safely use
     // this boolean value
     if (!IComposable(_frabric).supportsInterface(type(IFrabricCore).interfaceId)) {
-      revert UnsupportedInterface(_frabric, type(IFrabricCore).interfaceId);
+      revert errors.UnsupportedInterface(_frabric, type(IFrabricCore).interfaceId);
     }
   }
 
@@ -242,7 +242,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
     bytes32 info
   ) external override returns (uint256 id) {
     if (price == 0) {
-      revert ZeroPrice();
+      revert errors.ZeroPrice();
     }
 
     id = _createProposal(uint16(ThreadProposalType.Dissolution), true, info);
@@ -310,7 +310,7 @@ contract Thread is FrabricDAO, IThreadInitializable {
       delete _dissolutions[id];
 
     } else {
-      revert UnhandledEnumCase("Thread _completeSpecificProposal", _pType);
+      revert errors.UnhandledEnumCase("Thread _completeSpecificProposal", _pType);
     }
   }
 }

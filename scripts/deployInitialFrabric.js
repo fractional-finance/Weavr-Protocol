@@ -15,9 +15,11 @@ module.exports = async (usd, uniswap, genesis) => {
   process.hhCompiled = true;
 
   const signer = (await ethers.getSigners())[0];
-
+  console.log("starting deploy")
   const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
+  console.log("FRBC Deployed, awaiting whitelist of Auction")
   await (await frbc.whitelist(auction.address)).wait();
+  console.log("whitelist of auction complete")
 
   // Deploy the Uniswap pair to get the bond token
   uniswap = new ethers.Contract(
@@ -25,20 +27,23 @@ module.exports = async (usd, uniswap, genesis) => {
     require("@uniswap/v2-periphery/build/UniswapV2Router02.json").abi,
     signer
   );
+  console.log("preparing uniswap pairing")
 
   const pair = u2SDK.computePairAddress({
     factoryAddress: await uniswap.factory(),
-    tokenA: new uSDK.Token(1, usd, 18),
-    tokenB: new uSDK.Token(1, frbc.address, 18)
+    tokenA: new uSDK.Token(4, usd, 18),
+    tokenB: new uSDK.Token(4, frbc.address, 18)
   });
+  console.log("computed pair address, whitelisting uniswap pair")
   // Whitelisting the pair to create the LP token does break the whitelist to some degree
   // We're immediately creating a wrapped derivative token with no transfer limitations
   // That said, it's a derivative subject to reduced profit potential and unusable as FRBC
   // Considering the critical role Uniswap plays in the Ethereum ecosystem, we accordingly accept this effect
   await (await frbc.whitelist(pair)).wait();
-
+  console.log("waiting for waitlist")
   // Process the genesis
   let genesisList = [];
+  console.log("genesis start")
   for (const person in genesis) {
     await (await frbc.whitelist(person, { gasLimit: 300000 })).wait();
     await (await frbc.setKYC(person, ethers.utils.id(genesis[person].info), 0, { gasLimit: 300000 })).wait();
@@ -46,6 +51,7 @@ module.exports = async (usd, uniswap, genesis) => {
 
     genesisList.push(person);
   }
+  console.log("genesis stop")
 
   // Code to add liquidity to create the LP token used as bond
   // Also verifies the whitelist is correctly set up
@@ -83,7 +89,7 @@ module.exports = async (usd, uniswap, genesis) => {
   const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
   const proxy = await deployBeacon("single", InitialFrabric);
 
-  const frabric = await upgrades.deployBeaconProxy(proxy.address, InitialFrabric, [frbc.address, genesisList]);
+  const frabric = await upgrades.deployBeaconProxy(proxy.address, InitialFrabric.nativeContractFactory, [frbc.address, genesisList]);
   await (await frbc.whitelist(frabric.address)).wait();
 
   // Transfer ownership of everything to the Frabric

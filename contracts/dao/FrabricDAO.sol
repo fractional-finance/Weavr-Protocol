@@ -129,12 +129,12 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     bytes32 info
   ) public virtual override returns (uint256 id) {
     if (!beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) {
-      revert UnsupportedInterface(beacon, type(IFrabricBeacon).interfaceId);
+      revert errors.UnsupportedInterface(beacon, type(IFrabricBeacon).interfaceId);
     }
     bytes32 beaconName = IFrabricBeacon(beacon).beaconName();
 
     if (!code.supportsInterface(type(IComposable).interfaceId)) {
-      revert UnsupportedInterface(code, type(IComposable).interfaceId);
+      revert errors.UnsupportedInterface(code, type(IComposable).interfaceId);
     }
     bytes32 codeName = IComposable(code).contractName();
 
@@ -199,7 +199,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
 
       // Ensure that we know how to sell this token
       if (!token.supportsInterface(type(IIntegratedLimitOrderDEXCore).interfaceId)) {
-        revert UnsupportedInterface(token, type(IIntegratedLimitOrderDEXCore).interfaceId);
+        revert errors.UnsupportedInterface(token, type(IIntegratedLimitOrderDEXCore).interfaceId);
       }
 
       // Because this is an ILO DEX, amount here will be atomic yet the ILO DEX
@@ -210,7 +210,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
       }
     // Only allow a zero amount to cancel an order at a given price
     } else if (amount == 0) {
-      revert ZeroAmount();
+      revert errors.ZeroAmount();
     }
 
     id = _createProposal(uint16(CommonProposalType.TokenAction) | commonProposalBit, supermajority, info);
@@ -257,7 +257,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     // If this is done maliciously, whoever proposed this should be removed themselves
     if (signatures.length != 0) {
       if (!erc20.supportsInterface(type(IFreeze).interfaceId)) {
-        revert UnsupportedInterface(erc20, type(IFreeze).interfaceId);
+        revert errors.UnsupportedInterface(erc20, type(IFreeze).interfaceId);
       }
 
       // Create a nonce out of freezeUntil, as this will solely increase
@@ -369,7 +369,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
               1,
               uint64(block.timestamp),
               // A longer time period can be decided on and utilized via the above method
-              1 weeks
+              10 minutes
             );
           }
         }
@@ -382,7 +382,7 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
         delete _removals[id];
 
       } else {
-        revert UnhandledEnumCase("FrabricDAO _completeProposal CommonProposal", _pType);
+        revert errors.UnhandledEnumCase("FrabricDAO _completeProposal CommonProposal", _pType);
       }
 
     } else {

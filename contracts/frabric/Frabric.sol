@@ -64,10 +64,10 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
 
     (address _bond, address _threadDeployer, ) = abi.decode(data, (address, address, address));
     if (!_bond.supportsInterface(type(IBondCore).interfaceId)) {
-      revert UnsupportedInterface(_bond, type(IBondCore).interfaceId);
+      revert errors.UnsupportedInterface(_bond, type(IBondCore).interfaceId);
     }
     if (!_threadDeployer.supportsInterface(type(IThreadDeployer).interfaceId)) {
-      revert UnsupportedInterface(_threadDeployer, type(IThreadDeployer).interfaceId);
+      revert errors.UnsupportedInterface(_threadDeployer, type(IThreadDeployer).interfaceId);
     }
   }
 
@@ -137,7 +137,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     _proposalSelectors[uint16(IThread.ThreadProposalType.Dissolution)]      = IThread.proposeDissolution.selector;
 
     // Correct the voting time as well
-    votingPeriod = 2 weeks;
+    votingPeriod = 1 weeks;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -252,16 +252,16 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     bytes4 selector;
     if (_isCommonProposal(_proposalType)) {
       if (!thread.supportsInterface(type(IFrabricDAO).interfaceId)) {
-        revert UnsupportedInterface(thread, type(IFrabricDAO).interfaceId);
+        revert errors.UnsupportedInterface(thread, type(IFrabricDAO).interfaceId);
       }
     } else {
       if (!thread.supportsInterface(type(IThread).interfaceId)) {
-        revert UnsupportedInterface(thread, type(IThread).interfaceId);
+        revert errors.UnsupportedInterface(thread, type(IThread).interfaceId);
       }
     }
     selector = _proposalSelectors[_proposalType];
     if (selector == bytes4(0)) {
-      revert UnhandledEnumCase("Frabric proposeThreadProposal", _proposalType);
+      revert errors.UnhandledEnumCase("Frabric proposeThreadProposal", _proposalType);
     }
 
     id = _createProposal(uint16(FrabricProposalType.ThreadProposal), false, info);
@@ -326,11 +326,11 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
         abi.encodePacked(proposal.selector, proposal.data)
       );
       if (!success) {
-        revert ExternalCallFailed(proposal.thread, proposal.selector, data);
+        revert errors.ExternalCallFailed(proposal.thread, proposal.selector, data);
       }
       delete _threadProposals[id];
     } else {
-      revert UnhandledEnumCase("Frabric _completeSpecificProposal", _pType);
+      revert errors.UnhandledEnumCase("Frabric _completeSpecificProposal", _pType);
     }
   }
 

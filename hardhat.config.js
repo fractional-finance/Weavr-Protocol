@@ -3,6 +3,9 @@ require("dotenv").config();
 require("@nomiclabs/hardhat-waffle");
 require("@openzeppelin/hardhat-upgrades");
 require("solidity-coverage");
+const tdly = require("@tenderly/hardhat-tenderly");
+tdly.setup();
+
 
 module.exports = {
   solidity: {
@@ -26,3 +29,5 @@ if (process.env.RINKEBY) {
     ]
   };
 }
+
+

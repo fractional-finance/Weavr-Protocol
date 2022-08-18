@@ -47,7 +47,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     // We could use IERC20Metadata's decimals, yet that's an ERC20 extension and 0 decimal tokens exist.
     // so we'd lose the ability to boolean filter. No sane ERC20 will have a supply of 0/1 though
     if (IERC20(tradeToken).totalSupply() < 2) {
-      revert UnsupportedInterface(tradeToken, type(IERC20).interfaceId);
+      revert errors.UnsupportedInterface(tradeToken, type(IERC20).interfaceId);
     }
     __IntegratedLimitOrderDEX_init(tradeToken);
 
@@ -68,7 +68,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     mint(msg.sender, supply);
 
     if (!_auction.supportsInterface(type(IAuction).interfaceId)) {
-      revert UnsupportedInterface(_auction, type(IAuction).interfaceId);
+      revert errors.UnsupportedInterface(_auction, type(IAuction).interfaceId);
     }
     auction = _auction;
 

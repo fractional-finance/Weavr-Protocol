@@ -81,7 +81,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     // Require the caller to either be the token itself, forcing a sale, or the
     // seller
     if ((msg.sender != _token) && (msg.sender != seller)) {
-      revert Unauthorized(msg.sender, seller);
+      revert errors.Unauthorized(msg.sender, seller);
     }
 
     // Traditionally vulnerable pattern, hence nonReentrant
@@ -91,7 +91,7 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
     IERC20(_token).safeTransferFrom(seller, address(this), _amount);
     _amount = IERC20(_token).balanceOf(address(this)) - startBal;
     if (_amount == 0) {
-      revert ZeroAmount();
+      revert errors.ZeroAmount();
     }
 
     // If amount is microscopic, list it in a single batch

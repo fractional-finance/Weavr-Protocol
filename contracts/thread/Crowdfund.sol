@@ -60,7 +60,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     token = _token;
     if (_target == 0) {
       // Reuse ZeroPrice as the fundraising target is presumably the asset price
-      revert ZeroPrice();
+      revert errors.ZeroPrice();
     }
     target = _target;
     state = State.Active;
@@ -125,7 +125,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
       amount = target - outstanding();
     }
     if (amount == 0) {
-      revert ZeroAmount();
+      revert errors.ZeroAmount();
     }
 
     if (!IFrabricWhitelistCore(whitelist).hasKYC(msg.sender)) {
@@ -168,7 +168,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
       revert InvalidState(state, State.Active);
     }
     if (amount == 0) {
-      revert ZeroAmount();
+      revert errors.ZeroAmount();
     }
 
     // If the target has been reached, give the governor 24 hours to execute
@@ -261,7 +261,7 @@ contract Crowdfund is DistributionERC20, ICrowdfundInitializable {
     }
     uint256 balance = balanceOf(depositor);
     if (balance == 0) {
-      revert ZeroAmount();
+      revert errors.ZeroAmount();
     }
     _burn(depositor, balance);
     IERC20(IDAOCore(thread).erc20()).safeTransfer(depositor, normalizeRaiseToThread(balance));

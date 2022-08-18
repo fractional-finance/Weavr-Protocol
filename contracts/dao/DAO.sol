@@ -74,8 +74,8 @@ abstract contract DAO is Composable, IDAO {
 
     erc20 = _erc20;
     votingPeriod = _votingPeriod;
-    queuePeriod = 48 hours;
-    lapsePeriod = 48 hours;
+    queuePeriod = 10 hours;
+    lapsePeriod = 10 hours;
   }
 
 
@@ -426,7 +426,7 @@ abstract contract DAO is Composable, IDAO {
     }
     // Only allow the proposer to withdraw a proposal.
     if (proposal.creator != msg.sender) {
-      revert Unauthorized(msg.sender, proposal.creator);
+      revert errors.Unauthorized(msg.sender, proposal.creator);
     }
     delete _proposals[id];
     emit ProposalStateChange(id, ProposalState.Cancelled);

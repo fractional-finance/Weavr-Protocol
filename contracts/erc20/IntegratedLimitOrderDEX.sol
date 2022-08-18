@@ -212,10 +212,10 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     }
 
     if (price == 0) {
-      revert ZeroPrice();
+      revert errors.ZeroPrice();
     }
     if (amount == 0) {
-      revert ZeroAmount();
+      revert errors.ZeroAmount();
     }
 
     PricePoint storage point = _points[price];
@@ -315,7 +315,7 @@ abstract contract IntegratedLimitOrderDEX is ReentrancyGuardUpgradeable, Composa
     bool ours = order.trader == msg.sender;
     // Cancelling the order of someone removed
     if (!(ours || removed(order.trader))) {
-      revert Unauthorized(msg.sender, order.trader);
+      revert errors.Unauthorized(msg.sender, order.trader);
     }
 
     if (point.orderType == OrderType.Buy) {

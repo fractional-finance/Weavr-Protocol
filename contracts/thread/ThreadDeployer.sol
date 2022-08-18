@@ -57,21 +57,21 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
       (!_crowdfundProxy.supportsInterface(type(IFrabricBeacon).interfaceId)) ||
       (IFrabricBeacon(_crowdfundProxy).beaconName() != keccak256("Crowdfund"))
     ) {
-      revert UnsupportedInterface(_crowdfundProxy, type(IFrabricBeacon).interfaceId);
+      revert errors.UnsupportedInterface(_crowdfundProxy, type(IFrabricBeacon).interfaceId);
     }
 
     if (
       (!_erc20Beacon.supportsInterface(type(IFrabricBeacon).interfaceId)) ||
       (IFrabricBeacon(_erc20Beacon).beaconName() != keccak256("FrabricERC20"))
     ) {
-      revert UnsupportedInterface(_erc20Beacon, type(IFrabricBeacon).interfaceId);
+      revert errors.UnsupportedInterface(_erc20Beacon, type(IFrabricBeacon).interfaceId);
     }
 
     if (
       (!_threadBeacon.supportsInterface(type(IFrabricBeacon).interfaceId)) ||
       (IFrabricBeacon(_threadBeacon).beaconName() != keccak256("Thread"))
     ) {
-      revert UnsupportedInterface(_threadBeacon, type(IFrabricBeacon).interfaceId);
+      revert errors.UnsupportedInterface(_threadBeacon, type(IFrabricBeacon).interfaceId);
     }
 
     // This is technically a beacon to keep things consistent
@@ -84,11 +84,11 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
     threadBeacon = _threadBeacon;
 
     if (!_auction.supportsInterface(type(IAuctionCore).interfaceId)) {
-      revert UnsupportedInterface(_auction, type(IAuctionCore).interfaceId);
+      revert errors.UnsupportedInterface(_auction, type(IAuctionCore).interfaceId);
     }
 
     if (!_timelock.supportsInterface(type(ITimelock).interfaceId)) {
-      revert UnsupportedInterface(_timelock, type(ITimelock).interfaceId);
+      revert errors.UnsupportedInterface(_timelock, type(ITimelock).interfaceId);
     }
 
     auction = _auction;
@@ -107,7 +107,7 @@ contract ThreadDeployer is OwnableUpgradeable, Composable, IThreadDeployerInitia
       }
       (address tradeToken, ) = abi.decode(data, (address, uint112));
       if (IERC20(tradeToken).totalSupply() < 2) {
-        revert UnsupportedInterface(tradeToken, type(IERC20).interfaceId);
+        revert errors.UnsupportedInterface(tradeToken, type(IERC20).interfaceId);
       }
     } else {
       revert UnknownVariant(variant);

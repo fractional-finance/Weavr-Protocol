@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity >=0.8.9;
 
-import "../common/Errors.sol";
+import {errors} from "../common/Errors.sol";
 import "../common/IComposable.sol";
 
 interface IIntegratedLimitOrderDEXCore {

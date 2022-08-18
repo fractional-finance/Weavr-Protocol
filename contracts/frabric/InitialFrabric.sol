@@ -13,7 +13,7 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
     address _erc20,
     address[] calldata genesis
   ) external override initializer {
-    __FrabricDAO_init("Frabric Protocol", _erc20, 1 days, 100);
+    __FrabricDAO_init("Frabric Protocol", _erc20, 10 minutes, 100);
 
     __Composable_init("Frabric", false);
     supportsInterface[type(IInitialFrabric).interfaceId] = true;
@@ -33,6 +33,6 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
   }
 
   function _completeSpecificProposal(uint256, uint256 _pType) internal pure override {
-    revert UnhandledEnumCase("InitialFrabric _completeSpecificProposal", _pType);
+    revert errors.UnhandledEnumCase("InitialFrabric _completeSpecificProposal", _pType);
   }
 }

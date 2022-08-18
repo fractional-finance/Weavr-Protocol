@@ -34,7 +34,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
 
   function _setParent(address _parent) internal {
     if ((_parent != address(0)) && (!_parent.supportsInterface(type(IFrabricWhitelistCore).interfaceId))) {
-      revert UnsupportedInterface(_parent, type(IFrabricWhitelistCore).interfaceId);
+      revert errors.UnsupportedInterface(_parent, type(IFrabricWhitelistCore).interfaceId);
     }
 
     // Does still emit even if address 0 was changed to address 0
@@ -69,7 +69,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
 
     // Make sure this isn't replayed
     if (nonce != kycNonces[person]) {
-      revert Replay(nonce, kycNonces[person]);
+      revert errors.Replay(nonce, kycNonces[person]);
     }
     kycNonces[person]++;
 
@@ -106,7 +106,7 @@ abstract contract FrabricWhitelist is Composable, IFrabricWhitelist {
         abi.encodeWithSelector(IFrabricWhitelistCore.status.selector, person)
       );
       if (!success) {
-        revert ExternalCallFailed(parent, IFrabricWhitelistCore.status.selector, data);
+        revert errors.ExternalCallFailed(parent, IFrabricWhitelistCore.status.selector, data);
       }
 
       // Decode it

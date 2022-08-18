@@ -4,7 +4,7 @@ const { ethers } = hre;
 const deployBond = require("./deployBond.js");
 const deployThreadDeployer = require("./deployThreadDeployer.js");
 
-module.exports = async (auction, erc20Beacon, usd, pair, frabric) => {
+module.exports = async (auction, erc20Beacon, usd, pair, initial_frabric) => {
   process.hhCompiled ? null : await hre.run("compile");
   process.hhCompiled = true;
 
@@ -16,7 +16,7 @@ module.exports = async (auction, erc20Beacon, usd, pair, frabric) => {
     threadDeployer
   } = await deployThreadDeployer(erc20Beacon, auction);
 
-  const frabricCode = (await (await ethers.getContractFactory("Frabric")).deploy()).address;
+  const frabric = (await (await ethers.getContractFactory("Frabric")).deploy()).address;
 
   // Transfer ownership of everything to the Frabric (the actual proxy)
   // Bond proxy and bond
@@ -33,7 +33,7 @@ module.exports = async (auction, erc20Beacon, usd, pair, frabric) => {
   return {
     threadDeployer,
     bond,
-    frabricCode
+    frabricCode: frabric
   };
 };
 

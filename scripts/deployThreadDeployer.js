@@ -15,7 +15,7 @@ module.exports = async (erc20Beacon, auction) => {
 
   const threadDeployer = await upgrades.deployBeaconProxy(
     proxy.address,
-    ThreadDeployer,
+    ThreadDeployer.nativeContractFactory,
     [crowdfundProxy.address, erc20Beacon, threadBeacon.address, auction, timelock.address]
   );
 
