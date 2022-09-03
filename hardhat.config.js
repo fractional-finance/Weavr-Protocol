@@ -6,6 +6,10 @@ require("solidity-coverage");
 const tdly = require("@tenderly/hardhat-tenderly");
 tdly.setup();
 
+deployer = process.env.PRIVATE_KEY
+voters = (process.env.WALLETS).split(',')
+let accounts = []
+accounts.push(deployer)
 
 module.exports = {
   solidity: {
@@ -17,17 +21,38 @@ module.exports = {
       }
     }
   },
+  networks: {
+    arbitrum: {
+      url: process.env.ARB_NITRO_TESTNET,
+      accounts: [accounts.toString()],
+      chainId: 421613
+    }
+  },
+  defaultNetwork: "arbitrum",
 
-  networks: {}
 };
 
 if (process.env.RINKEBY) {
   module.exports.networks.rinkeby = {
     url: process.env.RINKEBY,
+    accounts: accounts
+  };
+}
+// if (process.env.ARB_NITRO_TESTNET) {
+//   module.exports.networks.nitro_test = {
+//     url: process.env.ARB_NITRO_TESTNET,
+//     accounts: [
+//       process.env.PRIVATE_KEY
+//     ]
+//   };
+// }
+
+if(process.env.GOERLI) {
+  module.exports.networks.goerli = {
+    url: process.env.GOERLI,
     accounts: [
       process.env.PRIVATE_KEY
     ]
-  };
+  }
 }
-
 
