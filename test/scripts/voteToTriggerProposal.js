@@ -42,17 +42,16 @@ class Proposal {
     // block: 0,
     // startTimeStamp: 0,
     // endTimeStamp: 0,
-    constructor(contract, id) {
+    constructor(id) {
         this.id = ethers.BigNumber.from(id);
-        this.contract = contract
         this.state = 0
         this.block = 0;
         this.type = -1
         this.startTimeStamp = 0;
         this.endTimeStamp = 0;
     }
-    getData = async () => {
-        const events = await (await this.contract.queryFilter(this.contract.filters.Proposal()))
+    getData = async (contract) => {
+        const events = await (await contract.queryFilter(contract.filters.Proposal()))
         events.forEach(event => {
             if(event.args.id.eq(this.id)) {
                 this.block = event.blockNumber
@@ -61,22 +60,23 @@ class Proposal {
         });let tx
         if(this.block == 0) {
             console.error("Proposal Not Found!!");
-            process.exit(1)
+            process.exit(1);
         }
-    }
-    checkSigner = async (signer) => {
-        isGenesis = await this.contract.callStatic.canPropose(signer.address)
+    };
+    checkSigner = async (contract, signer) => {
+        let isGenesis;
+        isGenesis = await contract.callStatic.canPropose(signer.address)
             console.log("Wallet: " + signer.address +(isGenesis ?  " is verified" : " is NOT verified"));
-    }
-    checkSigners = async (signers) => {
-        let isGenesis
+    };
+    checkSigners = async (contract, ...signers) => {
+        let isGenesis;
         signers.forEach( async( signer, i ) => {
-            isGenesis = await this.contract.callStatic.canPropose(signer.address)
+            isGenesis = await contract.callStatic.canPropose(signer.address)
             console.log("Wallet: " + signer.address +(isGenesis ?  " is verified" : " is NOT verified"));
         });
     };
-    getState = async () => {
-        const propStates = await (await this.contract.queryFilter(this.contract.filters.ProposalStateChange()));
+    getState = async (contract) => {
+        const propStates = (await contract.queryFilter(contract.filters.ProposalStateChange()));
         propStates.forEach(prop => {
             if(prop.args.id.eq(this.id)){
                 this.state = prop.args.state
@@ -96,28 +96,24 @@ class Proposal {
             endTimestamp: this.endTimeStamp
         }
     };
-    vote = async (signer) => {
-        await (await this.contract.connect(signer))
-        const tx = await this.contract.vote([this.id], [ethers.constants.MaxUint256.mask(111)])
-        const hasVoted = (await(expect(tx).to.emit(this.contract, "Vote")));
-        console.log(signer.address, (hasVoted ? " has voted!": "something went wrong on voting"));
-        console.log("Signer now", this.contract.signer.address);    
+    vote = async (contract, signer) => {        
+        return (await contract.connect(signer).vote([this.id], [ethers.constants.MaxUint256.mask(111)]))
     };
-    queue = async () => {
-        const tx = await this.contract.queueProposal(this.id);
-        (await( expect(tx).to.emit(this.contract, "ProposalStateChange").withArgs(this.id, ProposalState.Queued))) 
+    queue = async (contract) => {
+        const tx = await contract.queueProposal(this.id);
+        (await( expect(tx).to.emit(contract, "ProposalStateChange").withArgs(this.id, ProposalState.Queued))) 
             ? console.log("ProposalQueued") : console.log("Still Active");
         return new Promise(res => {
             if( tx.status){
                 res(tx)
             }
         })
-    }
-    complete = async () => {
+    };
+    complete = async (contract) => {
         const data = "0x"
-        const tx2 = await this.contract.completeProposal(this.id, data);
-        const isCompleted = (await expect(tx2).emit(this.contract, "ProposalStateChange").withArgs(this.id, ProposalState.Executed))
-        isCompleted ? console.log("Proposal Completed") : console.log("Something went wrong on Complete");
+        const tx2 = await contract.completeProposal(this.id, data);
+        const isCompleted = (await expect(tx2).emit(contract, "ProposalStateChange").withArgs(this.id, ProposalState.Executed))
+        return isCompleted
     };
 }
 
@@ -161,9 +157,6 @@ const completeProposal = async (contract, id) => {
     isCompleted ? console.log("Proposal Completed") : console.log("Something went wrong on Complete");
 };
 
-const voteForAllSigners = async (contract, id) => {
-    
-};
 
 const walletSetup = (provider) => {
     let _signers = [];
@@ -183,27 +176,20 @@ const walletSetup = (provider) => {
     const provider = new ethers.providers.InfuraProvider(networks.goerli, process.env.INFURA_API_KEY);
     const signers = walletSetup(provider);
 
-    setTimeout(() => { 
-        console.log(
-            "after wallet setup + 5s ", 
-            signers.map( signer => { return signer.address })
-        ) 
-    }, 5000);
-    /**
-     * LOAD CONTRACTS
-     * @dev beaconProxy as Frabric even tho might be InitialFrabric 
-     *      which has limited ABI, will make it easier to reuse the code
-     */
-
+    signers ? console.log("SIgnersReady"): console.log("signers not ready");
+    console.log(signers.map( signer => { return signer.address }));
     
-    const contractFactories = [];
-
+/**
+ * LOAD CONTRACTS
+ * @dev beaconProxy as Frabric even tho might be InitialFrabric 
+ *      which has limited ABI, will make it easier to reuse the code
+ */
     const frabric = await new ethers.Contract(
         FRABRIC.beaconProxy,
         require('../../artifacts/contracts/frabric/Frabric.sol/Frabric.json').abi,
         signers[0]
     );
-    await frabric.connect(signers[0]);
+    
     // get WaitingPeriods from the contract
     waitingPeriod.voting = (await frabric.votingPeriod()).toNumber();
     waitingPeriod.queue = (await frabric.queuePeriod()).toNumber();
@@ -213,42 +199,50 @@ const walletSetup = (provider) => {
 /**
  * ######## PROPOSAL SETUP ###########
  */
-    const ID = 11;
+    const ID = 21;
     console.log("Setting up the proposal..");
-    let proposal = new Proposal(frabric, ID);
-    let now = new Date().getTime() / 1000;
+    let proposal = new Proposal(ID);
+    const now = () => { return (new Date().getTime() / 1000);}
     
-
-    await proposal.getData()
-    await proposal.checkSigners(signers);
+    await proposal.getData(frabric).finally( () => {
+        console.log(proposal.printData());
+    })
+    
+    signers.forEach( async (signer) => {
+        await proposal.checkSigner(frabric, signer);
+    })
+    
     
     proposal.startTimeStamp = (await getTimeStampFromBlock(provider, proposal.block));
     proposal.endTimeStamp = proposal.startTimeStamp + waitingPeriod.voting
     console.log(proposal.printData());        
     
-    await proposal.getState();
-    console.log(proposal.printState());
-    let t = proposal.endTimeStamp - now;
-    console.log("T == ", t);
-    if (t >= 0) {
+    await proposal.getState(frabric);
+    console.log(proposal.printData());
+
+
+    const t = () => { return (proposal.endTimeStamp - now());}
+    console.log("T == ", t());
+    
+    if (t() >= 0) {
     /**
      * VOTE ON PROPOSAL
-     */
-        setTimeout( async() => {
-            await proposal.vote(signers[2]);
-        },1000)
-        setTimeout(async() => {
-            await proposal.vote(signers[1]);
-        },1000)
-        
-
-        
-        // check time and wait for votingPeriodToEnd
-        console.log("Waiting for votingPeriod to end");
-        
-        setTimeout(()=> { }, t*1000);
+     */    
+        signers.forEach( async (signer) => {
             
+            setTimeout(async ()=> {
+                await proposal.vote(frabric, signer);
+            }, 10000);
+        })
         
+        setTimeout( async () => {
+            await proposal.queue(frabric).then( () => {console.log("Proposal ", proposal.id.toNumber(), " Queued")})
+        }, t()*1000)
+
+        setTimeout( async () => {
+            await proposal.complete(frabric).then( () => console.log("Proposal ", proposal.id.toNumber(), " Completed"))
+        }, waitingPeriod.queue * 1000)
+
     }else if(proposal.state == ProposalState.Active){
     /**
      * QUEUE PROPOSAL
@@ -256,18 +250,18 @@ const walletSetup = (provider) => {
         console.log("Voting period has ended and state == ", proposal.printState());
         console.log("Queueing proposal...");
         console.log(proposal.printState());
-        await proposal.queue();
-        await proposal.getState();
+        await proposal.queue(frabric);
+        await proposal.getState(frabric);
         const waitingInMilliseconds = (waitingPeriod.queue*1000)
         setTimeout( () => {
             console.log("QueuePeriodEnded");
         }, waitingInMilliseconds);
     }else if(proposal.state == ProposalState.Queued) {
-    /**
-     *   COMPLETE PROPOSAL
-     */  
+     /**
+      *   COMPLETE PROPOSAL
+      */  
         console.log("TO BE COMPLETED");
-        await proposal.complete()
+        await proposal.complete(frabric)
             .then(
                 () => {
                     console.log("Proposal Completed");
@@ -276,22 +270,22 @@ const walletSetup = (provider) => {
             .catch( error => {
                 console.log(error);
             });
-        await proposal.getState();
+        await proposal.getState(frabric);
     }else if(proposal.state == ProposalState.Executed) {
         console.log("Proposal it's already in Executed state!");
         console.log("Checking if proposal is of type Upgrade");
         const toLapse = proposal.endTimeStamp + waitingPeriod.queue + waitingPeriod.lapse;
-        now = new Date().getTime() / 1000;
+        
         let isBeforeLapse
-        ((toLapse - now) >= 0) ? isBeforeLapse : !isBeforeLapse; 
+        ((toLapse - now()) >= 0) ? isBeforeLapse : !isBeforeLapse; 
         if(proposal.type.toNumber() === CommonProposalType.Upgrade) {
             console.log("Proposal is Upgrade");
             if(!isBeforeLapse) {
                 console.log("lapsePeriod ENDED!");
-                return
+                process.exitCode(1)
             }
             //getUpgradeData
-            const upgrades = await (await frabric.queryFilter(contract.filters.UpgradeProposal()))
+            const upgrades = await (await frabric.queryFilter(frabric.filters.UpgradeProposal()))
             const upgrade = upgrades.forEach( upgrade => {
                 if(upgrade.args.id.eq(proposal.id)) {
                     return upgrade.args
