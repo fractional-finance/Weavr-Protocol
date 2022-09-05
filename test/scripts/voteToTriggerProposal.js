@@ -4,35 +4,34 @@ const { expect } = require("chai");
 
 const genesis = require("../../genesis.json");
 const { ProposalState, CommonProposalType, VoteDirection } = require("../common.js")
+
 // Networks
 const networks = {
     rinkeby: 4,
     goerli: 5
 };
-
 // Contract addresses
 const FRABRIC = {
     beaconProxy: "0xBeb2BB398dA981Ec4C9dC5825158382eb4337CDa",
     singleBeacon: "0xAe371F948d46399E920104575BAE1D186D8B2642"
 };
-
-
-
-// defining time constants in millisecond
-const seconds = 1000;
-const minutes = seconds * 60;
-const hours = minutes * 60;
-
 // waitingPeriod constant
 const waitingPeriod = {
     voting: 600,
     queue:  10,
     lapse:  36000
 };
-
-
 // Wallet primitive and Signers
 const WALLETS = (process.env.WALLETS).split(",");
+
+/**
+ * @dev TODO:
+ *      - Fix Queue and Complete sequence for all case scenario
+ *      - Inject contractObject into the Proposal Object at "constructor"
+ *      - Saperate Vote, Queue and Complete into function
+ *      - Re-write "triggerUpgrade sequence with new format"
+ *      - Modularize script for better usage
+ */
 
 
 //Proposal
@@ -203,7 +202,7 @@ const walletSetup = (provider) => {
 /**
  * ######## PROPOSAL SETUP ###########
  */
-    const ID = 28;
+    const ID = 29;
     let proposal = new Proposal(ID);
     const now = () => { return (new Date().getTime() / 1000);}    
     await proposal.getData(frabric).then( () => {
@@ -244,6 +243,19 @@ const walletSetup = (provider) => {
            }));
         }).then( () => {
             console.log("AFTER VOTING");
+            setInterval(async ()=>{ 
+                if(t() < 0 ){
+                    console.log("Voting period has ended and state == ", proposal.printState());
+                    console.log("Queueing proposal...");
+                    console.log(proposal.printState());
+                    await proposal.queue(frabric);
+                    await proposal.getState(frabric);
+                    if(proposal.state === ProposalState.Queued){
+                        console.log("proposal ", proposal.id.toNumber(), " is Queued!");
+                        process.exitCode(0)
+                    }
+                }
+             },t()*1000)
         })
         
     }else if(proposal.state == ProposalState.Active){
