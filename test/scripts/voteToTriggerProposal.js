@@ -3,7 +3,7 @@ const { ethers, upgrades, waffle  } = hre;
 const { expect } = require("chai");
 
 const genesis = require("../../genesis.json");
-const { ProposalState, CommonProposalType } = require("../common.js")
+const { ProposalState, CommonProposalType, VoteDirection } = require("../common.js")
 // Networks
 const networks = {
     rinkeby: 4,
@@ -37,11 +37,6 @@ const WALLETS = (process.env.WALLETS).split(",");
 
 //Proposal
 class Proposal {
-    // id: 1,
-    // state: 0,
-    // block: 0,
-    // startTimeStamp: 0,
-    // endTimeStamp: 0,
     constructor(id) {
         this.id = ethers.BigNumber.from(id);
         this.state = 0
@@ -96,9 +91,18 @@ class Proposal {
             endTimestamp: this.endTimeStamp
         }
     };
-    vote = async (contract, signer) => {        
-        return (await contract.connect(signer).vote([this.id], [ethers.constants.MaxUint256.mask(111)]))
-    };
+    // vote = async (contract, voter) => {        
+    //     return new Promise( 
+    //         resolve => {
+    //             console.log("BEFORE VOTE");
+    //             let x = contract.connect(voter).vote([this.id], [ethers.constants.MaxUint256.mask(111)])
+    //             if (x) {
+    //                 console.log("XXX");
+    //                 resolve(x)
+    //             }
+    //         }    
+    //     ); 
+    // };
     queue = async (contract) => {
         const tx = await contract.queueProposal(this.id);
         (await( expect(tx).to.emit(contract, "ProposalStateChange").withArgs(this.id, ProposalState.Queued))) 
@@ -142,20 +146,20 @@ const getTimeStampFromBlock = async (provider, blockNumber) => {
 
 };
 
-const queueProposal = async (contract, id) => {
-    let tx
-    await contract.queueProposal(id).then((tx) => {
-        (await( expect(tx).to.emit(contract, "ProposalStateChange").withArgs(id, ProposalState.Queued))) 
-            ? console.log("ProposalQueued") : "Still Active";
-    })
-}
+// const queueProposal = async (contract, id) => {
+//     let tx
+//     await contract.queueProposal(id).then((tx) => {
+//         (await( expect(tx).to.emit(contract, "ProposalStateChange").withArgs(id, ProposalState.Queued))) 
+//             ? console.log("ProposalQueued") : "Still Active";
+//     })
+// }
 
-const completeProposal = async (contract, id) => {
-    const data = "0x"
-    const tx2 = await contract.completeProposal(id, data);
-    const isCompleted = (await expect(tx2).emit(contract, "ProposalStateChange").withArgs(id, ProposalState.Executed))
-    isCompleted ? console.log("Proposal Completed") : console.log("Something went wrong on Complete");
-};
+// const completeProposal = async (contract, id) => {
+//     const data = "0x"
+//     const tx2 = await contract.completeProposal(id, data);
+//     const isCompleted = (await expect(tx2).emit(contract, "ProposalStateChange").withArgs(id, ProposalState.Executed))
+//     isCompleted ? console.log("Proposal Completed") : console.log("Something went wrong on Complete");
+// };
 
 
 const walletSetup = (provider) => {
@@ -168,7 +172,7 @@ const walletSetup = (provider) => {
 };
 
 ;(async () => {
-    console.log("AAAA");
+    console.log("Vote to Trigger");
 
     /**
     * SETUP PROVIDER AND SIGNERS
@@ -199,10 +203,10 @@ const walletSetup = (provider) => {
 /**
  * ######## PROPOSAL SETUP ###########
  */
-    const ID = 21;
+    const ID = 28;
     let proposal = new Proposal(ID);
     const now = () => { return (new Date().getTime() / 1000);}    
-    await proposal.getData(frabric).finally( () => {
+    await proposal.getData(frabric).then( () => {
         console.log(proposal.printData());
     })
     signers.forEach( async (signer) => {
@@ -225,21 +229,23 @@ const walletSetup = (provider) => {
     /**
      * VOTE ON PROPOSAL
      */    
-        signers.forEach( async (signer) => {
-            
-            setTimeout(async ()=> {
-                await proposal.vote(frabric, signer);
-            }, 10000);
+        let votes = signers.map( (voter) => {
+            return (new Promise(resolve => {
+                resolve (frabric.connect(voter).vote([proposal.id], [ethers.constants.MaxUint256.mask(111)]))
+            }))
+        })
+        var results = Promise.all(votes);
+        results.then( VOTES => {
+           console.log(VOTES.map(vote => {
+            return {
+                hash: vote.hash,
+                event: expect(vote).to.emit(frabric, "Vote") ? true : false
+            }
+           }));
+        }).then( () => {
+            console.log("AFTER VOTING");
         })
         
-        setTimeout( async () => {
-            await proposal.queue(frabric).then( () => {console.log("Proposal ", proposal.id.toNumber(), " Queued")})
-        }, t()*1000)
-
-        setTimeout( async () => {
-            await proposal.complete(frabric).then( () => console.log("Proposal ", proposal.id.toNumber(), " Completed"))
-        }, waitingPeriod.queue * 1000)
-
     }else if(proposal.state == ProposalState.Active){
     /**
      * QUEUE PROPOSAL
@@ -249,7 +255,7 @@ const walletSetup = (provider) => {
         console.log(proposal.printState());
         await proposal.queue(frabric);
         await proposal.getState(frabric);
-        const waitingInMilliseconds = (waitingPeriod.queue*1000)
+        const waitingInMilliseconds = (( waitingPeriod.queue + 1 ) * 1000)
         setTimeout( () => {
             console.log("QueuePeriodEnded");
         }, waitingInMilliseconds);

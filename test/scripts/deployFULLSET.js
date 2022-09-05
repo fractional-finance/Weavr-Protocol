@@ -7,65 +7,6 @@ const deployFrabric = require("../../scripts/deployFrabric.js");
 
 const genesis = require("../../genesis.json");
 
-
-
-// module.exports = async (usd, uniswap) => {
-    
-
-//     process.hhCompiled ? null : await hre.run("compile");
-//     process.hhCompiled = true;
-
-//     const config = {
-//         USD: "",
-//         UNISWAP: ""
-//     }
-
-//     const genesis = require("../genesis.json");
-    
-//     (config.UNISWAP == "") ? process.env.UNISWAP : config.UNISWAP
-//     (config.USD == "") ? process.env.USD : config.USD
-
-
-
-//     let contracts = await deployInitialFrabric(usd, uniswap, genesis);
-
-//     let {
-//         auction,
-//         erc20Beacon,
-//         frbc,
-//         pair,
-//         proxy,
-//         frabric,
-//         router
-//     } = contracts;
-
-//     console.log({
-//         AUCTION: auction,
-//         ERC20_BEACON: erc20Beacon,
-//         FRBC: frbc,
-//         FRBC_USD_PAIR: pair,
-//         PROXY: proxy,
-//         FRABRIC: frabric,
-//         ROUTER: router
-//     });
-
-
-
-//     contracts = await deployFrabric(auction, erc20Beacon, usd, pair, frabric);
-
-//     console.log("Thread Deployer: " + contracts.threadDeployer.address);
-//     console.log("Bond:            " + contracts.bond.address);
-//     console.log("Frabric Code:    " + contracts.frabricCode);
-
-
-// }
-
-// if (require.main === module) {
-//     (async () => {
-//         let x = await module.exports(config.USD, config.UNISWAP)
-//     });
-// }
-
 (async () => {
     console.log("AAAA");
     let config = {
