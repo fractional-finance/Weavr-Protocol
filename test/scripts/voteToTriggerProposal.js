@@ -200,14 +200,11 @@ const walletSetup = (provider) => {
  * ######## PROPOSAL SETUP ###########
  */
     const ID = 21;
-    console.log("Setting up the proposal..");
     let proposal = new Proposal(ID);
-    const now = () => { return (new Date().getTime() / 1000);}
-    
+    const now = () => { return (new Date().getTime() / 1000);}    
     await proposal.getData(frabric).finally( () => {
         console.log(proposal.printData());
     })
-    
     signers.forEach( async (signer) => {
         await proposal.checkSigner(frabric, signer);
     })
