@@ -1,0 +1,14 @@
+{
+    "0xADDRESS_1": {
+        "info": "DEV_WALLET_1",
+        "amount": "100000000000000000000"
+    },
+    "0xADDRESS_2": {
+        "info": "DEV_WALLET_4",
+        "amount": "100000000000000000000"
+    },
+    "0xADDRESS_3": {
+        "info": "DEV_WALLET_3",
+        "amount": "100000000000000000000"
+    }
+}
