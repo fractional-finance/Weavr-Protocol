@@ -74,12 +74,14 @@ abstract contract FrabricDAO is EIP712Upgradeable, DAO, IFrabricDAO {
     string memory name,
     address _erc20,
     uint64 _votingPeriod,
+    uint64 _queuePeriod,
+    uint64 _lapsePeriod,
     uint8 _maxRemovalFee
   ) internal onlyInitializing {
     // This unfortunately doesn't use the Composable version, yet unless we change
     // the signing structs, we shouldn't need to upgrade this (even if EIP 712 would like us to)
     __EIP712_init(name, "1");
-    __DAO_init(_erc20, _votingPeriod);
+    __DAO_init(_erc20, _votingPeriod, _queuePeriod, _lapsePeriod);
     supportsInterface[type(IFrabricDAO).interfaceId] = true;
 
     // Ensure this is a valid percentage

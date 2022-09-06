@@ -9,7 +9,17 @@ const deployBeaconProxy = require("./deployBeaconProxy.js");
 const FrabricERC20 = require("./deployFrabricERC20.js");
 const deployDEXRouter = require("./deployDEXRouter.js");
 
-module.exports = async (usd, uniswap, genesis) => {
+module.exports = async (usd, uniswap, genesis, votingPeriod, queuePeriod, lapsePeriod) => {
+
+  if (!queuePeriod) {
+    queuePeriod = 60 * 60 * 24 * 2;
+  }
+  if (!lapsePeriod) {
+    lapsePeriod = 60 * 60 * 24 * 2;
+  }
+  if (!votingPeriod) {
+    votingPeriod = 60 * 60 * 24 * 7;
+  }
   // Run compile if it hasn't been run already
   // Prevents a print statement of "Nothing to compile" from repeatedly appearing
   process.hhCompiled ? null : await hre.run("compile");
@@ -56,7 +66,14 @@ module.exports = async (usd, uniswap, genesis) => {
 
   const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
   const beacon = await deployBeacon("single", InitialFrabric);
-  const frabric = await deployBeaconProxy(beacon.address, InitialFrabric, [frbc.address, genesisList])
+
+  const frabric = await deployBeaconProxy(beacon.address, InitialFrabric,
+      [frbc.address,
+        genesisList,
+          votingPeriod,
+          queuePeriod,
+          lapsePeriod
+      ]);
   await (await frbc.whitelist(frabric.address)).wait();
 
   // Transfer ownership of everything to the Frabric
@@ -90,6 +107,9 @@ if (require.main === module) {
   (async () => {
     let usd = process.env.USD;
     let uniswap = process.env.UNISWAP;
+    let queuePeriod = process.env.QUEUEPERIOD;
+    let lapsePeriod = process.env.LAPSEPERIOD;
+    let votingPeriod = process.env.VOTINGPERIOD;
     let genesis;
 
     if ((!usd) || (!uniswap)) {
@@ -98,7 +118,7 @@ if (require.main === module) {
     }
     genesis = require("../genesis.json");
 
-    const contracts = await module.exports(usd, uniswap, genesis);
+    const contracts = await module.exports(usd, uniswap, genesis, votingPeriod, lapsePeriod, queuePeriod);
     console.log("Auction:         " + contracts.auction.address);
     console.log("ERC20 Beacon:    " + contracts.erc20Beacon.address);
     console.log("FRBC:            " + contracts.frbc.address);

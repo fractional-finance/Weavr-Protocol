@@ -8,7 +8,7 @@ contract TestFrabricDAO is FrabricDAO {
 
   constructor(address erc20) Composable("TestFrabricDAO") initializer {
     __Composable_init("TestFrabricDAO", true);
-    __FrabricDAO_init("Test Frabric DAO", erc20, 1 weeks, 5);
+    __FrabricDAO_init("Test Frabric DAO", erc20, 1 weeks, 48 hours, 48 hours, 5);
   }
 
   function setParent(address _parent) external {
