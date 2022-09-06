@@ -1,5 +1,5 @@
 # Frabric Protocol
-![logo](docs/logo.png)
+<img src="docs/logo.png" alt="logo" width="200"/>
 Welcome to a revolution in DAO Governance.
 
 This repository contains all the smart contracts which make up the Frabric Protocol, along with their tests and deployment scripts.
@@ -7,7 +7,7 @@ The Frabric Protocol is a set of infrastructure for use as part of a larger DAO 
 
 ## Overview
 
-![dao_diagram](docs/dao_diagram.png)
+<img src="docs/dao_diagram.png" alt="diagram" width="200"/>
 
 As a DAO Federation builder, The Frabric Protocol's key functionality is the ability for the primary DAO to create a subDAO.
 Each DAO also have the ability to:
