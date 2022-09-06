@@ -26,8 +26,9 @@ module.exports = async (usd, uniswap, genesis, votingPeriod, queuePeriod, lapseP
   process.hhCompiled = true;
 
   const signer = (await ethers.getSigners())[0];
-
+  console.log("starting deploy")
   const { auctionBeacon, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
+  console.log("deployed FRBC")
   await (await frbc.whitelist(auction.address)).wait();
 
   // Deploy the Uniswap pair to get the bond token
@@ -36,18 +37,20 @@ module.exports = async (usd, uniswap, genesis, votingPeriod, queuePeriod, lapseP
       require("@uniswap/v2-periphery/build/UniswapV2Router02.json").abi,
       signer
   );
+  console.log("deployed uniswap")
 
   const pair = u2SDK.computePairAddress({
     factoryAddress: await uniswap.factory(),
     tokenA: new uSDK.Token(1, usd, 18),
     tokenB: new uSDK.Token(1, frbc.address, 18)
   });
+  console.log("deployed pair")
   // Whitelisting the pair to create the LP token does break the whitelist to some degree
   // We're immediately creating a wrapped derivative token with no transfer limitations
   // That said, it's a derivative subject to reduced profit potential and unusable as FRBC
   // Considering the critical role Uniswap plays in the Ethereum ecosystem, we accordingly accept this effect
   await (await frbc.whitelist(pair)).wait();
-
+  console.log("whitelisted pair")
   // Process the genesis
   let genesisList = [];
   for (const person in genesis) {
@@ -57,13 +60,14 @@ module.exports = async (usd, uniswap, genesis, votingPeriod, queuePeriod, lapseP
 
     genesisList.push(person);
   }
+  console.log("updated genesis list")
 
 
   // Remove self from the FRBC whitelist
   // While we have no powers over the Frabric, we can hold tokens
   // This is a mismatched state when we shouldn't have any powers except as needed to deploy
   await (await frbc.remove(signer.address, 0)).wait();
-
+  console.log("removed self from whitelist")
   const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
   const beacon = await deployBeacon("single", InitialFrabric);
 
@@ -74,6 +78,7 @@ module.exports = async (usd, uniswap, genesis, votingPeriod, queuePeriod, lapseP
           queuePeriod,
           lapsePeriod
       ]);
+  console.log("deployed InitialFrabric beaconproxy")
   await (await frbc.whitelist(frabric.address)).wait();
 
   // Transfer ownership of everything to the Frabric
@@ -86,12 +91,12 @@ module.exports = async (usd, uniswap, genesis, votingPeriod, queuePeriod, lapseP
   await (await frbc.transferOwnership(frabric.address)).wait();
   // Frabric proxy
   await beacon.transferOwnership(frabric.address);
-
+  console.log("ownership transferred to beaconProxy")
   // Deploy the DEX router
   // Technically a periphery contract yet this script treats InitialFrabric as
   // the initial entire ecosystem, not just itself
   const router = await deployDEXRouter();
-
+  console.log("deployed DEX")
   return {
     auction,
     erc20Beacon,
