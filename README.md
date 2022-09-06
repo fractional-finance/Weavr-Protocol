@@ -1,5 +1,5 @@
 
-# Frabric Protocol <img src="docs/logo.png" alt="logo" width="100"/>
+# <img src="docs/logo.png" alt="logo" width="100"/> Frabric Protocol
 Welcome to a revolution in DAO Governance.
 
 This repository contains all the smart contracts which make up the Frabric Protocol, along with their tests and deployment scripts.
