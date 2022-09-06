@@ -35,7 +35,7 @@ module.exports = async () => {
     erc20Beacon,
     frbc,
     pair,
-    proxy,
+    beacon,
     frabric
   } = contracts;
 
@@ -61,7 +61,7 @@ module.exports = async () => {
       "Upgrade",
       true,
       [
-        proxy.address,
+        beacon.address,
         ethers.constants.AddressZero,
         2,
         upgrade.frabricCode,
@@ -73,8 +73,8 @@ module.exports = async () => {
   );
 
   await expect(
-      await proxy.triggerUpgrade(frabric.address, 2)
-  ).to.emit(proxy, "Upgraded").withArgs(frabric.address, 2);
+      await beacon.triggerUpgrade(frabric.address, 2)
+  ).to.emit(beacon, "Upgraded").withArgs(frabric.address, 2);
   contracts.frabric = (await ethers.getContractFactory("Frabric")).attach(contracts.frabric.address);
   expect(await frabric.version()).to.equal(2);
   expect(await contracts.frabric.bond()).to.equal(upgrade.bond.address);

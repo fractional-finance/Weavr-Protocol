@@ -5,6 +5,7 @@ const u2SDK = require("@uniswap/v2-sdk");
 const uSDK = require("@uniswap/sdk-core");
 
 const deployBeacon = require("./deployBeacon.js");
+const deployBeaconProxy = require("./deployBeaconProxy.js");
 const FrabricERC20 = require("./deployFrabricERC20.js");
 const deployDEXRouter = require("./deployDEXRouter.js");
 
@@ -16,7 +17,7 @@ module.exports = async (usd, uniswap, genesis) => {
 
   const signer = (await ethers.getSigners())[0];
 
-  const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
+  const { auctionBeacon, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
   await (await frbc.whitelist(auction.address)).wait();
 
   // Deploy the Uniswap pair to get the bond token
@@ -47,33 +48,6 @@ module.exports = async (usd, uniswap, genesis) => {
     genesisList.push(person);
   }
 
-  // Code to add liquidity to create the LP token used as bond
-  // Also verifies the whitelist is correctly set up
-  // Currently disabled in favor of createPair since the whitelist has already been verified against this
-  /*
-  // Mint 10000 to use as initial liquidity, just to create the LP token
-  await frbc.mint(signer.address, 10000);
-  await frbc.approve(uniswap.address, 10000);
-
-  usd = new ethers.Contract(
-    usd,
-    // Use the test Token contract as it'll supply IERC20
-    (await ethers.getContractFactory("TestERC20")).interface,
-    signer
-  );
-  await usd.approve(uniswap.address, 10000);
-
-  await uniswap.addLiquidity(
-    usd.address,
-    frbc.address,
-    10000, 10000, 10000, 10000,
-    signer.address,
-    // Pointless deadline yet validly formed
-    Math.floor((Date.now() / 1000) + 30)
-  );
-
-  usd = usd.address;
-  */
 
   // Remove self from the FRBC whitelist
   // While we have no powers over the Frabric, we can hold tokens
@@ -81,21 +55,20 @@ module.exports = async (usd, uniswap, genesis) => {
   await (await frbc.remove(signer.address, 0)).wait();
 
   const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
-  const proxy = await deployBeacon("single", InitialFrabric);
-
-  const frabric = await upgrades.deployBeaconProxy(proxy.address, InitialFrabric, [frbc.address, genesisList]);
+  const beacon = await deployBeacon("single", InitialFrabric);
+  const frabric = await deployBeaconProxy(beacon.address, InitialFrabric, [frbc.address, genesisList])
   await (await frbc.whitelist(frabric.address)).wait();
 
   // Transfer ownership of everything to the Frabric
   // The Auction isn't owned as it doesn't need to be
   // While it does need to be upgraded, it tracks the (sole) release channel of its SingleBeacon
   // That's what needs to be owned
-  await (await auctionProxy.transferOwnership(frabric.address)).wait();
+  await (await auctionBeacon.transferOwnership(frabric.address)).wait();
   // FrabricERC20 beacon and FRBC
   await (await erc20Beacon.transferOwnership(frabric.address)).wait();
   await (await frbc.transferOwnership(frabric.address)).wait();
   // Frabric proxy
-  await proxy.transferOwnership(frabric.address);
+  await beacon.transferOwnership(frabric.address);
 
   // Deploy the DEX router
   // Technically a periphery contract yet this script treats InitialFrabric as
@@ -107,7 +80,7 @@ module.exports = async (usd, uniswap, genesis) => {
     erc20Beacon,
     frbc,
     pair,
-    proxy,
+    beacon,
     frabric,
     router
   };

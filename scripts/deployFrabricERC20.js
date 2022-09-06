@@ -1,5 +1,6 @@
 const { ethers, upgrades } = require("hardhat");
 
+const deployBeaconProxy = require("./deployBeaconProxy.js");
 const deployBeacon = require("./deployBeacon.js");
 const deployAuction = require("./deployAuction.js");
 
@@ -14,13 +15,8 @@ module.exports = {
     await new Promise((res) => setTimeout(res, 5000));
     await new Promise((res) => setTimeout(res, 5000));
     const FrabricERC20 = await ethers.getContractFactory("FrabricERC20");
-    const erc20 = await upgrades.deployBeaconProxy(
-      beacon.address,
-      FrabricERC20,
-      args == null ? [] : [...args, auction.auction.address],
-      args == null ? { initializer: false } : {}
-    );
-    return { auctionProxy: auction.proxy, auction: auction.auction, erc20 };
+    const erc20 = await deployBeaconProxy(beacon.address, FrabricERC20, args == null ? [] : [...args, auction.auction.address], args == null ? { initializer: false } : {});
+    return { auctionBeacon: auction.beacon, auction: auction.auction, erc20 };
   },
 
   deployFRBC: async (usd) => {
@@ -37,6 +33,6 @@ module.exports = {
         usd
       ]
     );
-    return { auctionProxy: frbc.auctionProxy, auction: frbc.auction, beacon, frbc: frbc.erc20 };
+    return { auctionBeacon: frbc.auctionBeacon, auction: frbc.auction, beacon, frbc: frbc.erc20 };
   }
 };

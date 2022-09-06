@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-
+const deployBeaconProxy = require("../../scripts/deployBeaconProxy.js")
 const deployBeacon = require("../../scripts/deployBeacon.js");
 const FrabricERC20 = require("../../scripts/deployFrabricERC20.js");
 
@@ -16,14 +16,11 @@ describe("InitialFrabric", accounts => {
     const { frbc } = await FrabricERC20.deployFRBC(
       (await (await ethers.getContractFactory("TestERC20")).deploy("Test Token", "TEST")).address
     );
-
     const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
     const beacon = await deployBeacon("single", InitialFrabric);
-    frabric = await upgrades.deployBeaconProxy(
-      beacon,
-      InitialFrabric,
+    frabric = await deployBeaconProxy(beacon, InitialFrabric,
       [],
-      { initializer: false }
+        {initializer: false}
     );
 
     addresses = genesis.map(signer => signer.address);
