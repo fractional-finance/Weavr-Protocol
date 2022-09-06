@@ -16,15 +16,15 @@ const FRABRIC = {
     singleBeacon: "0xAe371F948d46399E920104575BAE1D186D8B2642"
 };
 
-// Wallet primitive and Signers
+
 const WALLETS = (process.env.WALLETS).split(",");
 
 /**
  * @dev TODO:
- *      - Fix Queue and Complete sequence for all case scenario 
+ *      - Fix Queue and Complete sequence for all case scenario [V]
  *      - Inject contractObject into the Proposal Object at "constructor" [V]
  *      - Saperate Vote, Queue and Complete into function [V]
- *      - Re-write "triggerUpgrade sequence with new format"  
+ *      - Re-write "triggerUpgrade sequence with new format"  [V]
  *      - Modularize script for better usage [V]
  */
 
@@ -39,6 +39,9 @@ class Proposal {
         this.type = -1
         this.startTimeStamp = 0;
         this.endTimeStamp = 0;
+    };
+    t = () => {
+        return utils.t(this.endTimeStamp)
     }
     getData = async () => {
         const events = await (await this.contract.queryFilter(this.contract.filters.Proposal()))
@@ -57,16 +60,6 @@ class Proposal {
         let isGenesis;
         isGenesis = await this.contract.callStatic.canPropose(signer.address)
             console.log("Wallet: " + signer.address +(isGenesis ?  " is verified" : " is NOT verified"));
-    };
-    checkSigners = async (...signers) => {
-        console.log(signer.map( sig => {
-            return sig.address
-        }));
-        let isGenesis;
-        signers.forEach( async( signer, i ) => {
-            isGenesis = await this.contract.callStatic.canPropose(signer.address)
-            console.log("Wallet: " + signer.address +(isGenesis ?  " is verified" : " is NOT verified"));
-        });
     };
     getState = async () => {
         const propStates = (await this.contract.queryFilter(this.contract.filters.ProposalStateChange()));
@@ -89,18 +82,6 @@ class Proposal {
             endTimestamp: this.endTimeStamp
         }
     };
-    // vote = async (contract, voter) => {        
-    //     return new Promise( 
-    //         resolve => {
-    //             console.log("BEFORE VOTE");
-    //             let x = contract.connect(voter).vote([this.id], [ethers.constants.MaxUint256.mask(111)])
-    //             if (x) {
-    //                 console.log("X"infura" X");
-    //                 resolve(x)
-    //             }
-    //         }    
-    //     ); 
-    // };
     queue = async () => {
         const tx = await this.contract.queueProposal(this.id);
         (await( expect(tx).to.emit(this.contract, "ProposalStateChange").withArgs(this.id, ProposalState.Queued))) 
@@ -111,11 +92,11 @@ class Proposal {
             }
         })
     };
-    complete = async () => {
-        const data = "0x"
-        const tx2 = await this.contract.completeProposal(this.id, data);
-        const isCompleted = (await expect(tx2).emit(this.contract, "ProposalStateChange").withArgs(this.id, ProposalState.Executed))
-        return isCompleted
+    complete = () => {
+        const data = 0x000000
+        return new Promise( (res, rej) => {
+            res(this.contract.completeProposal(this.id, data))
+        });
     };
 }
 
@@ -142,6 +123,16 @@ const utils =  {
             return block.timestamp;
         });
     
+    },
+    checkSigners: async (contract, signers) => {
+        console.log("Checking signers..",signers.map( sig => {
+            return sig.address
+        }));
+        let isGenesis;
+        signers.forEach( async( signer, i ) => {
+            isGenesis = await contract.canPropose(signer.address)
+            console.log("Wallet: " + signer.address +(isGenesis ?  " is verified" : " is NOT verified"));
+        });
     },
     voteWithSigners: (proposal, signers) => {
         /**
@@ -182,22 +173,6 @@ const utils =  {
      }
 }
 
-// const queueProposal = async (contract, id) => {
-//     let tx
-//     await contract.queueProposal(id).then((tx) => {
-//         (await( expect(tx).to.emit(contract, "ProposalStateChange").withArgs(id, ProposalState.Queued))) 
-//             ? console.log("ProposalQueued") : "Still Active";
-//     })
-// }
-
-// const completeProposal = async (contract, id) => {
-//     const data = "0x"
-//     const tx2 = await contract.completeProposal(id, data);
-//     const isCompleted = (await expect(tx2).emit(contract, "ProposalStateChange").withArgs(id, ProposalState.Executed))
-//     isCompleted ? console.log("Proposal Completed") : console.log("Something went wrong on Complete");
-// };
-
-
 
 
 module.exports.setup = async (id, config) => {
@@ -237,50 +212,25 @@ module.exports.setup = async (id, config) => {
  * ######## PROPOSAL SETUP ###########
  */
     let proposal = new Proposal(id, frabric);   
+    
     await proposal.getData(frabric).then( () => {
         console.log(proposal.printData());
     })
-    signers.forEach( async (signer) => {
-        await proposal.checkSigner(frabric, signer);
-    })
     
+    await utils.checkSigners(frabric, signers);  
     
     proposal.startTimeStamp = (await utils.getTimeStampFromBlock(config.provider, proposal.block));
     proposal.endTimeStamp = proposal.startTimeStamp + waitingPeriod.voting
     console.log(proposal.printData());        
-    
+
     await proposal.getState(frabric);
     console.log(proposal.printData());
-    const t = () => { return utils.t(proposal.endTimeStamp)}
-
-    console.log("T == ", t());
+    console.log("T==",proposal.t())
     
     return {
         proposal: proposal,
         waitingPeriod: waitingPeriod
     }
-    
-    /**
-     * VOTE ON PROPOSAL
-     */    
-        // let votes = signers.map( (voter) => {
-        //     return (new Promise(resolve => {
-        //         resolve (frabric.connect(voter).vote([proposal.id], [ethers.constants.MaxUint256.mask(111)]))
-        //     }))
-        // })
-        // var results = Promise.all(votes);
-        // results.then( VOTES => {
-        //    console.log(VOTES.map(vote => {
-        //     return {
-        //         hash: vote.hash,
-        //         event: expect(vote).to.emit(frabric, "Vote") ? true : false
-        //     }
-        //    }));
-        // })
-        // utils.voteWithSigners(proposal, signers
-    
-
-    
 }
 
 /***
@@ -304,32 +254,66 @@ const callModule = (async (id, config) => {
 
 
     const {proposal, waitingPeriod } = await module.exports.setup(id, config)
-    const t = () => { return utils.t(proposal.endTimeStamp) }
     
     
-    if(t() >= 0) {
-        console.log("[V] Voting period!");
+    
+    console.log(proposal.printData(), "\n", {t: utils.t(proposal.endTimeStamp)} );
+ 
+    let t = proposal.t()
+    if(t > 0) {
         utils.voteWithSigners(proposal, signers)
-
-
-    if( (t() < 0) ) {
-        if(proposal.state == ProposalState.Active){
-            console.log("Queueing");
-            await proposal.queue()
-        }
-        if(proposal.state == ProposalState.Queued){
-            console.log("Completing");
-            utils.sleep(waitingPeriod.queue *1000).then(
-                async () => {
-                    await proposal.complete().then( () => { console.log("Proposal Completed");})
+        console.log("Voted and Queuing..");
+        utils.sleep(t*1000).then( 
+            async() => {
+                await proposal.queue().then(
+                    () => {
+                        utils.sleep(waitingPeriod.queue*1000).then(
+                            () => {
+                                console.log("Queued and Completing...");
+                                proposal.complete().then(
+                                    () => {
+                                        console.log("Completed");
+                                    }
+                                )
+                            }
+                        )
+                    }
+                )
+            });
+    }else if(t < 0) {
+        if(proposal.state== ProposalState.Active) {
+            console.log("Queueing...");
+            await proposal.queue().then(
+                () => {
+                    utils.sleep(waitingPeriod.queue*1000).then(
+                         () => proposal.complete().then(tx => {
+                            console.log(tx.hash);
+                         })
+                    )
+                }
+            )
+        }else if(proposal.state == ProposalState.Queued) {
+            console.log("Completing...")
+            proposal.complete().then( (tx) => {
+                console.log(tx.hash);
+            })
+        }else if(proposal.state == ProposalState.Executed && proposal.type === CommonProposalType.Upgrade) {
+            console.log("Triggering the Upgrade...");
+            const singleBeacon =  await new ethers.Contract(
+                config.singleBeacon,
+                require('../../artifacts/contracts/beacon/SingleBeacon.sol/SingleBeacon.json').abi,
+                signers[0]
+            );
+            console.log({beaconProxy: config.beaconProxy});
+            let tx = new Promise( (res, rej) => {
+                res(singleBeacon.triggerUpgrade(config.beaconProxy, ethers.BigNumber.from(2)))
+            }).then(
+                (tx) => {
+                    console.log(tx.hash);
                 }
             )
         }
-        
-    }
-            
-            
-        
+
     }
             
 })
@@ -352,7 +336,7 @@ if (require.main === module) {
     /***
      * PROPOSAL ID
      */
-    const ID = 0x22
+    const ID = 0x25
     callModule( ID, CONFIG ) 
 }
 
