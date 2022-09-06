@@ -21,13 +21,12 @@ module.exports = {
   networks: {}
 };
 
-if (process.env.RINKEBY) {
-  module.exports.networks.rinkeby = {
-    url: process.env.RINKEBY,
+if (process.env.GOERLI) {
+  module.exports.networks.goerli = {
+    url: process.env.GOERLI,
     accounts: [
       process.env.PRIVATE_KEY
     ]
   };
 }
-
 
