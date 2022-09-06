@@ -211,7 +211,7 @@ describe("Frabric", accounts => {
     await pair.mint(governor.address);
 
     await pair.approve(bond.address, 9000);
-    await bond.bond(9000);
+    await bond.bond(9000, {from: governor.address});
   });
 
   it("should let you remove bond", async () => {

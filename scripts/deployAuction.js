@@ -10,22 +10,8 @@ module.exports = async () => {
   // Proxy isn't a technically correct term, as it's the instances which are proxies,
   // yet it works well enough
   const proxy = await deployBeacon("single", Auction);
-  console.log("about to deploy auction beacon proxy")
-  const auction = await upgrades.deployBeaconProxy(proxy.address, Auction.nativeContractFactory);
-  console.log("deployed auction beacon proxy")
+
+  const auction = await upgrades.deployBeaconProxy(proxy.address, Auction);
+
   return { proxy, auction };
 };
-
-
-
-if (require.main === module) {
-  (async () => {
-    let {proxy, auction} = await module.exports();
-    console.log("Proxy: " + proxy.address);
-    console.log("Auction: " + auction.address);
-  })().catch(error => {
-    console.error(error);
-    process.exit(1);
-  });
-
-}

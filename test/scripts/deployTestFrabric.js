@@ -57,23 +57,23 @@ module.exports = async () => {
 
   let governor = signers.pop().address;
   await proposal(
-    frabric.connect(signers[2]),
-    "Upgrade",
-    true,
-    [
-      proxy.address,
-      ethers.constants.AddressZero,
-      2,
-      upgrade.frabricCode,
-      (new ethers.utils.AbiCoder()).encode(
-        ["address", "address", "address", "address"],
-        [upgrade.bond.address, upgrade.threadDeployer.address, signers[1].address, governor]
-      )
-    ]
+      frabric.connect(signers[2]),
+      "Upgrade",
+      true,
+      [
+        proxy.address,
+        ethers.constants.AddressZero,
+        2,
+        upgrade.frabricCode,
+        (new ethers.utils.AbiCoder()).encode(
+            ["address", "address", "address", "address"],
+            [upgrade.bond.address, upgrade.threadDeployer.address, signers[1].address, governor]
+        )
+      ]
   );
 
   await expect(
-    await proxy.triggerUpgrade(frabric.address, 2)
+      await proxy.triggerUpgrade(frabric.address, 2)
   ).to.emit(proxy, "Upgraded").withArgs(frabric.address, 2);
   contracts.frabric = (await ethers.getContractFactory("Frabric")).attach(contracts.frabric.address);
   expect(await frabric.version()).to.equal(2);
@@ -86,9 +86,9 @@ module.exports = async () => {
   // Actually create the pair
   await uniswap.factory.createPair(frbc.address, usd.address);
   contracts.pair = new ethers.Contract(
-    pair,
-    require("@uniswap/v2-core/build/UniswapV2Pair.json").abi,
-    signers[0]
+      pair,
+      require("@uniswap/v2-core/build/UniswapV2Pair.json").abi,
+      signers[0]
   );
 
   return contracts;

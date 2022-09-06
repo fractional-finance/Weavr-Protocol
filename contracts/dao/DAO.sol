@@ -74,8 +74,8 @@ abstract contract DAO is Composable, IDAO {
 
     erc20 = _erc20;
     votingPeriod = _votingPeriod;
-    queuePeriod = 10 hours;
-    lapsePeriod = 10 hours;
+    queuePeriod = 48 hours;
+    lapsePeriod = 48 hours;
   }
 
 
