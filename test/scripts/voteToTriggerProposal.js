@@ -176,7 +176,7 @@ const walletSetup = (provider) => {
     /**
     * SETUP PROVIDER AND SIGNERS
     */
-    const provider = new ethers.providers.InfuraProvider(networks.goerli, process.env.INFURA_API_KEY);
+    const provider = new ethers.providers.AlchemyProvider(networks.goerli);
     const signers = walletSetup(provider);
 
     signers ? console.log("SIgnersReady"): console.log("signers not ready");
@@ -202,7 +202,7 @@ const walletSetup = (provider) => {
 /**
  * ######## PROPOSAL SETUP ###########
  */
-    const ID = 29;
+    const ID = 31;
     let proposal = new Proposal(ID);
     const now = () => { return (new Date().getTime() / 1000);}    
     await proposal.getData(frabric).then( () => {
@@ -258,73 +258,73 @@ const walletSetup = (provider) => {
              },t()*1000)
         })
         
-    }else if(proposal.state == ProposalState.Active){
-    /**
-     * QUEUE PROPOSAL
-     */
-        console.log("Voting period has ended and state == ", proposal.printState());
-        console.log("Queueing proposal...");
-        console.log(proposal.printState());
-        await proposal.queue(frabric);
-        await proposal.getState(frabric);
-        const waitingInMilliseconds = (( waitingPeriod.queue + 1 ) * 1000)
-        setTimeout( () => {
-            console.log("QueuePeriodEnded");
-        }, waitingInMilliseconds);
-    }else if(proposal.state == ProposalState.Queued) {
-     /**
-      *   COMPLETE PROPOSAL
-      */  
-        console.log("TO BE COMPLETED");
-        await proposal.complete(frabric)
-            .then(
-                () => {
-                    console.log("Proposal Completed");
-                }
-            )
-            .catch( error => {
-                console.log(error);
-            });
-        await proposal.getState(frabric);
-    }else if(proposal.state == ProposalState.Executed) {
-        console.log("Proposal it's already in Executed state!");
-        console.log("Checking if proposal is of type Upgrade");
-        const toLapse = proposal.endTimeStamp + waitingPeriod.queue + waitingPeriod.lapse;
+    // }else if(proposal.state == ProposalState.Active){
+    // /**
+    //  * QUEUE PROPOSAL
+    //  */
+    //     console.log("Voting period has ended and state == ", proposal.printState());
+    //     console.log("Queueing proposal...");
+    //     console.log(proposal.printState());
+    //     await proposal.queue(frabric);
+    //     await proposal.getState(frabric);
+    //     const waitingInMilliseconds = (( waitingPeriod.queue + 1 ) * 1000)
+    //     setTimeout( () => {
+    //         console.log("QueuePeriodEnded");
+    //     }, waitingInMilliseconds);
+    // }else if(proposal.state == ProposalState.Queued) {
+    //  /**
+    //   *   COMPLETE PROPOSAL
+    //   */  
+    //     console.log("TO BE COMPLETED");
+    //     await proposal.complete(frabric)
+    //         .then(
+    //             () => {
+    //                 console.log("Proposal Completed");
+    //             }
+    //         )
+    //         .catch( error => {
+    //             console.log(error);
+    //         });
+    //     await proposal.getState(frabric);
+    // }else if(proposal.state == ProposalState.Executed) {
+    //     console.log("Proposal it's already in Executed state!");
+    //     console.log("Checking if proposal is of type Upgrade");
+    //     const toLapse = proposal.endTimeStamp + waitingPeriod.queue + waitingPeriod.lapse;
         
-        let isBeforeLapse
-        ((toLapse - now()) >= 0) ? isBeforeLapse : !isBeforeLapse; 
-        if(proposal.type.toNumber() === CommonProposalType.Upgrade) {
-            console.log("Proposal is Upgrade");
-            if(!isBeforeLapse) {
-                console.log("lapsePeriod ENDED!");
-                process.exitCode(1)
-            }
-            //getUpgradeData
-            const upgrades = await (await frabric.queryFilter(frabric.filters.UpgradeProposal()))
-            const upgrade = upgrades.forEach( upgrade => {
-                if(upgrade.args.id.eq(proposal.id)) {
-                    return upgrade.args
-                }
-            });
+    //     let isBeforeLapse
+    //     ((toLapse - now()) >= 0) ? isBeforeLapse : !isBeforeLapse; 
+    //     if(proposal.type.toNumber() === CommonProposalType.Upgrade) {
+    //         console.log("Proposal is Upgrade");
+    //         if(!isBeforeLapse) {
+    //             console.log("lapsePeriod ENDED!");
+    //             process.exitCode(1)
+    //         }
+    //         //getUpgradeData
+    //         const upgrades = await (await frabric.queryFilter(frabric.filters.UpgradeProposal()))
+    //         const upgrade = upgrades.forEach( upgrade => {
+    //             if(upgrade.args.id.eq(proposal.id)) {
+    //                 return upgrade.args
+    //             }
+    //         });
             
-            if(upgrade) {
-                console.log(upgrade.version);
-            }
-            const singleBeacon = await new ethers.Contract(
-                FRABRIC.singleBeacon,
-                require('../../artifacts/contracts/beacon/SingleBeacon.sol/SingleBeacon.json').abi,
-                signers[0]
-            );
+    //         if(upgrade) {
+    //             console.log(upgrade.version);
+    //         }
+    //         const singleBeacon = await new ethers.Contract(
+    //             FRABRIC.singleBeacon,
+    //             require('../../artifacts/contracts/beacon/SingleBeacon.sol/SingleBeacon.json').abi,
+    //             signers[0]
+    //         );
 
-            if(singleBeacon && upgrade.version) {
-                await singleBeacon.triggerUpgrade(FRABRIC.beaconProxy, upgrade.version);
-                (await (to.emit(proxy, "Upgraded").withArgs(FRABRIC.beaconProxy, upgrade.version))) 
-                    ? console.log("UPGRADED") : console.log("SOMETHING WENT WRONG DURIN UPGRADE");
-            }
-        }else {
-            console.log("Proposal is not Upgrade!!");
-            process.exit(1);
-        }
+    //         if(singleBeacon && upgrade.version) {
+    //             await singleBeacon.triggerUpgrade(FRABRIC.beaconProxy, upgrade.version);
+    //             (await (to.emit(proxy, "Upgraded").withArgs(FRABRIC.beaconProxy, upgrade.version))) 
+    //                 ? console.log("UPGRADED") : console.log("SOMETHING WENT WRONG DURIN UPGRADE");
+    //         }
+    //     }else {
+    //         console.log("Proposal is not Upgrade!!");
+    //         process.exit(1);
+    //     }
     }
 })
 
