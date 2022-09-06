@@ -3,8 +3,6 @@ require("dotenv").config();
 require("@nomiclabs/hardhat-waffle");
 require("@openzeppelin/hardhat-upgrades");
 require("solidity-coverage");
-const tdly = require("@tenderly/hardhat-tenderly");
-tdly.setup();
 
 
 module.exports = {
@@ -20,6 +18,11 @@ module.exports = {
 
   networks: {}
 };
+
+if (process.env.TENDERLY){
+  const tdly = require("@tenderly/hardhat-tenderly");
+  tdly.setup();
+}
 
 if (process.env.GOERLI) {
   module.exports.networks.goerli = {
