@@ -9,7 +9,7 @@ contract TestDAO is DAO {
   constructor(address erc20) Composable("TestDAO") initializer {
     __Composable_init("TestDAO", true);
     // Uses a time value not used by anything else
-    __DAO_init(erc20, 3 * 24 * 60 * 60);
+    __DAO_init(erc20, 3 * 24 * 60 * 60, 2 * 24 * 60 * 60, 2 * 24 * 60 * 60);
   }
 
   function canPropose(address participant) public view override returns (bool) {

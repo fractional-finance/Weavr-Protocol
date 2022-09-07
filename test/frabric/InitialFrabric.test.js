@@ -16,6 +16,9 @@ describe("InitialFrabric", accounts => {
     const { frbc } = await FrabricERC20.deployFRBC(
       (await (await ethers.getContractFactory("TestERC20")).deploy("Test Token", "TEST")).address
     );
+    let  queuePeriod = 60 * 60 * 24 * 2;
+    let  lapsePeriod = 60 * 60 * 24 * 2;
+    let  votingPeriod = 60 * 60 * 24 * 7;
     const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
     const beacon = await deployBeacon("single", InitialFrabric);
     frabric = await deployBeaconProxy(beacon, InitialFrabric,
@@ -25,7 +28,7 @@ describe("InitialFrabric", accounts => {
 
     addresses = genesis.map(signer => signer.address);
 
-    tx = await frabric.initialize(frbc.address, addresses);
+    tx = await frabric.initialize(frbc.address, addresses, votingPeriod, queuePeriod, lapsePeriod);
   });
 
   it("should have initialized correctly", async () => {

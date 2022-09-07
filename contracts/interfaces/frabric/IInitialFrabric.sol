@@ -28,6 +28,9 @@ interface IInitialFrabric is IFrabricDAO {
 interface IInitialFrabricInitializable is IInitialFrabric {
   function initialize(
     address erc20,
-    address[] calldata genesis
+    address[] calldata genesis,
+    uint64 _votingPeriod,
+    uint64 _queuePeriod,
+    uint64 _lapsePeriod
   ) external;
 }

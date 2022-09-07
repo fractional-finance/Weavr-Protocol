@@ -68,14 +68,14 @@ abstract contract DAO is Composable, IDAO {
 
   uint256[100] private __gap;
 
-  function __DAO_init(address _erc20, uint64 _votingPeriod) internal onlyInitializing {
+  function __DAO_init(address _erc20, uint64 _votingPeriod, uint64 _queuePeriod, uint64 _lapsePeriod) internal onlyInitializing {
     supportsInterface[type(IDAOCore).interfaceId] = true;
     supportsInterface[type(IDAO).interfaceId] = true;
 
     erc20 = _erc20;
     votingPeriod = _votingPeriod;
-    queuePeriod = 48 hours;
-    lapsePeriod = 48 hours;
+    queuePeriod = _queuePeriod;
+    lapsePeriod = _lapsePeriod;
   }
 
 

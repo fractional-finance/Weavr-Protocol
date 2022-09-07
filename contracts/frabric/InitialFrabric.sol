@@ -11,9 +11,12 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
   // The erc20 is expected to be fully initialized via JS during deployment
   function initialize(
     address _erc20,
-    address[] calldata genesis
+    address[] calldata genesis,
+    uint64 _votingPeriod,
+    uint64 _queuePeriod,
+    uint64 _lapsePeriod
   ) external override initializer {
-    __FrabricDAO_init("Frabric Protocol", _erc20, 1 days, 100);
+    __FrabricDAO_init("Frabric Protocol", _erc20, _votingPeriod, _queuePeriod, _lapsePeriod, 100);
 
     __Composable_init("Frabric", false);
     supportsInterface[type(IInitialFrabric).interfaceId] = true;
