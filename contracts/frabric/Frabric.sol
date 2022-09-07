@@ -334,81 +334,57 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     }
   }
 
-  function vouch(address _participant, bytes calldata signature) external override {
+  function vouch(address _participant) external override {
     // Places signer in a variable to make the information available for the error
     // While generally, the errors include an abundance of information with the expectation they'll be caught in a call,
     // and even if they are executed on chain, we don't care about the increased gas costs for the extreme minority,
     // this calculation is extensive enough it's worth the variable (which shouldn't even change gas costs?)
-    address signer = ECDSA.recover(
-      _hashTypedDataV4(
-        keccak256(
-          abi.encode(keccak256("Vouch(address participant)"), _participant)
-        )
-      ),
-      signature
-    );
-
-    if (!IFrabricWhitelistCore(erc20).hasKYC(signer)) {
-      revert NotKYC(signer);
+    if (!IFrabricWhitelistCore(erc20).hasKYC(msg.sender)) {
+      revert NotKYC(msg.sender);
     }
 
-    if (participant[signer] != ParticipantType.Voucher) {
+    if (participant[msg.sender] != ParticipantType.Voucher) {
       // Declared optimal growth number
-      if (vouchers[signer] == 6) {
-        revert OutOfVouchers(signer);
+      if (vouchers[msg.sender] == 6) {
+        revert OutOfVouchers(msg.sender);
       }
-      vouchers[signer] += 1;
+      vouchers[msg.sender] += 1;
     }
 
     // The fact whitelist can only be called once for a given participant makes this secure against replay attacks
     IFrabricWhitelistCore(erc20).whitelist(_participant);
-    emit Vouch(signer, _participant);
+    emit Vouch(msg.sender, _participant);
   }
 
-  function approve(
+  function verify(
     ParticipantType pType,
-    address approving,
-    bytes32 kycHash,
-    bytes calldata signature
+    address _participant,
+    bytes32 kycHash
   ) external override {
-    if ((pType == ParticipantType.Null) && passed[uint160(approving)]) {
-      address temp = _participants[uint160(approving)].addr;
+    if ((pType == ParticipantType.Null) && passed[uint160(_participant)]) {
+      address temp = _participants[uint160(_participant)].addr;
       if (temp == address(0)) {
-        // While approving is actually a proposal ID, it's the most info we have
-        revert ParticipantAlreadyApproved(approving);
+        // While _participant is actually a proposal ID, it's the most info we have
+        revert ParticipantAlreadyApproved(_participant);
       }
-      pType = _participants[uint160(approving)].pType;
-      delete _participants[uint160(approving)];
-      approving = temp;
+      pType = _participants[uint160(_participant)].pType;
+      delete _participants[uint160(_participant)];
+      _participant = temp;
     } else if ((pType != ParticipantType.Individual) && (pType != ParticipantType.Corporation)) {
       revert InvalidParticipantType(pType);
     }
 
-    address signer = ECDSA.recover(
-      _hashTypedDataV4(
-        keccak256(
-          abi.encode(
-            keccak256("KYCVerification(uint8 participantType,address participant,bytes32 kyc,uint256 nonce)"),
-            pType,
-            approving,
-            kycHash,
-            0 // For now, don't allow updating KYC hashes
-          )
-        )
-      ),
-      signature
-    );
-    if (participant[signer] != ParticipantType.KYC) {
-      revert InvalidKYCSignature(signer, participant[signer]);
+    if (participant[msg.sender] != ParticipantType.KYC) {
+      revert InvalidKYCSignature(msg.sender, participant[msg.sender]);
     }
 
-    if (participant[approving] != ParticipantType.Null) {
-      revert ParticipantAlreadyApproved(approving);
+    if (participant[_participant] != ParticipantType.Null) {
+      revert ParticipantAlreadyApproved(_participant);
     }
 
-    _changeParticipantAndKYC(approving, pType, kycHash);
+    _changeParticipantAndKYC(_participant, pType, kycHash);
     if (pType == ParticipantType.Governor) {
-      governor[approving] = GovernorStatus.Active;
+      governor[_participant] = GovernorStatus.Active;
     }
   }
 }

@@ -99,12 +99,11 @@ interface IFrabric is IFrabricCore {
     bytes32 info
   ) external returns (uint256);
 
-  function vouch(address participant, bytes calldata signature) external;
-  function approve(
+  function vouch(address participant) external;
+  function verify(
     ParticipantType pType,
     address approving,
-    bytes32 kycHash,
-    bytes calldata signature
+    bytes32 kycHash
   ) external;
 }
 
