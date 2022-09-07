@@ -2,10 +2,10 @@ const hre = require("hardhat");
 const { ethers, upgrades, waffle  } = hre;
 const { expect } = require("chai");
 
-const deployInitialFrabric = require("../../scripts/deployInitialFrabric.js");
-const deployFrabric = require("../../scripts/deployFrabric.js");
+const deployInitialFrabric = require("./deployInitialFrabric.js");
+const deployFrabric = require("./deployFrabric.js");
 
-const genesis = require("../../genesis.json");
+const genesis = require("../genesis.json");
 
 (async () => {
     console.log("AAAA");
