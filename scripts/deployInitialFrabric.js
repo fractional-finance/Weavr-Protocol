@@ -123,7 +123,7 @@ if (require.main === module) {
     }
     genesis = require("../genesis.json");
 
-    const contracts = await module.exports(usd, uniswap, genesis, votingPeriod, lapsePeriod, queuePeriod);
+    const contracts = await module.exports(usd, uniswap, genesis, votingPeriod, queuePeriod, lapsePeriod);
     console.log("Auction:         " + contracts.auction.address);
     console.log("ERC20 Beacon:    " + contracts.erc20Beacon.address);
     console.log("FRBC:            " + contracts.frbc.address);
