@@ -12,45 +12,10 @@ const {
   queueAndComplete
 } = require("../common.js");
 
-let signGlobal = [
-  {
-    name: "Frabric Protocol",
-    version: "1",
-    chainId: 31337
-  },
-  {
-    Vouch: [
-      { type: "address", name: "participant" }
-    ],
-    KYCVerification: [
-      { type: "uint8",   name: "participantType" },
-      { type: "address", name: "participant" },
-      { type: "bytes32", name: "kyc" },
-      { type: "uint256", name: "nonce" }
-    ]
-  }
-];
-
-function sign(signer, data) {
-  let signArgs = JSON.parse(JSON.stringify(signGlobal));
-  if (Object.keys(data).length === 1) {
-    signArgs[1] = { Vouch: signArgs[1].Vouch };
-  } else {
-    signArgs[1] = { KYCVerification: signArgs[1].KYCVerification };
-  }
-
-  // Shim for the fact ethers.js will change this functions names in the future
-  if (signer.signTypedData) {
-    return signer.signTypedData(...signArgs, data);
-  } else {
-    return signer._signTypedData(...signArgs, data);
-  }
-}
-
 let signers, deployer, kyc, genesis, governor, voucher;
 let usd, pair;
 let bond, threadDeployer;
-let frbc, frabric;
+let frbc, frabric_genesis, frabric_verifier;
 let thread;
 
 describe("Frabric", accounts => {
@@ -68,19 +33,18 @@ describe("Frabric", accounts => {
     pair = pair.connect(governor);
     bond = bond.connect(governor);
     frbc = frbc.connect(genesis);
-    frabric = frabric.connect(genesis);
-
-    signGlobal[0].verifyingContract = frabric.address;
+    frabric_genesis = frabric.connect(genesis);
+    frabric_verifier = frabric.connect(kyc);
   });
 
   it("shouldn't let anyone propose", async () => {
-    assert(!(await frabric.canPropose(signers[1].address)));
+    assert(!(await frabric_genesis.canPropose(signers[1].address)));
   });
 
   it("shouldn't let you propose Null/Removed/Genesis participants", async () => {
     for (let pType of [ParticipantType.Null, ParticipantType.Removed, ParticipantType.Genesis]) {
       await expect(
-        frabric.proposeParticipant(
+        frabric_genesis.proposeParticipant(
           pType,
           ethers.constants.AddressZero,
           ethers.utils.id("Proposing an invalid participant")
@@ -92,13 +56,13 @@ describe("Frabric", accounts => {
   it("should let you add KYC agencies", async () => {
     const [ kyc ] = signers.splice(0, 1);
     await expect(
-      (await proposal(frabric, "Participant", false, [ParticipantType.KYC, kyc.address], { insert: 1 })).tx
-    ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.KYC, kyc.address);
+      (await proposal(frabric_genesis, "Participant", false, [ParticipantType.KYC, kyc.address], { insert: 1 })).tx
+    ).to.emit(frabric_genesis, "ParticipantChange").withArgs(ParticipantType.KYC, kyc.address);
 
     // Verify they were successfully added
     // They will not be present on the token's whitelist
-    expect(await frabric.participant(kyc.address)).to.equal(ParticipantType.KYC);
-    assert(await frabric.canPropose(kyc.address));
+    expect(await frabric_genesis.participant(kyc.address)).to.equal(ParticipantType.KYC);
+    assert(await frabric_genesis.canPropose(kyc.address));
   });
 
   it("should let you add participants", async () => {
@@ -106,100 +70,63 @@ describe("Frabric", accounts => {
       let participant = signers.splice(0, 1)[0];
 
       // Vouch for the participant
-      const tx = await frabric.vouch(
-        participant.address,
-        await sign(
-          genesis,
-          {
-            participant: participant.address
-          }
-        )
-      );
-      await expect(tx).to.emit(frbc, "Whitelisted").withArgs(participant.address, true);
-      await expect(tx).to.emit(frabric, "Vouch").withArgs(genesis.address, participant.address);
+      const tx1 = await frabric_genesis.vouch(participant.address);
+      await expect(tx1).to.emit(frbc, "Whitelisted").withArgs(participant.address, true);
+      await expect(tx1).to.emit(frabric_genesis, "Vouch").withArgs(genesis.address, participant.address);
 
       // Approve the participant
       const kycHash = ethers.utils.id(participant.address);
-      await expect(
-        await frabric.approve(
+      await expect(await frabric_verifier.verify(
           pType,
           participant.address,
-          kycHash,
-          await sign(
-            kyc,
-            {
-              participantType: pType,
-              participant: participant.address,
-              kyc: kycHash,
-              nonce: 0
-            }
-          )
-        )
-      ).to.emit(frabric, "ParticipantChange").withArgs(pType, participant.address);
+          kycHash)
+    ).to.emit(frabric_genesis, "ParticipantChange").withArgs(pType, participant.address);
 
       // Verify they were successfully added
       expect(await frbc.kyc(participant.address)).to.equal(kycHash);
-      expect(await frabric.participant(participant.address)).to.equal(pType);
-      assert(await frabric.canPropose(participant.address));
+      expect(await frabric_genesis.participant(participant.address)).to.equal(pType);
+      assert(await frabric_genesis.canPropose(participant.address));
     }
   });
 
   it("should let you add a Governor", async () => {
-    const { id, tx } = await proposal(frabric, "Participant", false, [ParticipantType.Governor, governor.address], { insert: 1 });
+    const { id, tx } = await proposal(frabric_genesis, "Participant", false, [ParticipantType.Governor, governor.address], { insert: 1 });
     await expect(tx).to.emit(frbc, "Whitelisted").withArgs(governor.address, true);
 
     // Approve the participant
     const kycHash = ethers.utils.id("Governor");
     await expect(
-      await frabric.approve(
+      await frabric_verifier.verify(
         ParticipantType.Null,
-        "0x" + "0".repeat(38) + id.toHexString().substr(2),
-        kycHash,
-        await sign(
-          kyc,
-          {
-            participantType: ParticipantType.Governor,
-            participant: governor.address,
-            kyc: kycHash,
-            nonce: 0
-          }
-        )
+        governor.address,
+        kycHash
       )
-    ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.Governor, governor.address);
+    ).to.emit(frabric_genesis, "ParticipantChange").withArgs(ParticipantType.Governor, governor.address);
 
     // Verify they were successfully added
     expect(await frbc.kyc(governor.address)).to.equal(kycHash);
-    expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Governor);
-    expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Active);
-    assert(await frabric.canPropose(governor.address));
+    expect(await frabric_genesis.participant(governor.address)).to.equal(ParticipantType.Governor);
+    expect(await frabric_genesis.governor(governor.address)).to.equal(GovernorStatus.Active);
+    assert(await frabric_genesis.canPropose(governor.address));
   });
 
   it("should let you add a Voucher", async () => {
-    const { id } = await proposal(frabric, "Participant", false, [ParticipantType.Voucher, voucher.address], { insert: 1 });
+    const { id } = await proposal(frabric_genesis, "Participant", false, [ParticipantType.Voucher, voucher.address], { insert: 1 });
 
     // Approve the participant
     const kycHash = ethers.utils.id("Voucher");
     await expect(
-      await frabric.approve(
+      await frabric_verifier.approve(
         ParticipantType.Null,
-        "0x" + "0".repeat(38) + id.toHexString().substr(2),
-        kycHash,
-        await sign(
-          kyc,
-          {
-            participantType: ParticipantType.Voucher,
-            participant: voucher.address,
-            kyc: kycHash,
-            nonce: 0
-          }
-        )
+        voucher.address,
+        kycHash
       )
-    ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.Voucher, voucher.address);
+    ).to.emit(frabric_genesis, "ParticipantChange").withArgs(ParticipantType.Voucher, voucher.address);
 
     // Verify they were successfully added
     expect(await frbc.kyc(voucher.address)).to.equal(kycHash);
-    expect(await frabric.participant(voucher.address)).to.equal(ParticipantType.Voucher);
-    assert(await frabric.canPropose(voucher.address));
+    expect(await frabric_genesis.participant(voucher.address)).to.equal(ParticipantType.Voucher);
+    assert(await frabric_genesis.canPropose(voucher.address));
   });
 
   // Not routed through the Frabric at all other than the GovernorStatus, which
@@ -216,16 +143,16 @@ describe("Frabric", accounts => {
 
   it("should let you remove bond", async () => {
     await expect(
-      (await proposal(frabric, "BondRemoval", false, [governor.address, false, 3333])).tx
+      (await proposal(frabric_genesis, "BondRemoval", false, [governor.address, false, 3333])).tx
     ).to.emit(bond, "Unbond").withArgs(governor.address, 3333);
     expect(await pair.balanceOf(governor.address)).to.equal(3333);
   });
 
   it("should let you slash bond", async () => {
     await expect(
-      (await proposal(frabric, "BondRemoval", false, [governor.address, true, 5667])).tx
+      (await proposal(frabric_genesis, "BondRemoval", false, [governor.address, true, 5667])).tx
     ).to.emit(bond, "Slash").withArgs(governor.address, 5667);
-    expect(await pair.balanceOf(frabric.address)).to.equal(5667);
+    expect(await pair.balanceOf(governor.address)).to.equal(5667);
   });
 
   it("should let you create a Thread", async () => {
@@ -236,11 +163,11 @@ describe("Frabric", accounts => {
     );
 
     const { tx } = await proposal(
-      frabric.connect(governor),
+      frabric_genesis.connect(governor),
       "Thread",
       false,
       [0, "Test Thread", "TTHR", descriptor, data],
-      { insert: 1, voter: frabric.signer }
+      { insert: 1, voter: frabric_genesis.signer }
     );
 
     // Grab unknown event arguments due to Waffle's lack of partial event matching
@@ -255,11 +182,11 @@ describe("Frabric", accounts => {
   });
 
   it("should let you propose creating a proposal on a Thread", async () => {
-    assert(await thread.canPropose(frabric.address));
+    assert(await thread.canPropose(frabric_genesis.address));
     const info = ethers.utils.id("Proposal for Thread Paper Proposal");
     await expect(
       (await proposal(
-        frabric,
+        frabric_genesis,
         "ThreadProposal",
         false,
         [
@@ -271,7 +198,7 @@ describe("Frabric", accounts => {
           )
         ]
       )).tx
-    ).to.emit(thread, "Proposal").withArgs(0, CommonProposalType.Paper, frabric.address, false, info);
+    ).to.emit(thread, "Proposal").withArgs(0, CommonProposalType.Paper, frabric_genesis.address, false, info);
 
     // TODO: Other Thread proposal types
   });
@@ -282,12 +209,12 @@ describe("Frabric", accounts => {
     // Remove the governor as they have additional code in the hook, making them
     // the singular complete case
     await expect(
-      (await proposal(frabric, "ParticipantRemoval", false, [governor.address, 0, []])).tx
-    ).to.emit(frabric, "ParticipantChange").withArgs(ParticipantType.Removed, governor.address);
+      (await proposal(frabric_genesis, "ParticipantRemoval", false, [governor.address, 0, []])).tx
+    ).to.emit(frabric_genesis, "ParticipantChange").withArgs(ParticipantType.Removed, governor.address);
     expect(await frbc.whitelisted(governor.address)).to.equal(false);
-    expect(await frabric.participant(governor.address)).to.equal(ParticipantType.Removed);
-    expect(await frabric.governor(governor.address)).to.equal(GovernorStatus.Removed);
-    assert(!(await frabric.canPropose(governor.address)));
+    expect(await frabric_genesis.participant(governor.address)).to.equal(ParticipantType.Removed);
+    expect(await frabric_genesis.governor(governor.address)).to.equal(GovernorStatus.Removed);
+    assert(!(await frabric_genesis.canPropose(governor.address)));
   });
 
   // Used to practically demonstrate the delay is sufficient for all actions in a e2e test
