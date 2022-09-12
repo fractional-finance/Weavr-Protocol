@@ -16,27 +16,32 @@ const genesis = require("../genesis.json");
 
     console.log("CONFIG:\t\t", config);
 
-    let initialFrabric = await deployInitialFrabric(config.USD, config.UNISWAP, genesis);
+    let initialFrabric = await deployInitialFrabric(config.USD, config.UNISWAP, genesis).then( x => {
+        console.log("Initial Frabric Deployed");
+        console.log(x);
+        return x
+    });
 
     let {
         auction,
         erc20Beacon,
         frbc,
         pair,
-        proxy,
+        beacon,
         frabric,
         router
     } = initialFrabric;
 
     console.log({
-        AUCTION: auction.address,
-        ERC20_BEACON: erc20Beacon.address,
-        FRBC: frbc.address,
-        FRBC_USD_PAIR: pair,
-        PROXY: proxy.address,
-        FRABRIC: frabric.address,
-        ROUTER: router.address
+        AUCTION: initialFrabric.auction.address,
+        ERC20_BEACON: initialFrabric.erc20Beacon.address,
+        FRBC: initialFrabric.frbc.address,
+        FRBC_USD_PAIR: initialFrabric.pair,
+        SINGLEBEACON: initialFrabric.beacon.address,
+        FRABRIC: initialFrabric.frabric.address,
+        ROUTER: initialFrabric.router.address
     });
+
     const isAddress = ethers.utils.isAddress
     while(
         !isAddress(initialFrabric.auction.address) ||
@@ -52,6 +57,8 @@ const genesis = require("../genesis.json");
         )
     }
 
+
+
     console.log("Deploying Frabric");
     frabric = await deployFrabric(auction.address, erc20Beacon.address, config.USD, pair, frabric.address);
 
@@ -59,7 +66,7 @@ const genesis = require("../genesis.json");
     console.log("ERC20BEACON:       " + initialFrabric.erc20Beacon.address);
     console.log("FRBC:              " + initialFrabric.frbc.address);
     console.log("PAIR:              " + initialFrabric.pair);
-    console.log("PROXY:             " + initialFrabric.proxy.address);
+    console.log("PROXY:             " + initialFrabric.beacon.address);
     console.log("INITIALFRABRIC:    " + initialFrabric.frabric.address);
     console.log("DEXROUTER:         " + initialFrabric.router.address);
     
