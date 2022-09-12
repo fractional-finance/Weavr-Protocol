@@ -16,7 +16,7 @@ const genesis = require("../genesis.json");
 
     console.log("CONFIG:\t\t", config);
 
-    let initialFrabric = await deployInitialFrabric(config.USD, config.UNISWAP, genesis).then( x => {
+    let initialFrabric = await deployInitialFrabric(config.USD, config.UNISWAP, genesis, 240, 10, 36000).then( x => {
         console.log("Initial Frabric Deployed");
         console.log(x);
         return x
