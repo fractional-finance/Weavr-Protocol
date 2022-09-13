@@ -12,8 +12,8 @@ const networks = {
 };
 // Contract addresses
 const FRABRIC = {
-    beaconProxy: "0x3837fe8E2Fef5B2782DeAB5ECF742B1bdAE65B48",
-    singleBeacon: "0x1a4B365BD007DcCc80DDf3040b6840df99A38c81"
+    beaconProxy: process.env.INITIALFRABRIC,
+    singleBeacon: process.env.BEACON
 };
 
 
@@ -103,6 +103,13 @@ class Proposal {
 
 
 const utils =  {
+    /**
+     * Fetchw the proposal's state info
+     * : 
+     * @param {Contract} contract 
+     * @param {BigNumber} id 
+    * @returns proposalStateData: {state, blockNumber}
+     */
     getProposalState: async (contract, id) => {
         const propStates = await (await contract.queryFilter(contract.filters.ProposalStateChange()))
         let proposalStateData
@@ -117,13 +124,23 @@ const utils =  {
         console.log(proposalStateData);
         return proposalStateData;
     },
+    /**
+     * 
+     * @param {Provider} provider - Active provider.
+     * @param {Number} blockNumber - Block number to get the timestamp of.
+     * @returns the block's timestamp
+     */
     getTimeStampFromBlock: async (provider, blockNumber) => {
         return provider.getBlock(blockNumber).then((block) => {
             let x = block.timestamp;
             return block.timestamp;
         });
-    
     },
+    /**
+     * checkSigners: checks if the signers can propose
+     * @param {Contract} contract the contract to check against
+     * @param {...Signer} signers 
+     */
     checkSigners: async (contract, signers) => {
         console.log("Checking signers..",signers.map( sig => {
             return sig.address
@@ -134,6 +151,10 @@ const utils =  {
             console.log("Wallet: " + signer.address +(isGenesis ?  " is verified" : " is NOT verified"));
         });
     },
+    /**
+     * @param {Proposal} proposal - Object to vote on
+     * @param {...Signer} signers - Signers to vote with
+     */
     voteWithSigners: (proposal, signers) => {
         /**
      * VOTE ON PROPOSAL
@@ -154,7 +175,13 @@ const utils =  {
 
         })
     },
-    walletSetup: (provider) => {
+    /**
+     * Setup list of wallets with provider
+     * @param {Provider} provider - Provider  to set up the wallets with
+     * @param {...String} WALLETS - List of wallets's private_keys to setup
+     * @returns 
+     */
+    walletSetup: (provider, WALLETS) => {
         let _signers = [];
         WALLETS.forEach( ( wallet,i ) => {
             _signers.push(new ethers.Wallet(wallet, provider))
@@ -162,12 +189,26 @@ const utils =  {
         });
         return _signers
     },
+    /**
+     * 
+     * @returns the actual time in seconds
+     */
     now: () => { 
         return (new Date().getTime() / 1000);
     },
+    /**
+     * Calculates seconds left to vote
+     * @param {Number} endTimeStamp 
+     * @returns The proposal's voting period remaning time
+     */
     t : (endTimeStamp) => { 
         return (endTimeStamp - utils.now());
     },
+    /**
+     * Pauses the script for (n) milliseconds
+     * @param {Number} ms 
+     * @returns Promise to be resolved
+     */
     sleep: async (ms) => {
         return new Promise(resolve => setTimeout(resolve, ms));
      }
@@ -243,7 +284,7 @@ const callModule = (async (id, config) => {
     * SETUP PROVIDER AND SIGNERS
     */
     const provider = new ethers.providers.AlchemyProvider(config.network ? config.network : 5);
-    const signers = utils.walletSetup(provider);
+    const signers = utils.walletSetup(provider, WALLETS);
   
     signers ? console.log("SignersReady"): console.log("signers not ready");
     console.log(signers.map( signer => { return signer.address }));
@@ -260,7 +301,7 @@ const callModule = (async (id, config) => {
     console.log(proposal.printData(), "\n", {t: utils.t(proposal.endTimeStamp)} );
  
     let t = proposal.t()
-    if(t > 650000) {
+    if(t > 0) {
         utils.voteWithSigners(proposal, signers)
         console.log("Voted and Queuing..");
         utils.sleep(t*1000).then( 
@@ -315,7 +356,26 @@ const callModule = (async (id, config) => {
                 }
             )
         }
-    }   
+    } 
+
+    // if(proposal.state == 3 && proposal.type === 257) {
+    //     const version = await proposal.contract.version();
+    //     console.log("Version: ",version)
+    //     console.log("Triggering the Upgrade...");
+    //     const singleBeacon =  await new ethers.Contract(
+    //         config.singleBeacon,
+    //         require('../../artifacts/contracts/beacon/SingleBeacon.sol/SingleBeacon.json').abi,
+    //         signers[0]
+    //     );
+    //     console.log({beaconProxy: config.beaconProxy});
+    //     let tx = new Promise( (res, rej) => {
+    //         res(singleBeacon.triggerUpgrade(config.beaconProxy, ethers.BigNumber.from(2)))
+    //     }).then(
+    //         (tx) => {
+    //             console.log(tx.hash);
+    //         }
+    //     ) 
+    // }
 })
 
 
@@ -336,9 +396,10 @@ if (require.main === module) {
     /***
      * PROPOSAL ID
      */
-    const ID = 1
+    const ID = 0
     callModule( ID, CONFIG ) 
 }
 
 exports.proposalUtils = utils;
-exports.Proposal = Proposal
+exports.Proposal = Proposal;
+exports.FRABRIC = FRABRIC;
