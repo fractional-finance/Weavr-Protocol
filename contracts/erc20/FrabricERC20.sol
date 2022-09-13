@@ -24,7 +24,11 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
   mapping(address => uint64) public override frozenUntil;
   mapping(address => uint8) public override removalFee;
+
   bool private _removal;
+
+  mapping(address => uint256) public override active;
+  uint256 public activeSupply;
 
   function initialize(
     string memory name,
@@ -71,7 +75,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
       revert errors.UnsupportedInterface(_auction, type(IAuction).interfaceId);
     }
     auction = _auction;
-
+    activeSupply = 0;
     _removal = false;
   }
 
@@ -113,6 +117,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
   function burn(uint256 amount) external override {
     _burning = true;
+    deactivate(amount);
     _burn(msg.sender, amount);
     _burning = false;
   }
@@ -271,6 +276,38 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     _pause();
   }
 
+  // DAO Activation functions
+
+  function activate() external override {
+    uint256 prevActive = active[msg.sender];
+    active[msg.sender] = this.balanceOf(msg.sender);
+
+    updateActiveSupply(active[msg.sender] - prevActive, True);
+    emit Activate(msg.sender, active[msg.sender]);
+  }
+
+  function deactivate() external override {
+    uint256 prevActive = active[msg.sender];
+    active[msg.sender] = 0;
+    updateActiveSupply(prevActive, False);
+    emit Deactivate(msg.sender, active[msg.sender]);
+  }
+
+  function updateActiveSupply(uint256 amount, bool sign) internal {
+    if (sign) {
+      activeSupply += amount;
+    } else {
+      activeSupply -= amount;
+    }
+  }
+
+  function transferActive(address from, address to, uint256 amount) internal {
+    uint256 prevFrom = active[from];
+    uint256 prevTo = active[to];
+    active[from] -= amount;
+    active[to] += amount;
+  }
+
   // Transfer requirements
   function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
     super._beforeTokenTransfer(from, to, amount);
@@ -315,5 +352,6 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     if (balanceOf(from) < locked[from]) {
       revert Locked(from, balanceOf(from), locked[from]);
     }
+    transferActive(from, to, amount);
   }
 }
