@@ -62,17 +62,17 @@ const genesis = require("../genesis.json");
     console.log("Deploying Frabric");
     frabric = await deployFrabric(auction.address, erc20Beacon.address, config.USD, pair, frabric.address);
 
-    console.log("AUCTION:           " + initialFrabric.auction.address);
-    console.log("ERC20BEACON:       " + initialFrabric.erc20Beacon.address);
-    console.log("FRBC:              " + initialFrabric.frbc.address);
-    console.log("PAIR:              " + initialFrabric.pair);
-    console.log("PROXY:             " + initialFrabric.beacon.address);
-    console.log("INITIALFRABRIC:    " + initialFrabric.frabric.address);
-    console.log("DEXROUTER:         " + initialFrabric.router.address);
+    console.log("AUCTION=" + initialFrabric.auction.address);
+    console.log("ERC20BEACON=" + initialFrabric.erc20Beacon.address);
+    console.log("FRBC=" + initialFrabric.frbc.address);
+    console.log("PAIR=" + initialFrabric.pair);
+    console.log("PROXY=" + initialFrabric.beacon.address);
+    console.log("INITIALFRABRIC=" + initialFrabric.frabric.address);
+    console.log("DEXROUTER=" + initialFrabric.router.address);
     
-    console.log("Thread Deployer:   " + frabric.threadDeployer.address);
-    console.log("Bond:              " + frabric.bond.address);
-    console.log("Frabric Code:      " + frabric.frabricCode);
+    console.log("Thread Deployer=" + frabric.threadDeployer.address);
+    console.log("Bond=" + frabric.bond.address);
+    console.log("Frabric Code=" + frabric.frabricCode);
 })
 
 (async () => {
