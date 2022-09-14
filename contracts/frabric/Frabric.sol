@@ -136,8 +136,6 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     _proposalSelectors[uint16(IThread.ThreadProposalType.GovernorChange)]   = IThread.proposeGovernorChange.selector;
     _proposalSelectors[uint16(IThread.ThreadProposalType.Dissolution)]      = IThread.proposeDissolution.selector;
 
-    // Correct the voting time as well
-    votingPeriod = 1 weeks;
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
