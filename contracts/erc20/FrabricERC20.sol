@@ -117,7 +117,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
   function burn(uint256 amount) external override {
     _burning = true;
-    deactivate(amount);
+    _deactivate(msg.sender);
     _burn(msg.sender, amount);
     _burning = false;
   }
@@ -282,15 +282,19 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     uint256 prevActive = active[msg.sender];
     active[msg.sender] = this.balanceOf(msg.sender);
 
-    updateActiveSupply(active[msg.sender] - prevActive, True);
-    emit Activate(msg.sender, active[msg.sender]);
+    updateActiveSupply(active[msg.sender] - prevActive, true);
+    emit Activate(msg.sender);
   }
 
   function deactivate() external override {
-    uint256 prevActive = active[msg.sender];
-    active[msg.sender] = 0;
-    updateActiveSupply(prevActive, False);
-    emit Deactivate(msg.sender, active[msg.sender]);
+    _deactivate(msg.sender);
+  }
+
+  function _deactivate(address participant) internal {
+    uint256 prevActive = active[participant];
+    active[participant] = 0;
+    updateActiveSupply(prevActive, false);
+    emit Deactivate(participant);
   }
 
   function updateActiveSupply(uint256 amount, bool sign) internal {
@@ -301,11 +305,20 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
     }
   }
 
+  function checkIfProperlyActive(address person) public view override returns (bool) {
+    return active[person] == this.balanceOf(person);
+  }
+
   function transferActive(address from, address to, uint256 amount) internal {
-    uint256 prevFrom = active[from];
-    uint256 prevTo = active[to];
-    active[from] -= amount;
-    active[to] += amount;
+    if(active[from] > 0) {
+      if(amount <= active[from]) {
+        active[from] -= amount;
+        active[to] += amount;
+      } else {
+        active[to] += active[from];
+        active[from] = 0;
+      }
+    }
   }
 
   // Transfer requirements

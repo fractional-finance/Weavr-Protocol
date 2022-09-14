@@ -22,6 +22,11 @@ interface IFreeze {
 interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IRemovalFee, IFreeze, IIntegratedLimitOrderDEX {
   event Removal(address indexed person, uint256 balance);
 
+  event Activate(address person);
+  event Deactivate(address person);
+
+  function active(address person) external view returns (uint256);
+
   function auction() external view returns (address);
 
   function mint(address to, uint256 amount) external;
@@ -32,6 +37,13 @@ interface IFrabricERC20 is IDistributionERC20, IFrabricWhitelist, IRemovalFee, I
 
   function paused() external view returns (bool);
   function pause() external;
+
+  function activate() external;
+  function deactivate() external;
+
+  function checkIfProperlyActive(address person) external view returns (bool);
+
+
 }
 
 interface IFrabricERC20Initializable is IFrabricERC20 {
