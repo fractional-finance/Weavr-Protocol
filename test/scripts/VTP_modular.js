@@ -11,12 +11,18 @@ const networks = {
     goerli: 5
 };
 // Contract addresses
+// const FRABRIC = {
+//     beaconProxy: process.env.INITIALFRABRIC,
+//     singleBeacon: process.env.BEACON
+//     // beaconProxy: process.env.INITIALFRABRIC,
+//     // singleBeacon: process.env.BEACON
+// };
+
+// Contract addresses
 const FRABRIC = {
-    beaconProxy: process.env.INITIALFRABRIC,
-    singleBeacon: process.env.BEACON
+    beaconProxy: "0xce1A29476E07BF0B8AF58d738Ba5baD8C2b95e1C",
+    singleBeacon: "0x4f25dd861e84f6e9ccd490222fe8dc496461441b"
 };
-
-
 const WALLETS = (process.env.WALLETS).split(",");
 
 /**
@@ -396,7 +402,7 @@ if (require.main === module) {
     /***
      * PROPOSAL ID
      */
-    const ID = 0
+    const ID = 0x5
     callModule( ID, CONFIG ) 
 }
 

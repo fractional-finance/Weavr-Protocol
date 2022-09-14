@@ -17,39 +17,19 @@ module.exports = async () => {
     const proposer = signers[0];
     console.log(ethers.utils.isAddress(proposer.address));
 
-    const frabric = await new ethers.Contract(
-        FRABRIC.beaconProxy,
-        require('../../artifacts/contracts/frabric/Frabric.sol/Frabric.json').abi,
+    const threadDeployer = await new ethers.Contract(
+        "0x04F8679236B648bbCdaffc9A247312CD3C7d7aEd",
+        require('../../artifacts/contracts/thread/ThreadDeployer.sol/ThreadDeployer.json').abi,
         proposer
     )
 
     const USD = process.env.USD;
     console.log(USD);
     
-    const info = ethers.utils.id("ipfs-info");
-    const descriptor = ethers.utils.id("ipfs-descriptor");
-    const data = (new ethers.utils.AbiCoder()).encode(
-        ["address", "uint112"],
-        [USD, 1000]
-    );
-
-    const isAddress = ethers.utils.isAddress;
-
-    if(
-        isAddress(frabric.address) &&
-        isAddress(USD)
-    ) {
-        console.log("ALL GOOD!!");
-        const tx = await frabric.proposeThread(
-            0,
-            "NAME",
-            "SYMBOL",
-            descriptor,
-            data,
-            info
-        )
-    }
-// const {id } = await proposal(frabric, "ThreadProposal", false, [])
+    const crowdfundEvents = (await threadDeployer.queryFilter(threadDeployer.filters.CrowdfundedThread()));
+        crowdfundEvents.forEach(event => {
+            console.log(event.args);
+        });
 }
 
 const callModule = async () => {
