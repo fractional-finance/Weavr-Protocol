@@ -4,6 +4,12 @@ const { assert, expect } = require("chai");
 const { proposal, propose } = require("../common.js");
 const {FRABRIC, proposalUtils} = require("./VTP_modular");
 
+const State = {
+    Active: 0,
+    Executing: 1,
+    Refunding: 2,
+    Finished: 3
+  }
 
 const GOVERNOR = process.env.GOVERNOR;
 const WALLETS = [GOVERNOR]
@@ -26,10 +32,20 @@ module.exports = async () => {
     const USD = process.env.USD;
     console.log(USD);
     
+    let crowdfund;
     const crowdfundEvents = (await threadDeployer.queryFilter(threadDeployer.filters.CrowdfundedThread()));
-        crowdfundEvents.forEach(event => {
+        await crowdfundEvents.map( async (event) => {
             console.log(event.args);
+            crowdfundAddress = event.args.crowdfund;
+            console.log("ADDRESS: ", crowdfundAddress);
+            crowdfund = await new ethers.Contract(crowdfundAddress,
+                require('../../artifacts/contracts/thread/Crowdfund.sol/Crowdfund.json').abi,
+                proposer
+            )
         });
+
+        const state = await crowdfund.state();
+        console.log("CrowdfundState == ", (state==0) ? "Active" : state);
 }
 
 const callModule = async () => {
