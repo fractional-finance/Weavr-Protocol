@@ -57,6 +57,7 @@ contract TestFrabric is FrabricWhitelist {
     string memory symbol,
     bytes32 descriptor,
     address _governor,
+    address _broker,
     address tradeToken,
     uint112 target
   ) external {
@@ -66,6 +67,7 @@ contract TestFrabric is FrabricWhitelist {
       symbol,
       descriptor,
       _governor,
+      _broker,
       abi.encode(tradeToken, target)
     );
   }

@@ -4,17 +4,24 @@ pragma solidity >=0.8.9;
 import "../common/IComposable.sol";
 
 interface IThreadDeployer is IComposable {
+
+  struct ThreadInfo {
+    address governor;
+    address broker;
+  }
+
   event Thread(
     address indexed thread,
     uint8 indexed variant,
-    address indexed governor,
+    ThreadInfo info,
     address erc20,
     bytes32 descriptor
   );
 
   event CrowdfundedThread(address indexed thread, address indexed token, address indexed crowdfund, uint112 target);
 
-  function percentage() external view returns (uint8);
+  function protocolPercentage() external view returns (uint8);
+  function brokerPercentage() external view returns (uint8);
   function crowdfundProxy() external view returns (address);
   function erc20Beacon() external view returns (address);
   function threadBeacon() external view returns (address);
@@ -29,6 +36,7 @@ interface IThreadDeployer is IComposable {
     string memory symbol,
     bytes32 descriptor,
     address governor,
+    address broker,
     bytes calldata data
   ) external;
 

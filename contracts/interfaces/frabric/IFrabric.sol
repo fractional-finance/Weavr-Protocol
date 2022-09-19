@@ -88,6 +88,7 @@ interface IFrabric is IFrabricCore {
     uint8 variant,
     string calldata name,
     string calldata symbol,
+    address broker,
     bytes32 descriptor,
     bytes calldata data,
     bytes32 info
@@ -103,8 +104,7 @@ interface IFrabric is IFrabricCore {
   function approve(
     ParticipantType pType,
     address approving,
-    bytes32 kycHash,
-    bytes calldata signature
+    bytes32 kycHash
   ) external;
 }
 

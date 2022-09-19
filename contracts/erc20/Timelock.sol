@@ -25,7 +25,7 @@ contract Timelock is Ownable, Composable, ITimelock {
     uint64 time;
     uint8 months;
   }
-  mapping(address => LockStruct) private _locks;
+  mapping(address => mapping(address => LockStruct)) private _locks;
 
   constructor() Composable("Timelock") Ownable() initializer {
     __Composable_init("Timelock", true);
@@ -33,21 +33,29 @@ contract Timelock is Ownable, Composable, ITimelock {
     supportsInterface[type(ITimelock).interfaceId] = true;
   }
 
-  function lock(address token, uint8 months) external override onlyOwner {
-    LockStruct storage _lock = _locks[token];
+  function lock(address token, uint8 months, address recipient) external override onlyOwner {
+      // Enabled for case where owner is a Broker; enabling reuse of timelock for multiple payouts.
+  if(recipient == address(0)){
+    recipient = owner();
+    }
+    LockStruct storage _lock = _locks[token][recipient];
 
     // Would trivially be a DoS if token addresses were known in advance and this wasn't onlyOwner
     if (_lock.months != 0) {
-      revert AlreadyLocked(token);
+      revert AlreadyLocked(token, recipient);
     }
 
     _lock.time = uint64(block.timestamp) + (30 days);
     _lock.months = months;
-    emit Lock(token, months);
+    emit Lock(token, months, recipient);
   }
 
-  function claim(address token) external override {
-    LockStruct storage _lock = _locks[token];
+  function claim(address token, address recipient) external override {
+      // Enabled for case where owner is a Broker; enabling reuse of timelock for multiple payouts.
+      if(recipient == address(0)){
+        recipient = owner();
+        }
+       LockStruct storage _lock = _locks[token][recipient];
 
     // If this is a Thread token, and they've enabled upgrades, void the timelock
     // Prevents an attack vector documented in Thread where Threads can upgrade to claw back timelocked tokens
@@ -64,21 +72,27 @@ contract Timelock is Ownable, Composable, ITimelock {
       _lock.months = 1;
     } else {
       if (_lock.time > block.timestamp) {
-        revert Locked(token, block.timestamp, _lock.time);
+        revert Locked(token, block.timestamp, _lock.time, recipient);
       }
       _lock.time += 30 days;
     }
 
     uint256 amount = IERC20(token).balanceOf(address(this)) / _lock.months;
     _lock.months -= 1;
-    emit Claim(token, amount);
-    IERC20(token).safeTransfer(owner(), amount);
+    emit Claim(token, amount, recipient);
+    IERC20(token).safeTransfer(recipient, amount);
   }
 
-  function nextLockTime(address token) external view override returns (uint64) {
-    return _locks[token].time;
+  function nextLockTime(address token, address recipient) external view override returns (uint64) {
+    if(recipient == address(0)){
+        recipient = owner();
+        }
+    return _locks[token][recipient].time;
   }
-  function remainingMonths(address token) external view override returns (uint8) {
-    return _locks[token].months;
+  function remainingMonths(address token, address recipient) external view override returns (uint8) {
+    if(recipient == address(0)){
+      recipient = owner();
+    }
+    return _locks[token][recipient].months;
   }
 }

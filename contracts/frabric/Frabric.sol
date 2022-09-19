@@ -38,6 +38,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   struct Thread {
     uint8 variant;
     address governor;
+    address broker;
     // This may not actually pack yet it's small enough to theoretically
     string symbol;
     bytes32 descriptor;
@@ -193,6 +194,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     uint8 variant,
     string calldata name,
     string calldata symbol,
+    address broker,
     bytes32 descriptor,
     bytes calldata data,
     bytes32 info
@@ -225,6 +227,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     proposal.symbol = symbol;
     proposal.descriptor = descriptor;
     proposal.governor = msg.sender;
+    proposal.broker = broker;
     proposal.data = data;
     emit ThreadProposal(id, variant, msg.sender, name, symbol, descriptor, data);
   }
@@ -314,7 +317,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
       // This governor may no longer be viable for usage yet the Thread will check
       // When proposing this proposal type, we validate we upgraded which means this has been set
       IThreadDeployer(threadDeployer).deploy(
-        proposal.variant, proposal.name, proposal.symbol, proposal.descriptor, proposal.governor, proposal.data
+        proposal.variant, proposal.name, proposal.symbol, proposal.descriptor, proposal.governor, proposal.broker, proposal.data
       );
       delete _threads[id];
 
@@ -366,9 +369,7 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
   function approve(
     ParticipantType pType,
     address approving,
-    bytes32 kycHash,
-    bytes calldata signature
-  ) external override {
+    bytes32 kycHash) external override {
     if ((pType == ParticipantType.Null) && passed[uint160(approving)]) {
       address temp = _participants[uint160(approving)].addr;
       if (temp == address(0)) {
@@ -381,23 +382,8 @@ contract Frabric is FrabricDAO, IFrabricUpgradeable {
     } else if ((pType != ParticipantType.Individual) && (pType != ParticipantType.Corporation)) {
       revert InvalidParticipantType(pType);
     }
-
-    address signer = ECDSA.recover(
-      _hashTypedDataV4(
-        keccak256(
-          abi.encode(
-            keccak256("KYCVerification(uint8 participantType,address participant,bytes32 kyc,uint256 nonce)"),
-            pType,
-            approving,
-            kycHash,
-            0 // For now, don't allow updating KYC hashes
-          )
-        )
-      ),
-      signature
-    );
-    if (participant[signer] != ParticipantType.KYC) {
-      revert InvalidKYCSignature(signer, participant[signer]);
+    if (participant[msg.sender] != ParticipantType.KYC) {
+      revert InvalidKYCSignature(msg.sender, participant[msg.sender]);
     }
 
     if (participant[approving] != ParticipantType.Null) {
