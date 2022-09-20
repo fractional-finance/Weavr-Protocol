@@ -20,8 +20,8 @@ const networks = {
 
 // Contract addresses
 const FRABRIC = {
-    beaconProxy: "0xce1A29476E07BF0B8AF58d738Ba5baD8C2b95e1C",
-    singleBeacon: "0x4f25dd861e84f6e9ccd490222fe8dc496461441b"
+    beaconProxy: process.env.INITIALFRABRIC,
+    singleBeacon: process.env.BEACON
 };
 const WALLETS = (process.env.WALLETS).split(",");
 
@@ -364,24 +364,26 @@ const callModule = (async (id, config) => {
         }
     } 
 
-    // if(proposal.state == 3 && proposal.type === 257) {
-    //     const version = await proposal.contract.version();
-    //     console.log("Version: ",version)
-    //     console.log("Triggering the Upgrade...");
-    //     const singleBeacon =  await new ethers.Contract(
-    //         config.singleBeacon,
-    //         require('../../artifacts/contracts/beacon/SingleBeacon.sol/SingleBeacon.json').abi,
-    //         signers[0]
-    //     );
-    //     console.log({beaconProxy: config.beaconProxy});
-    //     let tx = new Promise( (res, rej) => {
-    //         res(singleBeacon.triggerUpgrade(config.beaconProxy, ethers.BigNumber.from(2)))
-    //     }).then(
-    //         (tx) => {
-    //             console.log(tx.hash);
-    //         }
-    //     ) 
-    // }
+
+
+    
+        // const version = await proposal.contract.version();
+        // console.log("Version: ",version)
+        // console.log("Triggering the Upgrade...");
+        // const singleBeacon =  await new ethers.Contract(
+        //     config.singleBeacon,
+        //     require('../../artifacts/contracts/beacon/SingleBeacon.sol/SingleBeacon.json').abi,
+        //     signers[0]
+        // );
+        // console.log({beaconProxy: config.beaconProxy});
+        // let tx = new Promise( (res, rej) => {
+        //     res(singleBeacon.triggerUpgrade(config.beaconProxy, ethers.BigNumber.from(2)))
+        // }).then(
+        //     (tx) => {
+        //         console.log(tx.hash);
+        //     }
+        // ) 
+    
 })
 
 
@@ -396,13 +398,13 @@ if (require.main === module) {
      */
     const CONFIG = {
         network:        networks.goerli,
-        beaconProxy:    FRABRIC.beaconProxy,
-        singleBeacon:   FRABRIC.singleBeacon,
+        beaconProxy:    process.env.INITIALFRABRIC,
+        singleBeacon:   process.env.BEACON,
     }
     /***
      * PROPOSAL ID
      */
-    const ID = 0x5
+    const ID = 0x1
     callModule( ID, CONFIG ) 
 }
 
