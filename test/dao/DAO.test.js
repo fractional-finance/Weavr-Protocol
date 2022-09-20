@@ -19,7 +19,7 @@ describe("DAO", () => {
     ([ deployer, other ] = signers.splice(0, 2));
 
     const usd = await (await ethers.getContractFactory("TestERC20")).deploy("Test USD", "TUSD");
-    ({ frbc } = await FrabricERC20.deployFRBC(usd.address));
+    ({ frbc } = await FrabricERC20.deployWEAV(usd.address));
     await frbc.mint(deployer.address, 100);
     await frbc.setKYC(deployer.address, ethers.utils.id("deployer"), 0);
     dao = await (await ethers.getContractFactory("TestDAO")).deploy(frbc.address);

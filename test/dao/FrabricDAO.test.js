@@ -17,7 +17,7 @@ describe("FrabricDAO", accounts => {
     [ deployer, participant ] = signers.splice(0, 2);
 
     usd = await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD");
-    ({ frbc, auction } = await FrabricERC20.deployFRBC(usd.address));
+    ({ frbc, auction } = await FrabricERC20.deployWEAV(usd.address));
     await frbc.whitelist(auction.address);
     await frbc.whitelist(participant.address);
     await frbc.setKYC(participant.address, ethers.utils.id("kyc"), 0);
