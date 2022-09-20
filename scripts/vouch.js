@@ -1,10 +1,10 @@
 const { ethers } = require("hardhat");
 
 const beaconproxyAddress = "";
-infura_key = "10f965a85be14e40b1b7bb000a7be036";
-network = 5;
-private_key_of_signer = "";
-const participant_address = "0x6bE56DbAA46dD1Ea477c1Cf19B511CB5bd342043";
+const infura_key = "";
+const network = 5;
+const private_key_of_signer = "";
+const participant_address = "";
 
 
 const domain = {
