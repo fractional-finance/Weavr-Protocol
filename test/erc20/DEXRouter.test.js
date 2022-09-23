@@ -13,7 +13,7 @@ describe("DEXRouter", accounts => {
     deployer = signers.splice(0, 1)[0];
 
     usd = await (await ethers.getContractFactory("TestERC20")).deploy("USD Test", "USD");
-    ({ frbc } = await FrabricERC20.deployFRBC(usd.address));
+    ({ frbc } = await FrabricERC20.deployWEAV(usd.address));
     await frbc.mint(deployer.address, ethers.utils.parseUnits("1"));
     router = (await (await ethers.getContractFactory("DEXRouter")).deploy());
   });

@@ -27,7 +27,7 @@ module.exports = async (usd, uniswap, genesis, votingPeriod, queuePeriod, lapseP
 
   const signer = (await ethers.getSigners())[0];
   console.log("starting deploy")
-  const { auctionBeacon, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
+  const { auctionBeacon, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployWEAV(usd);
   console.log("deployed FRBC")
   await (await frbc.whitelist(auction.address)).wait();
 

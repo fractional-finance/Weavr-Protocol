@@ -22,15 +22,15 @@ module.exports = {
     return { auctionBeacon: auction.beacon, auction: auction.auction, erc20 };
   },
 
-  deployFRBC: async (usd) => {
+  deployWEAV: async (usd) => {
       console.log("about to deploy FRBC beacon")
     const beacon = await module.exports.deployBeacon();
     console.log("deployed frbc beacon")
     const frbc = await module.exports.deploy(
       beacon,
       [
-        "Frabric Token",
-        "FRBC",
+        "Weavr Token",
+        "WEAV",
         // Supply is 0 as all distribution is via mint
         0,
         // Parent whitelist doesn't exist

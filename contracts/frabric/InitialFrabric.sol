@@ -16,7 +16,7 @@ contract InitialFrabric is FrabricDAO, IInitialFrabricInitializable {
     uint64 _queuePeriod,
     uint64 _lapsePeriod
   ) external override initializer {
-    __FrabricDAO_init("Frabric Protocol", _erc20, _votingPeriod, _queuePeriod, _lapsePeriod, 100);
+    __FrabricDAO_init("Protocol", _erc20, _votingPeriod, _queuePeriod, _lapsePeriod, 100);
 
     __Composable_init("Frabric", false);
     supportsInterface[type(IInitialFrabric).interfaceId] = true;

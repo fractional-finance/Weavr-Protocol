@@ -241,7 +241,7 @@ describe("IntegratedLimitOrderDEX", accounts => {
 
     usd = await (await ethers.getContractFactory("TestERC20")).deploy("Test USD", "TUSD");
 
-    ({ frbc } = await FrabricERC20.deployFRBC(usd.address));
+    ({ frbc } = await FrabricERC20.deployWEAV(usd.address));
     expect(await frbc.tradeToken()).to.equal(usd.address);
 
     await frbc.mint(deployer.address, ethers.utils.parseUnits("777777"));
@@ -251,7 +251,7 @@ describe("IntegratedLimitOrderDEX", accounts => {
     await frbc.mint(other.address, ethers.utils.parseUnits("333333"));
     frbcBalances[other.address] = ethers.BigNumber.from("333333");
 
-    ({ frbc: parent } = await FrabricERC20.deployFRBC(usd.address));
+    ({ frbc: parent } = await FrabricERC20.deployWEAV(usd.address));
     await frbc.setParent(parent.address);
 
     await parent.whitelist(removed.address);

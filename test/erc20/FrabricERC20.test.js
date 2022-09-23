@@ -18,15 +18,15 @@ describe("FrabricERC20", () => {
 
     usd = await (await ethers.getContractFactory("TestERC20")).deploy("Test USD", "TUSD");
 
-    ({ auction, frbc } = await FrabricERC20.deployFRBC(usd.address));
+    ({ auction, frbc } = await FrabricERC20.deployWEAV(usd.address));
 
     // Deploy a FrabricERC20 which will eventually be set as the parent
-    ({ frbc: parent } = await FrabricERC20.deployFRBC(usd.address));
+    ({ frbc: parent } = await FrabricERC20.deployWEAV(usd.address));
   });
 
   it("should have initialized properly", async () => {
-    expect(await frbc.name()).to.equal("Frabric Token");
-    expect(await frbc.symbol()).to.equal("FRBC");
+    expect(await frbc.name()).to.equal("Weavr Token");
+    expect(await frbc.symbol()).to.equal("WEAV");
     expect(await frbc.parent()).to.equal(ethers.constants.AddressZero);
     expect(await frbc.tradeToken()).to.equal(usd.address);
     expect(await frbc.auction()).to.equal(auction.address);

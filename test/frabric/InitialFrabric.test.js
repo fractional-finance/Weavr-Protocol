@@ -13,7 +13,7 @@ describe("InitialFrabric", accounts => {
   before(async () => {
     genesis = (await ethers.getSigners()).splice(1, 5);
 
-    const { frbc } = await FrabricERC20.deployFRBC(
+    const { frbc } = await FrabricERC20.deployWEAV(
       (await (await ethers.getContractFactory("TestERC20")).deploy("Test Token", "TEST")).address
     );
     let  queuePeriod = 60 * 60 * 24 * 2;
