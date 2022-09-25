@@ -20,15 +20,15 @@ module.exports = async (auction, erc20Beacon, usd, pair, frabric) => {
 
   // Transfer ownership of everything to the Frabric (the actual proxy)
   // Bond proxy and bond
-  await bondProxy.transferOwnership(frabric);
-  await bond.transferOwnership(frabric);
+  await (await bondProxy.transferOwnership(frabric)).wait();
+  await (await bond.transferOwnership(frabric)).wait();
   // Crowdfund proxy
-  await crowdfundProxy.transferOwnership(frabric);
+  await (await crowdfundProxy.transferOwnership(frabric)).wait();
   // Thread beacon
-  await threadBeacon.transferOwnership(frabric);
+  await (await threadBeacon.transferOwnership(frabric)).wait();
   // ThreadDeployer proxy and ThreadDeployer
-  await threadDeployerProxy.transferOwnership(frabric);
-  await threadDeployer.transferOwnership(frabric);
+  await (await threadDeployerProxy.transferOwnership(frabric)).wait();
+  await (await threadDeployer.transferOwnership(frabric)).wait();
 
   return {
     threadDeployer,
@@ -47,8 +47,8 @@ if (require.main === module) {
 
     if ((!auction) || (!erc20Beacon) || (!usd) || (!pair) || (!frabric)) {
       console.error(
-        "Only some environment variables were provide. Provide the ERC20 Beacon, " +
-        "the Auction contract, USD, the Uniswap Pair, and the Initial Frabric."
+          "Only some environment variables were provide. Provide the ERC20 Beacon, " +
+          "the Auction contract, USD, the Uniswap Pair, and the Initial Frabric."
       );
       process.exit(1);
     }

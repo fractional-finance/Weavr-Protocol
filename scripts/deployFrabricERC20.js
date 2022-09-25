@@ -18,7 +18,7 @@ module.exports = {
       args == null ? [] : [...args, auction.auction.address],
       args == null ? { initializer: false } : {}
     );
-    return { auctionProxy: auction.proxy, auction: auction.auction, erc20 };
+    return { auctionProxy: auction.beacon, auction: auction.auction, erc20 };
   },
 
   deployFRBC: async (usd) => {

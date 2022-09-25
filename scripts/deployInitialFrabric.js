@@ -21,9 +21,9 @@ module.exports = async (usd, uniswap, genesis) => {
 
   // Deploy the Uniswap pair to get the bond token
   uniswap = new ethers.Contract(
-    uniswap,
-    require("@uniswap/v2-periphery/build/UniswapV2Router02.json").abi,
-    signer
+      uniswap,
+      require("@uniswap/v2-periphery/build/UniswapV2Router02.json").abi,
+      signer
   );
 
   const pair = u2SDK.computePairAddress({
