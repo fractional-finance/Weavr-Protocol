@@ -1,5 +1,6 @@
 const { ethers, upgrades } = require("hardhat");
 
+const deployBeaconProxy = require("./deployBeaconProxy.js");
 const deployBeacon = require("./deployBeacon.js");
 
 module.exports = async () => {
@@ -9,9 +10,8 @@ module.exports = async () => {
   // We just have them to maintain a consistent API
   // Proxy isn't a technically correct term, as it's the instances which are proxies,
   // yet it works well enough
-  const proxy = await deployBeacon("single", Auction);
-
-  const auction = await upgrades.deployBeaconProxy(proxy.address, Auction);
-
-  return { proxy, auction };
+  const beacon = await deployBeacon("single", Auction);
+  await new Promise((res) => setTimeout(res, 5000));
+  const auction = await deployBeaconProxy(beacon.address, Auction, []);
+  return { beacon, auction };
 };

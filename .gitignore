@@ -8,6 +8,6 @@ cache
 
 coverage
 coverage.json
-
+genesis.json
 .vscode
 .idea

@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 require("@nomiclabs/hardhat-waffle");
 require("@openzeppelin/hardhat-upgrades");
 require("solidity-coverage");
@@ -30,5 +28,16 @@ if (process.env.GOERLI) {
     accounts: [
       process.env.PRIVATE_KEY
     ]
+  };
+}
+
+
+if (process.env.ARBITRUM) {
+  module.exports.networks.arbitrum = {
+    url: process.env.ARBITRUM,
+    accounts: [
+      process.env.PRIVATE_KEY
+    ],
+    gasLimit: 100000000000000
   };
 }

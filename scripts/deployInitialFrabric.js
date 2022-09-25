@@ -4,6 +4,7 @@ const { ethers, upgrades, waffle } = hre;
 const u2SDK = require("@uniswap/v2-sdk");
 const uSDK = require("@uniswap/sdk-core");
 
+const deployBeaconProxy = require("./deployBeaconProxy.js");
 const deployBeacon = require("./deployBeacon.js");
 const FrabricERC20 = require("./deployFrabricERC20.js");
 const deployDEXRouter = require("./deployDEXRouter.js");
@@ -15,8 +16,8 @@ module.exports = async (usd, uniswap, genesis) => {
   process.hhCompiled = true;
 
   const signer = (await ethers.getSigners())[0];
-
-  const { auctionProxy, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
+  console.log("about to deploy WEAV");
+  const { auctionBeacon, auction, beacon: erc20Beacon, frbc } = await FrabricERC20.deployFRBC(usd);
   await (await frbc.whitelist(auction.address)).wait();
 
   // Deploy the Uniswap pair to get the bond token
@@ -36,13 +37,13 @@ module.exports = async (usd, uniswap, genesis) => {
   // That said, it's a derivative subject to reduced profit potential and unusable as FRBC
   // Considering the critical role Uniswap plays in the Ethereum ecosystem, we accordingly accept this effect
   await (await frbc.whitelist(pair)).wait();
-
+  setTimeout(() => {}, 2000);
   // Process the genesis
   let genesisList = [];
   for (const person in genesis) {
-    await (await frbc.whitelist(person, { gasLimit: 300000 })).wait();
-    await (await frbc.setKYC(person, ethers.utils.id(genesis[person].info), 0, { gasLimit: 300000 })).wait();
-    await (await frbc.mint(person, genesis[person].amount, { gasLimit: 300000 })).wait();
+    await (await frbc.whitelist(person)).wait();
+    await (await frbc.setKYC(person, ethers.utils.id(genesis[person].info), 0)).wait();
+    await (await frbc.mint(person, genesis[person].amount)).wait();
 
     genesisList.push(person);
   }
@@ -82,15 +83,15 @@ module.exports = async (usd, uniswap, genesis) => {
 
   const InitialFrabric = await ethers.getContractFactory("InitialFrabric");
   const proxy = await deployBeacon("single", InitialFrabric);
-
-  const frabric = await upgrades.deployBeaconProxy(proxy.address, InitialFrabric, [frbc.address, genesisList]);
+  setTimeout(() => {}, 2000);
+  const frabric = await deployBeaconProxy(proxy.address, InitialFrabric, [frbc.address, genesisList]);
   await (await frbc.whitelist(frabric.address)).wait();
 
   // Transfer ownership of everything to the Frabric
   // The Auction isn't owned as it doesn't need to be
   // While it does need to be upgraded, it tracks the (sole) release channel of its SingleBeacon
   // That's what needs to be owned
-  await (await auctionProxy.transferOwnership(frabric.address)).wait();
+  await (await auctionBeacon.transferOwnership(frabric.address)).wait();
   // FrabricERC20 beacon and FRBC
   await (await erc20Beacon.transferOwnership(frabric.address)).wait();
   await (await frbc.transferOwnership(frabric.address)).wait();
