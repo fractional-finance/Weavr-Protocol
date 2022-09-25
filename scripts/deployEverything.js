@@ -16,14 +16,14 @@ const genesis = require("../genesis.json");
 
     console.log("CONFIG:\t\t", config);
 
-    let initialFrabric = await deployInitialFrabric(config.USD, config.UNISWAP, genesis);
+    let initialFrabric = await deployInitialFrabric(config.USD, config.UNISWAP, genesis, process.env.VOTINGPERIOD, process.env.QUEUEPERIOD, process.env.LAPSEPERIOD);
 
     let {
         auction,
         erc20Beacon,
         frbc,
         pair,
-        proxy,
+        beacon,
         frabric,
         router
     } = initialFrabric;
@@ -33,7 +33,7 @@ const genesis = require("../genesis.json");
         ERC20_BEACON: erc20Beacon.address,
         FRBC: frbc.address,
         FRBC_USD_PAIR: pair,
-        PROXY: proxy.address,
+        PROXY: beacon.address,
         FRABRIC: frabric.address,
         ROUTER: router.address
     });
@@ -59,7 +59,7 @@ const genesis = require("../genesis.json");
     console.log("ERC20BEACON:       " + initialFrabric.erc20Beacon.address);
     console.log("FRBC:              " + initialFrabric.frbc.address);
     console.log("PAIR:              " + initialFrabric.pair);
-    console.log("PROXY:             " + initialFrabric.proxy.address);
+    console.log("PROXY:             " + initialFrabric.beacon.address);
     console.log("INITIALFRABRIC:    " + initialFrabric.frabric.address);
     console.log("DEXROUTER:         " + initialFrabric.router.address);
     

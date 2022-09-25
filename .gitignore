@@ -13,3 +13,5 @@ coverage.json
 .idea
 .gitsigners
 genesis.json
+
+deployments
