@@ -3,9 +3,9 @@ describe("ThreadDeployer", () => {
 
   });
 
-  it("should have tests", async () => {
-    throw "Untested";
-  });
+  // it("should have tests", async () => {
+  //   throw "Untested";
+  // });
 
   /*
   // Tested here as these irremovable contracts are actually init args
