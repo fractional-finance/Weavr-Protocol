@@ -24,8 +24,8 @@ describe("FrabricERC20", () => {
   });
 
   it("should have initialized properly", async () => {
-    expect(await frbc.name()).to.equal("Frabric Token");
-    expect(await frbc.symbol()).to.equal("FRBC");
+    expect(await frbc.name()).to.equal("Weavr Token");
+    expect(await frbc.symbol()).to.equal("WEAV");
     expect(await frbc.parent()).to.equal(ethers.constants.AddressZero);
     expect(await frbc.tradeToken()).to.equal(usd.address);
     expect(await frbc.auction()).to.equal(auction.address);

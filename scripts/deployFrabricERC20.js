@@ -26,8 +26,8 @@ module.exports = {
     const frbc = await module.exports.deploy(
       beacon,
       [
-        "Frabric Token",
-        "FRBC",
+        "Weavr Token",
+        "WEAV",
         // Supply is 0 as all distribution is via mint
         0,
         // Parent whitelist doesn't exist
