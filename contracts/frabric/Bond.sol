@@ -29,7 +29,7 @@ contract Bond is OwnableUpgradeable, DistributionERC20, IBondInitializable {
   function initialize(address _usd, address _bondToken) external override initializer {
     // Intended to be own by the Frabric
     __Ownable_init();
-    __DistributionERC20_init("Frabric Bond", "bFBRC");
+    __DistributionERC20_init("Weavr Bond", "bWEAV");
 
     __Composable_init("Bond", false);
     supportsInterface[type(OwnableUpgradeable).interfaceId] = true;

@@ -14,7 +14,7 @@ const {
 
 let signGlobal = [
   {
-    name: "Frabric Protocol",
+    name: "Weavr Protocol",
     version: "1",
     chainId: 31337
   },

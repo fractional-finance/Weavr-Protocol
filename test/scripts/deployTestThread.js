@@ -36,7 +36,7 @@ module.exports = async () => {
     ]
   );
 
-  expect(await thread.votingPeriod()).to.equal(7 * 24 * 60 * 60);
+  expect(await thread.votingPeriod()).to.equal(5 * 24 * 60 * 60);
   expect(await thread.maxRemovalFee()).to.equal(10);
 
   expect(await thread.contractName()).to.equal(ethers.utils.id("Thread"));
