@@ -10,13 +10,11 @@ import "../interfaces/auxillary/IAirdrop.sol";
 contract Airdrop is Ownable, IAirdrop {
     using SafeERC20 for IFrabricERC20;
     uint64 private _expiryDate;
-    bool private _expired;
     address private _token;
 
     mapping(address => uint256) private _claims;
     constructor(uint8 daysUntilExpiry, address erc20, address [] memory claimants, uint256 [] memory amounts){
         _expiryDate = uint64(block.timestamp) + (daysUntilExpiry * 1 days);
-        _expired = false;
         _token = erc20;
         if (claimants.length != amounts.length) {
             revert DifferentLengths(claimants.length, amounts.length);
@@ -37,7 +35,6 @@ contract Airdrop is Ownable, IAirdrop {
 
     function claim() external {
         if (block.timestamp > _expiryDate) {
-            _expired = true;
             revert Expired();
         }
         uint256 claim = _claims[msg.sender];
@@ -56,9 +53,7 @@ contract Airdrop is Ownable, IAirdrop {
      */
 
     function expire() external {
-        if (block.timestamp > _expiryDate) {
-            _expired = true;
-        } else {
+        if (block.timestamp <= _expiryDate) {
             revert StillActive();
         }
         uint256 balance = IFrabricERC20(_token).balanceOf(address(this));
@@ -73,7 +68,12 @@ contract Airdrop is Ownable, IAirdrop {
     */
 
     function viewClaim(address claimant) external view returns (uint256) {
+        if (block.timestamp > _expiryDate) {
+            revert Expired();
+            }
+        else {
             return (_claims[claimant]);
         }
+    }
 
 }
