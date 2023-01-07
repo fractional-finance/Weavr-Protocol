@@ -3,11 +3,7 @@ pragma solidity 0.8.9;
 
 interface IAirdrop {
     event ClaimRedeemed(uint256 amount, address claimant);
-    event ClaimAdded(uint256, address claimant);
-    event Deposit(uint256 amount);
     event BurnedTokens(uint256 amount);
-
-    function addClaim(address [] memory claimants, uint256 [] memory amounts) external;
 
     function claim() external;
 
@@ -17,7 +13,6 @@ interface IAirdrop {
 
     error Expired();
     error StillActive();
-    error AlreadyClaimed(uint256 amount, address claimant);
-    error InsufficientFunds(uint256 expected, uint256 real);
+    error AlreadyClaimed(address claimant);
     error DifferentLengths(uint256 lengthA, uint256 lengthB);
 }
