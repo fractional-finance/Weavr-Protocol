@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity 0.8.9;
 
-import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/auxillary/IAirdrop.sol";
@@ -21,8 +21,8 @@ contract Airdrop is IAirdrop {
 
         for (uint64 i = 0; i < claimants.length; i++) {
             _claims[claimants[i]] = amounts[i];
-            }
         }
+    }
 
 
     /*
@@ -67,9 +67,8 @@ contract Airdrop is IAirdrop {
 
     function viewClaim(address claimant) external view returns (uint256) {
         if (block.timestamp > _expiryDate) {
-            revert Expired();
-            }
-        else {
+            return 0;
+        } else {
             return (_claims[claimant]);
         }
     }
