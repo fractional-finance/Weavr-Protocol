@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: AGPLv3
 pragma solidity 0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
 import "../interfaces/auxillary/IAirdrop.sol";
 
-contract Airdrop is Ownable, IAirdrop {
+contract Airdrop is IAirdrop {
     using SafeERC20 for IFrabricERC20;
-    uint64 private _expiryDate;
-    address private _token;
+    uint64 public _expiryDate;
+    address public _token;
 
     mapping(address => uint256) private _claims;
     constructor(uint8 daysUntilExpiry, address erc20, address [] memory claimants, uint256 [] memory amounts){
@@ -21,7 +20,6 @@ contract Airdrop is Ownable, IAirdrop {
         }
 
         for (uint64 i = 0; i < claimants.length; i++) {
-            //If the claimant was already added, lets skip over them without overwriting.
             _claims[claimants[i]] = amounts[i];
             }
         }
