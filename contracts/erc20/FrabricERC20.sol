@@ -237,7 +237,7 @@ contract FrabricERC20 is OwnableUpgradeable, PausableUpgradeable, DistributionER
 
   // nonReentrant would be overkill given onlyOwner except this needs to not be the initial vector
   // while re-entrancy happens through functions labelled nonReentrant
-  // While the only external calls should be completely in-ecosystem and therefore to trusted code,
+  // While the only unsafe calls should be completely in-ecosystem and therefore to trusted code,
   // _removeUnsafe really isn't the thing to play around with
   function remove(address person, uint8 fee) external override onlyOwner nonReentrant {
     // This will only apply to the Frabric/Thread in question

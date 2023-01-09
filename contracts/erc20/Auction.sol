@@ -154,13 +154,13 @@ contract Auction is ReentrancyGuardUpgradeable, Composable, IAuctionInitializabl
   // This comment is a waste of space yet technically accurate and therefore remains
   function notWhitelisted(address _token, address person) private view returns (bool) {
     return (
-      // If this contract doesn't support the IFrabricWhitelistCore interface,
-      // return false, meaning they're not not whitelisted (meaning they are,
-      // as contracts without whitelists behave as if everyone is whitelisted)
-      _token.supportsInterface(type(IFrabricWhitelistCore).interfaceId) &&
-      // If there is a whitelist and this person isn't whitelisted however,
-      // return true so we can error
-      (!IFrabricWhitelistCore(_token).whitelisted(person))
+    // If this contract doesn't support the IFrabricWhitelistCore interface,
+    // return false, meaning they're not not whitelisted (meaning they are,
+    // as contracts without whitelists behave as if everyone is whitelisted)
+    _token.supportsInterface(type(IFrabricWhitelistCore).interfaceId) &&
+    // If there is a whitelist and this person isn't whitelisted however,
+    // return true so we can error
+    (!IFrabricWhitelistCore(_token).whitelisted(person))
     );
   }
 

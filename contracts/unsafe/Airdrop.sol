@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/erc20/IFrabricERC20.sol";
-import "../interfaces/auxillary/IAirdrop.sol";
+import "../interfaces/unsafe/IAirdrop.sol";
 
 contract Airdrop is IAirdrop {
     using SafeERC20 for IFrabricERC20;
