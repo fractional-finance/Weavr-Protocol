@@ -75,5 +75,4 @@ describe("Airdrop", accounts => {
         expect(await token.balanceOf(airdrop.address)).to.equal(0);
     });
 
-
 });
