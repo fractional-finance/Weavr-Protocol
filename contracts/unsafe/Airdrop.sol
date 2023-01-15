@@ -8,13 +8,13 @@ import "../interfaces/unsafe/IAirdrop.sol";
 
 contract Airdrop is IAirdrop {
     using SafeERC20 for IFrabricERC20;
-    uint64 public _expiryDate;
-    address public _token;
+    uint64 public expiryDate;
+    address public token;
 
     mapping(address => uint256) private _claims;
     constructor(uint8 daysUntilExpiry, address erc20, address [] memory claimants, uint256 [] memory amounts){
-        _expiryDate = uint64(block.timestamp) + (daysUntilExpiry * 1 days);
-        _token = erc20;
+        expiryDate = uint64(block.timestamp) + (daysUntilExpiry * 1 days);
+        token = erc20;
         if (claimants.length != amounts.length) {
             revert DifferentLengths(claimants.length, amounts.length);
         }
@@ -32,16 +32,16 @@ contract Airdrop is IAirdrop {
     */
 
     function claim() external {
-        if (block.timestamp > _expiryDate) {
+        if (block.timestamp > expiryDate) {
             revert Expired();
         }
         uint256 claim = _claims[msg.sender];
         if (claim == 0) {
             revert AlreadyClaimed(msg.sender);
         }
-        uint256 finalAmount = claim > IFrabricERC20(_token).balanceOf(address(this)) ? IFrabricERC20(_token).balanceOf(address(this)) : claim;
-        IFrabricERC20(_token).safeTransfer(msg.sender, finalAmount);
         _claims[msg.sender] = 0;
+        uint256 finalAmount = _claims[msg.sender] > IFrabricERC20(token).balanceOf(address(this)) ? IFrabricERC20(token).balanceOf(address(this)) : claim;
+        IFrabricERC20(token).safeTransfer(msg.sender, finalAmount);
         emit ClaimRedeemed(finalAmount, msg.sender);
     }
 
@@ -51,11 +51,11 @@ contract Airdrop is IAirdrop {
      */
 
     function expire() external {
-        if (block.timestamp <= _expiryDate) {
+        if (block.timestamp <= expiryDate) {
             revert StillActive();
         }
-        uint256 balance = IFrabricERC20(_token).balanceOf(address(this));
-        IFrabricERC20(_token).burn(balance);
+        uint256 balance = IFrabricERC20(token).balanceOf(address(this));
+        IFrabricERC20(token).burn(balance);
         emit BurnedTokens(balance);
     }
 
@@ -66,7 +66,7 @@ contract Airdrop is IAirdrop {
     */
 
     function viewClaim(address claimant) external view returns (uint256) {
-        if (block.timestamp > _expiryDate) {
+        if (block.timestamp > expiryDate) {
             return 0;
         } else {
             return (_claims[claimant]);

@@ -11,3 +11,4 @@ coverage.json
 genesis.json
 .vscode
 .idea
+scripts/deployAirdrop.js
