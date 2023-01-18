@@ -40,3 +40,10 @@ if (process.env.ARBITRUM) {
     gasLimit: 100000000000000
   };
 }
+
+if(process.env.ETHERSCAN) {
+    require("@nomiclabs/hardhat-etherscan");
+    module.exports.etherscan = {
+        apiKey: process.env.ETHERSCAN
+    };
+}

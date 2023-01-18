@@ -12,3 +12,4 @@ genesis.json
 .vscode
 .idea
 scripts/deployAirdrop.js
+arguments.js

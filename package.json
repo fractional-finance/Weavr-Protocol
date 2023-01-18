@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Blockchain components of the Frabric platform.",
   "dependencies": {
-    "@nomiclabs/hardhat-etherscan": "^3.1.0",
+    "@nomiclabs/hardhat-etherscan": "^3.1.5",
     "@openzeppelin/contracts": "^4.5.0",
     "@openzeppelin/contracts-upgradeable": "^4.5.2",
     "@tenderly/hardhat-tenderly": "^1.4.1"
