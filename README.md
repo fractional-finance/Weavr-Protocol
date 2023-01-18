@@ -88,3 +88,58 @@ This doesn't immediately make these contracts available and alter behavior, that
 npx hardhat deploy --network goerli scripts/deployFrabric.js
 ```
 After this has been deployed, take note of the FRABRIC address as that is the implementation needed in a ProposeUpgrade step.
+
+### Upgrading from InitialFrabric -> Frabric
+Now that the Frabric contracts have been deployed, and the InitialFrabric has been set as the owner of the Frabric contracts, we can now upgrade the InitialFrabric to the Frabric contracts.
+#### Creating the Upgrade Proposal
+This is done by creating a proposal in the InitialFrabric, and submitting it to the DAO. 
+The proposal will be a `ProposeUpgrade` proposal, and will require a majority of the DAO to vote in favor of it.
+
+##### Data Field
+In order to make a proposeUpgrade call, you must generate the data component.
+This contains all information around initial Governors, KYC, and the initial token supply.
+```js
+function generateData(bond_address, threadDeployer_address, kyc_address, governor_address) {
+   return (new ethers.utils.AbiCoder()).encode(
+        ["address", "address", "address", "address"],
+        [bond_address, threadDeployer_address, kyc_address, governor_address]
+    )
+}
+```
+
+The result of this is a hex string that should be used as the data field in the proposal.
+
+
+### Proposals
+
+The order of function calls are the following:
+- `ProposeUpgrade` - this is the first proposal, and is used to upgrade the InitialFrabric to the Frabric contracts
+- `QueueProposal` - this queues the proposal made in the previous step, you will need to wait `QUEUE_PERIOD` days before moving on.
+- `CompleteProposal` - this executes the proposal; the ProposeUpgrade must have passed it's votes, and you must wait for the `QUEUE_PERIOD` to end.
+- `TriggerUpgrade` - this is triggered against the single Beacon that was provided with deployInitialFrabric.js.
+
+#### ProposeUpgrade:
+ - instance: 0x00
+ - beacon: singleBeacon address for Initial Frabric
+ - data: Data Field
+ - code: address of Frabric (output of deploy Frabric) 
+ - version: 2
+ - info: 0x00
+
+The output of this will be a proposal ID; a supermajority of InitialFrabric tokenholders will
+need to vote on this proposal for it to pass.
+
+#### QueueProposal:
+ - id: proposal ID from ProposeUpgrade
+
+#### CompleteProposal:
+ - data: 0x00
+ - id: (proposal id from ProposeUpgrade)
+
+#### TriggerUpgrade:
+- instance: BeaconProxy address for InitialFrabric (main address you've been interacting with)
+- data: 0x00
+- version: 2
+
+
+If TriggerUpgrade succeeds, that means that you've successfully upgraded InitialFrabric -> Frabric.
