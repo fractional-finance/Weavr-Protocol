@@ -1,6 +1,6 @@
 
-# <img src="docs/logo.png" alt="logo" width="100"/> Frabric Protocol
-Welcome to a revolution in DAO Governance. used by WeavrDAO.
+# <img src="docs/logo.png" alt="logo" width="100"/> Weavr Protocol (Previously Frabric)
+Welcome to a revolution in DAO Governance. used by WeavrDAO to build Weavr (www.weavr.org)
 
 This repository contains all the smart contracts which make up the Frabric Protocol, along with their tests and deployment scripts.
 The Frabric Protocol is a set of infrastructure for use as part of a larger DAO deployment.
