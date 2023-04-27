@@ -1,5 +1,5 @@
 
-# <img src="docs/logo.png" alt="logo" width="100"/> Weavr Protocol (Previously Frabric)
+# <img src="docs/logo.png" alt="logo" width="100"/> Frabric
 Welcome to a revolution in DAO Governance. used by WeavrDAO to build Weavr (www.weavr.org)
 
 This repository contains all the smart contracts which make up the Frabric Protocol, along with their tests and deployment scripts.
